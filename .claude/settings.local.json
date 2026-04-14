@@ -1,0 +1,39 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "3061558bd1af41aea9d98a7af392ccd0.hH0JRzgCbSCoPSEi",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-4.6",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.5-air",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-4.6",
+    "API_TIMEOUT_MS": "3000000"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(py --version)",
+      "Bash(python:*)",
+      "Bash(npm create:*)",
+      "Bash(cp:*)",
+      "Bash(npm install:*)",
+      "Bash(where python:*)",
+      "Bash(where py:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite:*)",
+      "Bash(npm run:*)",
+      "Bash(echo \"EXIT_CODE: $?\")",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(echo \"EXIT=$?\")",
+      "Skill(impeccable:critique)",
+      "Bash(echo \"TSC=$?\")",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(curl -sL \"https://i.pravatar.cc/80?img=12\" -o C:/projetos/vibe-coding/trainify/src/assets/avatar.jpg)",
+      "WebSearch",
+      "Bash(echo '{\"model\":{\"display_name\":\"claude-sonnet-4-6\"},\"workspace\":{\"current_dir\":\"C:\\\\\\\\projetos\\\\\\\\vibe-coding\\\\\\\\trainify\"}}')",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\isabe\\\\.claude\\\\statusline-command.ps1\")",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\\\\Users\\\\isabe\\\\.claude\\\\statusline-command.ps1')",
+      "Bash(powershell:*)",
+      "Bash(echo '{\"model\":{\"display_name\":\"claude-sonnet-4-6\"},\"workspace\":{\"current_dir\":\"C:\\\\\\\\projetos\\\\\\\\vibe-coding\\\\\\\\trainify\"},\"context_window\":{\"used_percentage\":45,\"current_usage\":{\"cache_read_input_tokens\":1000,\"cache_creation_input_tokens\":500,\"input_tokens\":10000,\"output_tokens\":5000},\"context_window_size\":200000}}')"
+    ]
+  }
+}

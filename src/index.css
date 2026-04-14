@@ -1,0 +1,326 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════
+   TRAINIFY — Design Tokens (OKLCH)
+   Paleta quente, creme e preto — Notion-like
+   Matiz base: ~65 (amber quente)
+   ═══════════════════════════════════════════ */
+
+@theme {
+  /* Superfícies */
+  --color-fundo: oklch(0.965 0.007 70);
+  --color-superficie: oklch(0.985 0.005 70);
+  --color-superficie-elevada: oklch(0.985 0.005 70);
+  --color-superficie-suave: oklch(0.950 0.008 68);
+  --color-superficie-hover: oklch(0.940 0.010 68);
+
+  /* Texto */
+  --color-texto-primario: oklch(0.200 0.015 55);
+  --color-texto-secundario: oklch(0.450 0.018 55);
+  --color-texto-sutil: oklch(0.550 0.015 55);
+  --color-texto-invertido: oklch(0.965 0.007 70);
+
+  /* Bordas */
+  --color-borda: oklch(0.895 0.010 65);
+  --color-borda-suave: oklch(0.930 0.008 65);
+
+  /* Acento (preto quente como ação primária) */
+  --color-acento: oklch(0.220 0.015 55);
+  --color-acento-hover: oklch(0.310 0.018 55);
+  --color-acento-suave: oklch(0.935 0.014 65);
+
+  /* Tipografia */
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-sans: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Escala tipográfica (baseline: 16px) */
+  --text-xs: 0.75rem;    /* 12px - mínimo acessível */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+
+  /* Espaçamento base: 4px */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 48px;
+
+  /* Bordas arredondadas */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+}
+
+/* ═══════════════════════════════════════════
+   Base
+   ═══════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background-color: var(--color-acento);
+  color: var(--color-texto-invertido);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-fundo);
+  color: var(--color-texto-primario);
+  font-size: 1rem;
+  line-height: 1.5;
+  font-kerning: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse 80% 45% at 20% 0%, oklch(0.91 0.035 55 / 0.5), transparent 70%),
+    radial-gradient(ellipse 60% 35% at 85% 8%, oklch(0.90 0.03 40 / 0.4), transparent 60%),
+    radial-gradient(ellipse 70% 40% at 75% 100%, oklch(0.91 0.035 50 / 0.5), transparent 70%),
+    radial-gradient(ellipse 55% 35% at 15% 95%, oklch(0.90 0.03 35 / 0.4), transparent 60%),
+    linear-gradient(180deg, oklch(0.95 0.015 55), var(--color-fundo) 30%, var(--color-fundo) 70%, oklch(0.95 0.015 50));
+  background-color: var(--color-fundo);
+}
+
+/* Scrollbar sutil */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-borda);
+  border-radius: var(--radius-full);
+}
+
+/* Firefox scrollbar */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-borda) transparent;
+}
+
+/* ═══════════════════════════════════════════
+   Acessibilidade
+   ═══════════════════════════════════════════ */
+
+:focus-visible {
+  outline: 2px solid var(--color-acento);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Animações Delight - Motivação e Feedback
+   ═══════════════════════════════════════════ */
+
+
+/* Pulse sutil para indicar elementos pendentes */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* Animação de check bounce para success states */
+@keyframes checkBounce {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Animação de shrink para progress bar do toast */
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Animação de entrada com fade */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Animação de slide in from top */
+@keyframes slide-in-from-top-2 {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Fogo flamejante sutil (para streak ativo) */
+@keyframes flame-subtle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.05) rotate(-2deg);
+  }
+  75% {
+    transform: scale(1.05) rotate(2deg);
+  }
+}
+
+/* Count up suave para números */
+@keyframes count-up {
+  0% {
+    transform: translateY(0.25em);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Highlight suave para próxima ficha */
+@keyframes highlight-pulse {
+  0%, 100% {
+    background-color: oklch(0.935 0.014 65 / 0.3);
+  }
+  50% {
+    background-color: oklch(0.935 0.014 65 / 0.5);
+  }
+}
+
+/* Slide in escalonado para lista de fichas */
+@keyframes slide-in-stagger {
+  from {
+    transform: translateX(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Button press satisfatório */
+@keyframes button-press {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Utilitários de animação */
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+.animate-check-bounce {
+  animation: checkBounce 0.5s ease-out;
+}
+
+.animate-flame {
+  animation: flame-subtle 3s ease-in-out infinite;
+}
+
+.animate-highlight-pulse {
+  animation: highlight-pulse 3s ease-in-out infinite;
+}
+
+/* Animations utilities compatíveis com Tailwind */
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.slide-in-from-top-2 {
+  animation: slide-in-from-top-2 0.3s ease-out;
+}
+
+/* Stagger delays para listas */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+
+/* Shimmer effect para progress bars completas */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Shimmer para botão de próxima ficha */
+@keyframes shimmer-btn {
+  0% {
+    transform: translateX(-100%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-12deg);
+  }
+}
+
+.animate-shimmer-btn {
+  animation: shimmer-btn 2.5s ease-in-out infinite;
+}
