@@ -17,4 +17,6 @@ export const STORAGE_KEYS = {
   FONTE_GRANDE: "trainify_fonte_grande",
   USUARIO: "trainify_usuario",
   TOKEN: "trainify_token",
+  // Dados de treino
+  DADOS_TREINO: "trainify_dados_treino",
 } as const;

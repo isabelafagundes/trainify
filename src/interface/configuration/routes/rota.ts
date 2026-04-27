@@ -14,9 +14,8 @@ export const ROTAS = {
   ESTATISTICAS: "/estatisticas",
   GERENCIAR: "/gerenciar",
 
-  // Gestão de fichas
+  // Gestão de fichas (sempre dentro de um programa)
   FICHA: "/ficha",
-  CRIAR_FICHA: "/criar-ficha",
   EDITAR_FICHA: "/editar-ficha",
 
   // Gestão de programas
@@ -39,7 +38,6 @@ export const TITULOS_POR_ROTA: Record<Rota, string> = {
   [ROTAS.ESTATISTICAS]: "Estatísticas",
   [ROTAS.GERENCIAR]: "Gerenciar",
   [ROTAS.FICHA]: "Ficha de Treino",
-  [ROTAS.CRIAR_FICHA]: "Nova Ficha",
   [ROTAS.EDITAR_FICHA]: "Editar Ficha",
   [ROTAS.PROGRAMA]: "Programa de Treino",
   [ROTAS.CRIAR_PROGRAMA]: "Novo Programa",
