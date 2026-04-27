@@ -1,0 +1,230 @@
+/* ═══════════════════════════════════════════
+   Modal de Cópia de Ficha Existente
+   ═══════════════════════════════════════════ */
+
+import { useState, useEffect, useMemo } from "react";
+import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
+import { Botao } from "@/interface/widget/botao/Botao";
+import { Icone } from "@/interface/widget/svg/Icone";
+
+interface ModalCopiarFichaProps {
+  aberto: boolean;
+  aoCopiar: (fichaId: string) => void;
+  aoCancelar: () => void;
+  fichaIdAtual?: string; // Para não mostrar a ficha being edited
+}
+
+export function ModalCopiarFicha({
+  aberto,
+  aoCopiar,
+  aoCancelar,
+  fichaIdAtual,
+}: ModalCopiarFichaProps) {
+  const [busca, setBusca] = useState("");
+  const [fichaSelecionada, setFichaSelecionada] = useState<string | null>(null);
+
+  // Resetar ao abrir
+  useEffect(() => {
+    if (aberto) {
+      setBusca("");
+      setFichaSelecionada(null);
+    }
+  }, [aberto]);
+
+  // Fechar ao pressionar Escape
+  useEffect(() => {
+    if (!aberto) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        aoCancelar();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [aberto, aoCancelar]);
+
+  // Listar e filtrar fichas
+  const fichasFiltradas = useMemo(() => {
+    const todasFichas = stateManagerRepository.listarFichas();
+
+    // Filtrar busca
+    let filtradas = todasFichas;
+    if (busca) {
+      const buscaLower = busca.toLowerCase();
+      filtradas = filtradas.filter((f) =>
+        f.nome.toLowerCase().includes(buscaLower)
+      );
+    }
+
+    // Remover ficha atual (se estiver editando)
+    if (fichaIdAtual) {
+      filtradas = filtradas.filter((f) => f.id !== fichaIdAtual);
+    }
+
+    return filtradas.sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [busca, fichaIdAtual]);
+
+  const handleCopiar = () => {
+    if (!fichaSelecionada) return;
+    aoCopiar(fichaSelecionada);
+  };
+
+  if (!aberto) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-copiar-ficha-title"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={aoCancelar}
+      />
+
+      {/* Modal Content */}
+      <div className="relative w-full max-w-md bg-superficie rounded-3xl shadow-xl border border-borda animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 max-h-[80vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-borda-suave shrink-0">
+          <h2
+            id="modal-copiar-copiar-ficha-title"
+            className="text-lg font-semibold font-display text-texto-primario"
+          >
+            Copiar de Existente
+          </h2>
+          <button
+            type="button"
+            onClick={aoCancelar}
+            className="p-2 -mr-2 text-texto-secundario hover:text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
+            aria-label="Fechar"
+          >
+            <Icone nome="fechar" tamanho={20} />
+          </button>
+        </div>
+
+        {/* Busca */}
+        <div className="px-5 py-4 border-b border-borda-suave shrink-0">
+          <div className="relative">
+            <input
+              type="text"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar ficha..."
+              className="
+                w-full px-4 py-3 pl-10
+                bg-superficie-suave border border-borda
+                rounded-[10px]
+                text-sm text-texto-primario placeholder:text-texto-sutil
+                focus:border-acento focus:outline-none focus:ring-2 focus:ring-acento/20
+                transition-all duration-200
+              "
+            />
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-texto-sutil"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+        </div>
+
+        {/* Lista de fichas */}
+        <div className="flex-1 overflow-y-auto px-5 py-2">
+          {fichasFiltradas.length === 0 ? (
+            <div className="py-12 text-center">
+              <Icone nome="clipboard" tamanho={48} className="text-texto-sutil mx-auto mb-3" />
+              <p className="text-sm text-texto-secundario">
+                {busca ? "Nenhuma ficha encontrada." : "Nenhuma ficha disponível."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {fichasFiltradas.map((ficha) => (
+                <button
+                  key={ficha.id}
+                  type="button"
+                  onClick={() => setFichaSelecionada(ficha.id)}
+                  className={`
+                    w-full px-4 py-3
+                    bg-superficie-suave border rounded-xl
+                    flex items-center gap-3
+                    text-left
+                    transition-all duration-150
+                    hover:border-acento/50
+                    ${fichaSelecionada === ficha.id
+                      ? "border-acento bg-acento-suave ring-2 ring-acento/20"
+                      : "border-borda"
+                    }
+                  `}
+                >
+                  {/* Emoji */}
+                  <span className="text-2xl shrink-0">
+                    {ficha.emoji || "💪"}
+                  </span>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-texto-primario truncate">
+                      {ficha.nome}
+                    </p>
+                    <p className="text-xs text-texto-secundario">
+                      {ficha.exercicios.length} {ficha.exercicios.length === 1 ? "exercício" : "exercícios"}
+                      {ficha.cardio.length > 0 && " · cardio"}
+                    </p>
+                  </div>
+
+                  {/* Indicador de seleção */}
+                  {fichaSelecionada === ficha.id && (
+                    <div className="shrink-0">
+                      <svg
+                        className="w-5 h-5 text-acento"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Ações */}
+        <div className="flex gap-3 px-5 py-4 border-t border-borda-suave shrink-0">
+          <Botao
+            variante="secundario"
+            onClick={aoCancelar}
+            className="flex-1"
+          >
+            Cancelar
+          </Botao>
+          <Botao
+            variante="primario"
+            onClick={handleCopiar}
+            className="flex-1"
+            disabled={!fichaSelecionada}
+          >
+            Copiar
+          </Botao>
+        </div>
+      </div>
+    </div>
+  );
+}
