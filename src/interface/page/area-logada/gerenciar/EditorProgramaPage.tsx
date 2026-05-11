@@ -3,14 +3,13 @@
    ═══════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
-import type { Programa, Ficha, CorBanner } from "@/domain/tipos";
+import type { Programa } from "@/domain/tipos";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Input } from "@/interface/widget/formulario/Input";
-import { SelectCorBanner } from "@/interface/widget/formulario/SelectCorBanner";
-import { SeletorFichas } from "@/interface/widget/formulario/SeletorFichas";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
-import { exerciciosPadrao } from "@/infrastructure/repo/mock/exercicio-mock.repo";
+import { useToast } from "@/interface/widget/toast";
+import { ModalCopiarPrograma } from "@/interface/widget/modal/ModalCopiarPrograma";
 
 interface PropriedadesEditorProgramaPage {
   programaId?: string;
@@ -23,14 +22,15 @@ export function EditorProgramaPage({
   aoVoltar,
   aoNavegar,
 }: PropriedadesEditorProgramaPage) {
+  const { showError } = useToast();
   const [programa, setPrograma] = useState<Programa | null>(null);
-  const [fichas, setFichas] = useState<Ficha[]>([]);
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [corBanner, setCorBanner] = useState<CorBanner | null>(null);
   const [ativo, setAtivo] = useState(false);
-  const [fichaIds, setFichaIds] = useState<string[]>([]);
   const [programaTempId, setProgramaTempId] = useState<string | null>(null);
+  const [modalCopiarProgramaAberto, setModalCopiarProgramaAberto] = useState(false);
+  const [modalNovaFicha, setModalNovaFicha] = useState(false);
+  const [modalSelecionarFicha, setModalSelecionarFicha] = useState(false);
 
   const editando = Boolean(programaId);
   const titulo = editando ? "Editar Programa" : "Novo Programa";
@@ -39,18 +39,13 @@ export function EditorProgramaPage({
   // Carregar dados
   useEffect(() => {
     const carregarDados = () => {
-      const todasFichas = stateManagerRepository.listarFichas();
-      setFichas(todasFichas);
-
       if (programaId) {
         const prog = stateManagerRepository.obterProgramaPorId(programaId);
         if (prog) {
           setPrograma(prog);
           setNome(prog.nome);
           setDescricao(prog.descricao);
-          setCorBanner(prog.corBanner);
           setAtivo(prog.ativo);
-          setFichaIds(prog.fichaIds);
         }
       } else {
         // Novo programa - começar como ativo se não houver outros
@@ -65,203 +60,400 @@ export function EditorProgramaPage({
     return cancelarInscricao;
   }, [programaId]);
 
-  // Calcular grupos por ficha
-  const gruposPorFicha: Record<string, string[]> = {};
-  fichas.forEach((ficha) => {
-    const grupos = new Set<string>();
-    ficha.exercicios.forEach((exFicha) => {
-      const exercicio = exerciciosPadrao.find((e) => e.id === exFicha.exercicioId);
-      if (exercicio) {
-        grupos.add(exercicio.grupoMuscular);
-      }
-    });
-    gruposPorFicha[ficha.id] = Array.from(grupos);
-  });
-
   // Handlers
   const handleSalvar = () => {
     if (!nome.trim()) {
-      alert("Digite um nome para o programa.");
+      showError("Digite um nome para o programa.");
       return;
     }
-
-    if (fichaIds.length === 0) {
-      alert("Selecione pelo menos uma ficha para o programa.");
-      return;
-    }
-
-    const dadosPrograma = {
-      nome: nome.trim(),
-      descricao: descricao.trim(),
-      corBanner,
-      ativo,
-      fichaIds,
-    };
 
     if (editando && programa) {
-      stateManagerRepository.atualizarPrograma(programa.id, dadosPrograma);
+      // Ao editar, atualizamos apenas os campos editáveis, preservando fichaIds
+      stateManagerRepository.atualizarPrograma(programa.id, {
+        nome: nome.trim(),
+        descricao: descricao.trim(),
+        corBanner: null,
+        ativo,
+      });
     } else {
-      stateManagerRepository.adicionarPrograma(dadosPrograma);
+      // Ao criar, passamos todos os campos incluindo fichaIds vazio
+      stateManagerRepository.adicionarPrograma({
+        nome: nome.trim(),
+        descricao: descricao.trim(),
+        corBanner: null,
+        ativo,
+        fichaIds: [],
+      });
     }
 
     aoVoltar();
   };
 
-  const handleCopiar = () => {
-    if (!editando) return; // Só permite copiar quando editando
+  const handleCopiarProgramaExistente = (programaId: string) => {
+    const programa = stateManagerRepository.obterProgramaPorId(programaId);
+    if (!programa) return;
 
-    if (confirm("Deseja criar uma cópia deste programa?")) {
-      const copia = stateManagerRepository.copiarPrograma(programaId!);
-      if (copia) {
-        aoVoltar();
-      }
-    }
+    setNome(programa.nome);
+    setDescricao(programa.descricao);
+    setAtivo(false); // Começa inativo ao copiar
+
+    setModalCopiarProgramaAberto(false);
   };
 
   return (
-    <div className="px-5 py-4 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold font-display tracking-tight text-texto-primario">
-          {titulo}
-        </h1>
-        <button
-          type="button"
-          onClick={aoVoltar}
-          className="p-2 -mr-2 text-texto-secundario hover:text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
-        >
-          <Icone nome="fechar" tamanho={24} />
-        </button>
-      </div>
-
-      {/* Formulário */}
-      <div className="space-y-6">
-        {/* Nome */}
-        <Input
-          label="Nome"
-          tipo="text"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Ex: Rotina Janeiro"
-          ajuda="Nome para identificar o programa"
-        />
-
-        {/* Descrição */}
-        <Input
-          label="Descrição (opcional)"
-          tipo="textarea"
-          value={descricao}
-          onChange={(e) => setDescricao(e.target.value)}
-          placeholder="Ex: Rotina de volume, 4x por semana"
-          linhas={2}
-          ajuda="Descreva o objetivo ou características do programa"
-        />
-
-        {/* Cor do banner */}
-        <SelectCorBanner valor={corBanner} aoAlterar={setCorBanner} />
-
-        {/* Programa ativo */}
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={ativo}
-            onChange={(e) => setAtivo(e.target.checked)}
-            className="
-              w-5 h-5 rounded-md border-2 border-borda
-              transition-all duration-150
-              checked:bg-acento checked:border-acento
-              focus:ring-2 focus:ring-acento/20
-            "
-          />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-texto-primario">
-              Programa ativo
-            </p>
-            <p className="text-xs text-texto-secundario">
-              Apenas um programa pode estar ativo por vez
-            </p>
-          </div>
-        </label>
-
-        {/* Seleção de fichas */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-texto-primario">
-              Fichas do programa
-            </h3>
-            <Botao
-              variante="fantasma"
-              tamanho="compacto"
-              icone={<Icone nome="mais" tamanho={16} />}
-              onClick={() => {
-                // Se for programa novo, salvar primeiro
-                if (!idParaUsar) {
-                  if (!nome.trim()) {
-                    alert("Digite um nome para o programa antes de criar fichas.");
-                    return;
-                  }
-                  const novoPrograma = stateManagerRepository.adicionarPrograma({
-                    nome: nome.trim(),
-                    descricao: descricao.trim(),
-                    corBanner,
-                    ativo,
-                    fichaIds: [],
-                  });
-                  setProgramaTempId(novoPrograma.id);
-                  aoNavegar("criarFicha", { programaId: novoPrograma.id });
-                } else {
-                  aoNavegar("criarFicha", { programaId: idParaUsar });
-                }
-              }}
-            >
-              Nova Ficha
-            </Botao>
-          </div>
-
-          <SeletorFichas
-            fichas={fichas}
-            fichaIdsSelecionadas={fichaIds}
-            aoAlterarSelecao={(fichaId) => {
-              if (fichaIds.includes(fichaId)) {
-                setFichaIds(fichaIds.filter((id) => id !== fichaId));
-              } else {
-                setFichaIds([...fichaIds, fichaId]);
-              }
-            }}
-            gruposPorFicha={gruposPorFicha}
-            semTitulo
-          />
+    <div className="fixed inset-0 z-40 flex flex-col bg-superficie">
+      {/* Header fixo */}
+      <div className="px-5 py-4 border-b border-borda shrink-0">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold font-display tracking-tight text-texto-primario">
+            {titulo}
+          </h1>
+          <button
+            type="button"
+            onClick={aoVoltar}
+            className="flex items-center gap-1.5 px-2 -mr-2 text-texto-secundario hover:text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
+          >
+            <span className="text-sm">Fechar</span>
+            <Icone nome="fechar" tamanho={20} />
+          </button>
         </div>
       </div>
 
-      {/* Ações */}
-      <div className="flex gap-3 pt-4">
-        {editando && (
+      {/* Conteúdo scrollável */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="px-5 py-4 pb-32 space-y-6">
+          {/* Copiar de existente */}
           <Botao
             variante="secundario"
-            onClick={handleCopiar}
-            className="flex-1"
+            tamanho="compacto"
+            className="w-full"
+            icone={<Icone nome="copiar" tamanho={14} />}
+            onClick={() => setModalCopiarProgramaAberto(true)}
           >
-            Copiar
+            Copiar de existente
           </Botao>
-        )}
 
-        <Botao
-          variante="secundario"
-          onClick={aoVoltar}
-          className={editando ? "" : "flex-1"}
-        >
-          Cancelar
-        </Botao>
+          {/* Nome */}
+          <Input
+            label="Nome"
+            tipo="text"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Ex: Rotina Janeiro"
+            ajuda="Nome para identificar o programa"
+          />
 
-        <Botao
-          variante="primario"
-          onClick={handleSalvar}
-          className="flex-1"
-        >
-          {editando ? "Salvar" : "Criar Programa"}
-        </Botao>
+          {/* Descrição */}
+          <Input
+            label="Descrição (opcional)"
+            tipo="textarea"
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            placeholder="Ex: Rotina de volume, 4x por semana"
+            linhas={2}
+            ajuda="Descreva o objetivo ou características do programa"
+          />
+
+          {/* Programa ativo */}
+          <button
+            type="button"
+            onClick={() => setAtivo(!ativo)}
+            className={`
+              flex items-center gap-3 px-4 py-3 rounded-xl transition-colors w-full
+              ${ativo
+                ? "bg-acento/20 text-acento"
+                : "bg-superficie-suave text-texto-secundario"
+              }
+            `}
+          >
+            <div className="flex-1 text-left">
+              <p className="text-sm font-medium">
+                Programa ativo
+              </p>
+              <p className="text-xs opacity-80">
+                Apenas um programa pode estar ativo por vez
+              </p>
+            </div>
+            <div className={`w-11 h-6 rounded-full relative transition-colors duration-200 ${ativo ? "bg-acento" : "bg-borda"}`}>
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-200 ${ativo ? "translate-x-5" : "translate-x-0"}`} />
+            </div>
+          </button>
+
+          {/* Info sobre fichas */}
+          <div className="px-4 py-3 bg-superficie-suave rounded-xl border border-borda-suave">
+            {editando && idParaUsar ? (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-texto-primario">
+                    Fichas do programa
+                  </p>
+                  <Botao
+                    variante="fantasma"
+                    tamanho="compacto"
+                    icone={<Icone nome="mais" tamanho={14} />}
+                    onClick={() => setModalNovaFicha(true)}
+                  >
+                    Nova ficha
+                  </Botao>
+                </div>
+
+                {(() => {
+                  const fichasDoPrograma = stateManagerRepository.obterFichasDoPrograma(idParaUsar);
+                  if (fichasDoPrograma.length === 0) {
+                    return (
+                      <p className="text-sm text-texto-sutil py-2">
+                        Nenhuma ficha criada ainda
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {fichasDoPrograma.map((ficha) => (
+                        <div
+                          key={ficha.id}
+                          className="flex items-center gap-3 px-3 py-2 bg-superficie rounded-lg border border-borda-suave"
+                        >
+                          <span className="text-xl shrink-0">
+                            {ficha.emoji || "💪"}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-texto-primario truncate">
+                              {ficha.nome}
+                            </p>
+                            <p className="text-xs text-texto-secundario">
+                              {ficha.exercicios.length} {ficha.exercicios.length === 1 ? "exercício" : "exercícios"}
+                            </p>
+                          </div>
+                          <Botao
+                            variante="fantasma"
+                            tamanho="compacto"
+                            onClick={() => aoNavegar("editarFicha", { id: ficha.id, voltarPara: "editarPrograma", programaIdVoltar: idParaUsar })}
+                          >
+                            Editar
+                          </Botao>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-texto-secundario">
+                  Salve o programa para criar fichas.
+                </p>
+                <Botao
+                  variante="fantasma"
+                  tamanho="compacto"
+                  className="mt-3"
+                  icone={<Icone nome="mais" tamanho={14} />}
+                  onClick={() => {
+                    if (!nome.trim()) {
+                      showError("Digite um nome para o programa antes de criar fichas.");
+                      return;
+                    }
+                    setModalNovaFicha(true);
+                  }}
+                >
+                  Criar nova ficha
+                </Botao>
+              </>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Footer fixo com botões */}
+      <div className="absolute bottom-0 left-0 right-0 px-5 py-4 border-t border-borda bg-superficie/95 backdrop-blur-sm">
+        <div className="max-w-[480px] mx-auto">
+          <Botao
+            variante="primario"
+            onClick={handleSalvar}
+            className="w-full"
+          >
+            {editando ? "Salvar" : "Criar Programa"}
+          </Botao>
+        </div>
+      </div>
+
+      {/* Modal de copiar programa */}
+      <ModalCopiarPrograma
+        aberto={modalCopiarProgramaAberto}
+        aoCopiar={handleCopiarProgramaExistente}
+        aoCancelar={() => setModalCopiarProgramaAberto(false)}
+      />
+
+      {/* Modal Nova Ficha - Opções */}
+      {modalNovaFicha && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setModalNovaFicha(false)}
+          />
+
+          {/* Modal Content */}
+          <div className="relative w-[350px] bg-superficie rounded-3xl shadow-xl border border-borda animate-in zoom-in-95 duration-200">
+            <div className="px-5 py-4 border-b border-borda-suave">
+              <h3 className="text-lg font-semibold font-display text-texto-primario">Nova Ficha</h3>
+            </div>
+            <div className="p-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  // Salvar o programa se ainda não foi salvo
+                  if (!idParaUsar && !nome.trim()) {
+                    showError("Digite um nome para o programa primeiro.");
+                    return;
+                  }
+
+                  let programaIdFinal = idParaUsar;
+                  if (!programaIdFinal) {
+                    const novoPrograma = stateManagerRepository.adicionarPrograma({
+                      nome: nome.trim(),
+                      descricao: descricao.trim(),
+                      corBanner: null,
+                      ativo,
+                      fichaIds: [],
+                    });
+                    setProgramaTempId(novoPrograma.id);
+                    programaIdFinal = novoPrograma.id;
+                  }
+
+                  setModalNovaFicha(false);
+                  aoNavegar("criarFicha", {
+                    programaId: programaIdFinal,
+                    voltarPara: "editarPrograma",
+                    programaIdVoltar: programaIdFinal
+                  });
+                }}
+                className="w-full px-4 py-3 bg-superficie-suave hover:bg-superficie-hover rounded-xl border border-borda-suave text-left transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Icone nome="mais" tamanho={20} />
+                  <div>
+                    <p className="font-medium text-sm">Criar nova ficha</p>
+                    <p className="text-xs text-texto-secundario">Crie uma ficha do zero</p>
+                  </div>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Salvar o programa se ainda não foi salvo
+                  if (!idParaUsar && !nome.trim()) {
+                    showError("Digite um nome para o programa primeiro.");
+                    return;
+                  }
+
+                  let programaIdFinal = idParaUsar;
+                  if (!programaIdFinal) {
+                    const novoPrograma = stateManagerRepository.adicionarPrograma({
+                      nome: nome.trim(),
+                      descricao: descricao.trim(),
+                      corBanner: null,
+                      ativo,
+                      fichaIds: [],
+                    });
+                    setProgramaTempId(novoPrograma.id);
+                    programaIdFinal = novoPrograma.id;
+                  }
+
+                  setModalNovaFicha(false);
+                  setModalSelecionarFicha(true);
+                }}
+                className="w-full px-4 py-3 bg-superficie-suave hover:bg-superficie-hover rounded-xl border border-borda-suave text-left transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Icone nome="halter" tamanho={20} />
+                  <div>
+                    <p className="font-medium text-sm">Adicionar ficha existente</p>
+                    <p className="text-xs text-texto-secundario">Selecione uma ficha criada anteriormente</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+            <div className="px-5 py-4 border-t border-borda-suave flex justify-end">
+              <Botao
+                variante="fantasma"
+                onClick={() => setModalNovaFicha(false)}
+              >
+                Cancelar
+              </Botao>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Selecionar Ficha Existente */}
+      {modalSelecionarFicha && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setModalSelecionarFicha(false)}
+          />
+
+          {/* Modal Content */}
+          <div className="relative w-[350px] max-h-[80vh] bg-superficie rounded-3xl shadow-xl border border-borda animate-in zoom-in-95 duration-200 flex flex-col">
+            <div className="px-5 py-4 border-b border-borda-suave shrink-0">
+              <h3 className="text-lg font-semibold font-display text-texto-primario">Adicionar ficha existente</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4 space-y-2">
+                {stateManagerRepository.listarFichas().map((ficha) => {
+                  const programasDaFicha = stateManagerRepository.obterProgramasDaFicha(ficha.id);
+                  const jaVinculada = programasDaFicha.some((p) => p.id === idParaUsar);
+                  return (
+                    <button
+                      key={ficha.id}
+                      type="button"
+                      disabled={jaVinculada}
+                      onClick={() => {
+                        if (idParaUsar) {
+                          stateManagerRepository.vincularFichaAoPrograma(ficha.id, idParaUsar);
+                          setModalSelecionarFicha(false);
+                        }
+                      }}
+                      className={`w-full px-3 py-2.5 rounded-xl border text-left transition-colors ${
+                        jaVinculada
+                          ? "bg-superficie-suave border-borda-suave opacity-50 cursor-not-allowed"
+                          : "bg-superficie-suave hover:bg-superficie-hover border-borda-suave"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl shrink-0">{ficha.emoji || "💪"}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-texto-primario truncate">{ficha.nome}</p>
+                          <p className="text-xs text-texto-secundario">
+                            {ficha.exercicios.length} {ficha.exercicios.length === 1 ? "exercício" : "exercícios"}
+                          </p>
+                        </div>
+                        {jaVinculada && (
+                          <span className="text-xs text-texto-sutil shrink-0">Já adicionada</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+                {stateManagerRepository.listarFichas().length === 0 && (
+                  <p className="text-sm text-texto-sutil text-center py-8">
+                    Nenhuma ficha criada ainda
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-borda-suave flex justify-end shrink-0">
+              <Botao
+                variante="fantasma"
+                onClick={() => setModalSelecionarFicha(false)}
+              >
+                Cancelar
+              </Botao>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

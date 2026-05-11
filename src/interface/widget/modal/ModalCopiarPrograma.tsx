@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Modal de Cópia de Ficha Existente
+   Modal de Cópia de Programa Existente
    ═══════════════════════════════════════════ */
 
 import { useState, useEffect, useMemo } from "react";
@@ -7,27 +7,25 @@ import { stateManagerRepository } from "@/infrastructure/repo/state/state-manage
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
 
-interface ModalCopiarFichaProps {
+interface ModalCopiarProgramaProps {
   aberto: boolean;
-  aoCopiar: (fichaId: string) => void;
+  aoCopiar: (programaId: string) => void;
   aoCancelar: () => void;
-  fichaIdAtual?: string; // Para não mostrar a ficha being edited
 }
 
-export function ModalCopiarFicha({
+export function ModalCopiarPrograma({
   aberto,
   aoCopiar,
   aoCancelar,
-  fichaIdAtual,
-}: ModalCopiarFichaProps) {
+}: ModalCopiarProgramaProps) {
   const [busca, setBusca] = useState("");
-  const [fichaSelecionada, setFichaSelecionada] = useState<string | null>(null);
+  const [programaSelecionado, setProgramaSelecionado] = useState<string | null>(null);
 
   // Resetar ao abrir
   useEffect(() => {
     if (aberto) {
       setBusca("");
-      setFichaSelecionada(null);
+      setProgramaSelecionado(null);
     }
   }, [aberto]);
 
@@ -45,30 +43,25 @@ export function ModalCopiarFicha({
     return () => window.removeEventListener("keydown", handleEscape);
   }, [aberto, aoCancelar]);
 
-  // Listar e filtrar fichas
-  const fichasFiltradas = useMemo(() => {
-    const todasFichas = stateManagerRepository.listarFichas();
+  // Listar e filtrar programas
+  const programasFiltrados = useMemo(() => {
+    const todosProgramas = stateManagerRepository.listarProgramas();
 
     // Filtrar busca
-    let filtradas = todasFichas;
+    let filtrados = todosProgramas;
     if (busca) {
       const buscaLower = busca.toLowerCase();
-      filtradas = filtradas.filter((f) =>
-        f.nome.toLowerCase().includes(buscaLower)
+      filtrados = filtrados.filter((p) =>
+        p.nome.toLowerCase().includes(buscaLower)
       );
     }
 
-    // Remover ficha atual (se estiver editando)
-    if (fichaIdAtual) {
-      filtradas = filtradas.filter((f) => f.id !== fichaIdAtual);
-    }
-
-    return filtradas.sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [busca, fichaIdAtual]);
+    return filtrados.sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [busca]);
 
   const handleCopiar = () => {
-    if (!fichaSelecionada) return;
-    aoCopiar(fichaSelecionada);
+    if (!programaSelecionado) return;
+    aoCopiar(programaSelecionado);
   };
 
   if (!aberto) return null;
@@ -78,7 +71,7 @@ export function ModalCopiarFicha({
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-copiar-ficha-title"
+      aria-labelledby="modal-copiar-programa-title"
     >
       {/* Backdrop */}
       <div
@@ -91,7 +84,7 @@ export function ModalCopiarFicha({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-borda-suave shrink-0">
           <h2
-            id="modal-copiar-copiar-ficha-title"
+            id="modal-copiar-programa-title"
             className="text-lg font-semibold font-display text-texto-primario"
           >
             Copiar de Existente
@@ -113,7 +106,7 @@ export function ModalCopiarFicha({
               type="text"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar ficha..."
+              placeholder="Buscar programa..."
               className="
                 w-full px-4 py-3 pl-10
                 bg-superficie-suave border border-borda
@@ -139,22 +132,22 @@ export function ModalCopiarFicha({
           </div>
         </div>
 
-        {/* Lista de fichas */}
+        {/* Lista de programas */}
         <div className="flex-1 overflow-y-auto px-5 py-2">
-          {fichasFiltradas.length === 0 ? (
+          {programasFiltrados.length === 0 ? (
             <div className="py-12 text-center">
               <Icone nome="clipboard" tamanho={48} className="text-texto-sutil mx-auto mb-3" />
               <p className="text-sm text-texto-secundario">
-                {busca ? "Nenhuma ficha encontrada." : "Nenhuma ficha disponível."}
+                {busca ? "Nenhum programa encontrado." : "Nenhum programa disponível."}
               </p>
             </div>
           ) : (
             <div className="space-y-2">
-              {fichasFiltradas.map((ficha) => (
+              {programasFiltrados.map((programa) => (
                 <button
-                  key={ficha.id}
+                  key={programa.id}
                   type="button"
-                  onClick={() => setFichaSelecionada(ficha.id)}
+                  onClick={() => setProgramaSelecionado(programa.id)}
                   className={`
                     w-full px-4 py-3
                     bg-superficie-suave border rounded-xl
@@ -162,30 +155,25 @@ export function ModalCopiarFicha({
                     text-left
                     transition-all duration-150
                     hover:border-acento/50
-                    ${fichaSelecionada === ficha.id
+                    ${programaSelecionado === programa.id
                       ? "border-acento bg-acento-suave ring-2 ring-acento/20"
                       : "border-borda"
                     }
                   `}
                 >
-                  {/* Emoji */}
-                  <span className="text-2xl shrink-0">
-                    {ficha.emoji || "💪"}
-                  </span>
-
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-texto-primario truncate">
-                      {ficha.nome}
+                      {programa.nome}
                     </p>
                     <p className="text-xs text-texto-secundario">
-                      {ficha.exercicios.length} {ficha.exercicios.length === 1 ? "exercício" : "exercícios"}
-                      {ficha.cardio.length > 0 && " · cardio"}
+                      {programa.fichaIds.length} {programa.fichaIds.length === 1 ? "ficha" : "fichas"}
+                      {programa.ativo && " · Ativo"}
                     </p>
                   </div>
 
                   {/* Indicador de seleção */}
-                  {fichaSelecionada === ficha.id && (
+                  {programaSelecionado === programa.id && (
                     <div className="shrink-0">
                       <svg
                         className="w-5 h-5 text-acento"
@@ -219,7 +207,7 @@ export function ModalCopiarFicha({
             variante="primario"
             onClick={handleCopiar}
             className="flex-1"
-            disabled={!fichaSelecionada}
+            disabled={!programaSelecionado}
           >
             Copiar
           </Botao>

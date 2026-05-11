@@ -7,6 +7,7 @@ import { EditorFichaPage } from "@/interface/page/area-logada/gerenciar/EditorFi
 import { CabecalhoApp } from "@/interface/widget/cabecalho/CabecalhoApp";
 import { NavegacaoInferior, type AbaNavegacao } from "@/interface/widget/menu-lateral/NavegacaoInferior";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
+import { ToastProvider } from "@/interface/widget/toast";
 
 const titulosPorAba: Record<AbaNavegacao, string> = {
   treinos: "Meus Treinos",
@@ -19,6 +20,7 @@ const titulosPorAba: Record<AbaNavegacao, string> = {
 const titulosPorTela: Record<string, string> = {
   criarPrograma: "Novo Programa",
   editarPrograma: "Editar Programa",
+  criarFicha: "Nova Ficha",
   editarFicha: "Editar Ficha",
   historico: "Histórico de Treinos",
 };
@@ -49,8 +51,14 @@ function App() {
   };
 
   const aoVoltar = () => {
-    setTelaAtual(null);
-    setParamsTela(null);
+    // Se há um parâmetro voltarPara, navega para a tela apropriada
+    if (paramsTela?.voltarPara === "editarPrograma" && paramsTela?.programaIdVoltar) {
+      setTelaAtual("editarPrograma");
+      setParamsTela({ id: paramsTela.programaIdVoltar });
+    } else {
+      setTelaAtual(null);
+      setParamsTela(null);
+    }
   };
 
   // Obter título da tela atual
@@ -61,21 +69,15 @@ function App() {
     return titulosPorAba[abaAtiva];
   };
 
-  // Buscar o programaId de uma ficha (para edição)
-  const getProgramaIdDaFicha = (fichaId?: string): string => {
-    if (!fichaId) return "";
-    const ficha = stateManagerRepository.obterFichaPorId(fichaId);
-    return ficha?.programaId || "";
-  };
-
   return (
-    <div className="flex flex-col min-h-[100dvh] pt-4">
+    <ToastProvider>
+      <div className="flex flex-col min-h-[100dvh] pt-4">
       <CabecalhoApp
         tituloTela={getTituloTela()}
         nomeUsuario={abaAtiva === "treinos" && !telaAtual ? "Fulano" : undefined}
       />
 
-      <main className="flex-1 pb-[72px]">
+      <main className={`flex-1 ${telaAtual && ["criarPrograma", "editarPrograma", "criarFicha", "editarFicha"].includes(telaAtual) ? "" : "pb-[72px]"}`}>
         {/* Tela de histórico (acessada por navegação) */}
         {telaAtual === "historico" ? (
           <HistoricoPage
@@ -112,28 +114,37 @@ function App() {
             aoVoltar={aoVoltar}
             aoNavegar={aoNavegar}
           />
+        ) : telaAtual === "criarFicha" ? (
+          <EditorFichaPage
+            aoVoltar={aoVoltar}
+            programaId={paramsTela?.programaId}
+          />
         ) : telaAtual === "editarFicha" ? (
           <EditorFichaPage
             fichaId={paramsTela?.id}
             aoVoltar={aoVoltar}
-            programaId={paramsTela?.programaId || getProgramaIdDaFicha(paramsTela?.id)}
+            programaId={paramsTela?.programaId}
           />
         ) : null}
       </main>
 
-      <NavegacaoInferior
-        abaAtiva={abaAtiva}
-        aoMudarAba={(aba) => {
-          setAbaAtiva(aba);
-          setTelaAtual(null);
-          setParamsTela(null);
-        }}
-        aoCriarPrograma={() => {
-          setAbaAtiva("gerenciar");
-          setTelaAtual("criarPrograma");
-        }}
-      />
-    </div>
+      {/* Esconder navegação em telas de edição/criação */}
+      {!telaAtual || !["criarPrograma", "editarPrograma", "criarFicha", "editarFicha"].includes(telaAtual) ? (
+        <NavegacaoInferior
+          abaAtiva={abaAtiva}
+          aoMudarAba={(aba) => {
+            setAbaAtiva(aba);
+            setTelaAtual(null);
+            setParamsTela(null);
+          }}
+          aoCriarPrograma={() => {
+            setAbaAtiva("gerenciar");
+            setTelaAtual("criarPrograma");
+          }}
+        />
+      ) : null}
+      </div>
+    </ToastProvider>
   );
 }
 

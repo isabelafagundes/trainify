@@ -31,9 +31,11 @@ export interface StateManagerRepository {
   listarFichas(): Ficha[];
   obterFichaPorId(id: string): Ficha | null;
   obterFichasDoPrograma(programaId: string): Ficha[];
+  obterProgramasDaFicha(fichaId: string): Programa[];
+  obterFichasOrfas(): Ficha[];
   adicionarFicha(
-    ficha: Omit<Ficha, "id" | "programaId">,
-    programaId: string
+    ficha: Omit<Ficha, "id">,
+    programaId?: string
   ): Ficha;
   atualizarFicha(
     id: string,
@@ -41,6 +43,8 @@ export interface StateManagerRepository {
   ): Ficha | null;
   removerFicha(id: string): boolean;
   copiarFicha(id: string): Ficha | null;
+  vincularFichaAoPrograma(fichaId: string, programaId: string): boolean;
+  desvincularFichaDoPrograma(fichaId: string, programaId: string): boolean;
 
   // Exercícios
   listarTodosExercicios(): Exercicio[];
@@ -79,12 +83,19 @@ export const stateManagerRepository: StateManagerRepository = {
   obterFichaPorId: (id) => trainifyState.getFichaPorId(id),
   obterFichasDoPrograma: (programaId) =>
     trainifyState.getFichasDoPrograma(programaId),
+  obterProgramasDaFicha: (fichaId) =>
+    trainifyState.getProgramasDaFicha(fichaId),
+  obterFichasOrfas: () => trainifyState.getFichasOrfas(),
   adicionarFicha: (ficha, programaId) =>
     trainifyState.adicionarFicha(ficha, programaId),
   atualizarFicha: (id, atualizacoes) =>
     trainifyState.atualizarFicha(id, atualizacoes),
   removerFicha: (id) => trainifyState.removerFicha(id),
   copiarFicha: (id) => trainifyState.copiarFicha(id),
+  vincularFichaAoPrograma: (fichaId, programaId) =>
+    trainifyState.vincularFichaAoPrograma(fichaId, programaId),
+  desvincularFichaDoPrograma: (fichaId, programaId) =>
+    trainifyState.desvincularFichaDoPrograma(fichaId, programaId),
 
   // Exercícios
   listarTodosExercicios: () => trainifyState.getTodosExercicios(),

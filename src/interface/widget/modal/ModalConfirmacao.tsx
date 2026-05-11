@@ -33,7 +33,7 @@ export function ModalConfirmacao({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={aoCancelar}
     >
       {/* Backdrop */}
@@ -41,7 +41,7 @@ export function ModalConfirmacao({
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-sm bg-superficie rounded-3xl shadow-xl border border-borda animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
+        className="relative w-full max-w-[350px] bg-superficie rounded-3xl shadow-xl border border-borda animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Conteúdo */}

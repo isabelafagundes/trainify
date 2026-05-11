@@ -7,6 +7,7 @@ import type { Exercicio } from "@/domain/tipos";
 import { Input } from "@/interface/widget/formulario/Input";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
+import { useToast } from "@/interface/widget/toast";
 
 const GRUPOS_MUSCULARES_PREDEFINIDOS = [
   "Peito",
@@ -32,6 +33,7 @@ export function ModalCriarExercicio({
   aoCriar,
   aoCancelar,
 }: ModalCriarExercicioProps) {
+  const { showError } = useToast();
   const [nome, setNome] = useState("");
   const [grupoMuscular, setGrupoMuscular] = useState("");
   const [grupoCustomizado, setGrupoCustomizado] = useState("");
@@ -69,12 +71,12 @@ export function ModalCriarExercicio({
 
     // Validações
     if (nomeTrimado.length < 2) {
-      alert("Digite um nome com pelo menos 2 caracteres.");
+      showError("Digite um nome com pelo menos 2 caracteres.");
       return;
     }
 
     if (!grupoFinal) {
-      alert("Selecione ou digite um grupo muscular.");
+      showError("Selecione ou digite um grupo muscular.");
       return;
     }
 
@@ -91,7 +93,7 @@ export function ModalCriarExercicio({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-criar-exercicio-title"
@@ -103,7 +105,7 @@ export function ModalCriarExercicio({
       />
 
       {/* Modal Content */}
-      <div className="relative w-full max-w-sm bg-superficie rounded-3xl shadow-xl border border-borda animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
+      <div className="relative w-full max-w-[350px] bg-superficie rounded-3xl shadow-xl border border-borda animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-borda-suave">
           <h2

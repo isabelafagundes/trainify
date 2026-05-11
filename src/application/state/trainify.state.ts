@@ -99,6 +99,11 @@ export class TrainifyStateManager {
     );
   }
 
+  /** Obter programas de uma ficha (múltiplos) */
+  getProgramasDaFicha(fichaId: string): Programa[] {
+    return this.estado.programas.filter((p) => p.fichaIds.includes(fichaId));
+  }
+
   /** Obter programa por ID */
   getProgramaPorId(id: string): Programa | null {
     return this.estado.programas.find((p) => p.id === id) || null;
@@ -161,23 +166,15 @@ export class TrainifyStateManager {
     return this.estado.programas[index];
   }
 
-  /** Remover programa */
+  /** Remover programa (não remove fichas, apenas desvincula) */
   removerPrograma(id: string): boolean {
     const index = this.estado.programas.findIndex((p) => p.id === id);
     if (index === -1) return false;
 
     const programa = this.estado.programas[index];
 
-    // Remover fichas do programa (fichas são filhas do programa)
-    const fichasParaRemover = new Set(programa.fichaIds);
-    this.estado.fichas = this.estado.fichas.filter(
-      (f) => !fichasParaRemover.has(f.id)
-    );
-
-    // Remover registros do histórico dessas fichas
-    this.estado.historico = this.estado.historico.filter(
-      (h) => !fichasParaRemover.has(h.fichaId)
-    );
+    // Desvincular fichas do programa (fichas podem existir sem programas)
+    programa.fichaIds = [];
 
     // Remover o programa
     this.estado.programas.splice(index, 1);
@@ -187,25 +184,69 @@ export class TrainifyStateManager {
     return true;
   }
 
-  /** Adicionar ficha */
+  /** Vincular ficha a um programa */
+  vincularFichaAoPrograma(fichaId: string, programaId: string): boolean {
+    const ficha = this.estado.fichas.find((f) => f.id === fichaId);
+    if (!ficha) {
+      console.error(`Ficha com ID ${fichaId} não encontrada`);
+      return false;
+    }
+
+    const programa = this.estado.programas.find((p) => p.id === programaId);
+    if (!programa) {
+      console.error(`Programa com ID ${programaId} não encontrado`);
+      return false;
+    }
+
+    // Verificar se já está vinculada
+    if (programa.fichaIds.includes(fichaId)) {
+      return false; // Já está vinculada
+    }
+
+    programa.fichaIds.push(fichaId);
+    this.salvarDados();
+    this.notificar();
+    return true;
+  }
+
+  /** Desvincular ficha de um programa */
+  desvincularFichaDoPrograma(fichaId: string, programaId: string): boolean {
+    const programa = this.estado.programas.find((p) => p.id === programaId);
+    if (!programa) return false;
+
+    const index = programa.fichaIds.indexOf(fichaId);
+    if (index === -1) return false;
+
+    programa.fichaIds.splice(index, 1);
+    this.salvarDados();
+    this.notificar();
+    return true;
+  }
+
+  /** Obter fichas não vinculadas a nenhum programa */
+  getFichasOrfas(): Ficha[] {
+    const fichasVinculadas = new Set(
+      this.estado.programas.flatMap((p) => p.fichaIds)
+    );
+
+    return this.estado.fichas.filter((f) => !fichasVinculadas.has(f.id));
+  }
+
+  /** Adicionar ficha (opcionalmente vinculada a um programa) */
   adicionarFicha(
-    ficha: Omit<Ficha, "id" | "programaId">,
-    programaId: string
+    ficha: Omit<Ficha, "id">,
+    programaId?: string
   ): Ficha {
     const nova: Ficha = {
       ...ficha,
       id: crypto.randomUUID(),
-      programaId, // Adiciona referência ao programa pai
     };
 
     this.estado.fichas.push(nova);
 
-    // Adiciona automaticamente ao programa
-    const programa = this.estado.programas.find((p) => p.id === programaId);
-    if (programa) {
-      programa.fichaIds.push(nova.id);
-    } else {
-      throw new Error(`Programa com ID ${programaId} não encontrado`);
+    // Se fornecido, vincula ao programa
+    if (programaId) {
+      this.vincularFichaAoPrograma(nova.id, programaId);
     }
 
     this.salvarDados();
@@ -230,7 +271,7 @@ export class TrainifyStateManager {
     return this.estado.fichas[index];
   }
 
-  /** Remover ficha */
+  /** Remover ficha (desvincula de todos os programas e remove) */
   removerFicha(id: string): boolean {
     const index = this.estado.fichas.findIndex((f) => f.id === id);
     if (index === -1) return false;
@@ -293,11 +334,12 @@ export class TrainifyStateManager {
     return novo;
   }
 
-  /** Copiar ficha */
+  /** Copiar ficha (sem vincular automaticamente a programa) */
   copiarFicha(fichaId: string): Ficha | null {
     const ficha = this.getFichaPorId(fichaId);
     if (!ficha) return null;
 
+    // Copiar sem vincular a programa (usuário pode vincular depois)
     const copia = this.adicionarFicha({
       nome: `${ficha.nome} (cópia)`,
       descricao: ficha.descricao,
@@ -406,17 +448,10 @@ export class TrainifyStateManager {
       if (salvo) {
         const dados: DadosTreino = JSON.parse(salvo);
 
-        // Cleanup: remover fichas órfãs (não pertencem a nenhum programa)
-        const fichaIdsEmUso = new Set(
-          (dados.programas || []).flatMap((p) => p.fichaIds)
-        );
-        const fichasFiltradas = (dados.fichas || []).filter((f) =>
-          fichaIdsEmUso.has(f.id)
-        );
-
+        // Não removemos mais fichas órfãs - elas podem existir independentemente
         return {
           programas: dados.programas || [],
-          fichas: fichasFiltradas,
+          fichas: dados.fichas || [],
           historico: dados.historico || [],
           exerciciosCustom: dados.exerciciosCustom || [],
         };

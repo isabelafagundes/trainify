@@ -45,7 +45,6 @@ export interface Ficha {
   emoji?: string; /** Emoji opcional para substituir o ícone SVG */
   exercicios: ExercicioFicha[];
   cardio: EntradaCardio[];
-  programaId?: string; /** ID do programa pai (para consistência e rastreamento) */
 }
 
 /** Programa de treino */

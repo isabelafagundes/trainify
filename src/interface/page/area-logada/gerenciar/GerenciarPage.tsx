@@ -3,15 +3,16 @@
    ═══════════════════════════════════════════ */
 
 import { useEffect, useState } from "react";
-import type { Programa, Exercicio } from "@/domain/tipos";
+import type { Programa, Exercicio, Ficha } from "@/domain/tipos";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
 import { EstadoVazio } from "@/interface/widget/EstadoVazio";
 import { BigSwitcher } from "@/interface/widget/formulario/BigSwitcher";
 import { ModalConfirmacao } from "@/interface/widget/modal/ModalConfirmacao";
+import { useToast } from "@/interface/widget/toast";
 
-type VisualizacaoGerenciar = "programas" | "exercicios";
+type VisualizacaoGerenciar = "programas" | "fichas" | "exercicios";
 
 interface PropriedadesGerenciarPage {
   aoNavegar: (destino: string, params?: Record<string, string>) => void;
@@ -19,17 +20,21 @@ interface PropriedadesGerenciarPage {
 
 const OPCOES_VISUALIZACAO = [
   { id: "programas", label: "Programas", icone: "clipboard" },
+  { id: "fichas", label: "Fichas", icone: "halter" },
   { id: "exercicios", label: "Exercícios", icone: "alvo" },
-] as const;
+];
 
 export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
+  const { showInfo } = useToast();
   const [visualizacao, setVisualizacao] = useState<VisualizacaoGerenciar>("programas");
   const [programas, setProgramas] = useState<Programa[]>([]);
+  const [fichas, _setFichas] = useState<Ficha[]>([]);
   const [exerciciosCustom, setExerciciosCustom] = useState<Exercicio[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   // IDs de itens sendo excluídos (para animação de fade-out)
   const [programasExcluindo, setProgramasExcluindo] = useState<Set<string>>(new Set());
+  const [fichasExcluindo, setFichasExcluindo] = useState<Set<string>>(new Set());
   const [exerciciosExcluindo, setExerciciosExcluindo] = useState<Set<string>>(new Set());
 
   // Estado dos modais de confirmação
@@ -43,11 +48,17 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
     id: null,
     nome: "",
   });
+  const [modalExcluirFicha, setModalExcluirFicha] = useState<{ aberto: boolean; id: string | null; nome: string }>({
+    aberto: false,
+    id: null,
+    nome: "",
+  });
 
   // Carregar dados e inscrever para mudanças
   useEffect(() => {
     const carregarDados = () => {
       setProgramas(stateManagerRepository.listarProgramas());
+      _setFichas(stateManagerRepository.listarFichas());
       setExerciciosCustom(stateManagerRepository.listarExerciciosCustom());
       setCarregando(false);
     };
@@ -188,7 +199,7 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                     variante="fantasma"
                     tamanho="compacto"
                     icone={<Icone nome="mais" tamanho={16} />}
-                    onClick={() => alert("Funcionalidade em desenvolvimento: criar exercício customizado")}
+                    onClick={() => showInfo("Funcionalidade em desenvolvimento: criar exercício customizado")}
                   >
                     Novo
                   </Botao>
@@ -204,7 +215,7 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                     <Botao
                       variante="secundario"
                       icone={<Icone nome="mais" tamanho={16} />}
-                      onClick={() => alert("Funcionalidade em desenvolvimento: criar exercício customizado")}
+                      onClick={() => showInfo("Funcionalidade em desenvolvimento: criar exercício customizado")}
                     >
                       Criar Exercício
                     </Botao>
@@ -228,11 +239,91 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
         </section>
       </div>
 
+      {/* ── Visualização: Fichas ── */}
+      <div
+        className={`
+          transition-opacity duration-200 ease-out
+          ${visualizacao === "fichas" ? "opacity-100" : "opacity-0 hidden"}
+        `}
+      >
+        <section className="space-y-4">
+          {/* Loading Skeleton */}
+          {carregando ? (
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-superficie rounded-2xl border border-borda overflow-hidden">
+                  <div className="px-5 py-4 bg-superficie-suave animate-pulse">
+                    <div className="h-5 bg-borda-suave rounded w-1/3 mb-2"></div>
+                    <div className="h-4 bg-borda-suave rounded w-1/2"></div>
+                  </div>
+                  <div className="px-5 py-3 flex items-center justify-between">
+                    <div className="h-4 bg-borda-suave rounded w-16"></div>
+                    <div className="flex gap-2">
+                      <div className="h-8 bg-borda-suave rounded w-16"></div>
+                      <div className="h-8 bg-borda-suave rounded w-16"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Header com ação */}
+              {fichas.length > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-texto-sutil">
+                    {fichas.length} {fichas.length === 1 ? "ficha" : "fichas"}
+                  </span>
+                  <Botao
+                    variante="fantasma"
+                    tamanho="compacto"
+                    icone={<Icone nome="mais" tamanho={16} />}
+                    onClick={() => aoNavegar("criarFicha")}
+                  >
+                    Nova Ficha
+                  </Botao>
+                </div>
+              )}
+
+              {fichas.length === 0 ? (
+                <EstadoVazio
+                  icone="halter"
+                  titulo="Nenhuma ficha criada"
+                  descricao="Crie sua primeira ficha de treino para começar."
+                  acao={
+                    <Botao
+                      variante="secundario"
+                      icone={<Icone nome="mais" tamanho={16} />}
+                      onClick={() => aoNavegar("criarFicha")}
+                    >
+                      Criar Ficha
+                    </Botao>
+                  }
+                />
+              ) : (
+                <div className="space-y-3">
+                  {fichas.map((ficha) => (
+                    <CartaoFicha
+                      key={ficha.id}
+                      ficha={ficha}
+                      programasDaFicha={stateManagerRepository.obterProgramasDaFicha(ficha.id)}
+                      estaSendoExcluida={fichasExcluindo.has(ficha.id)}
+                      aoEditar={() => aoNavegar("editarFicha", { id: ficha.id })}
+                      aoExcluir={() => abrirModalExcluirFicha(ficha.id, ficha.nome)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      </div>
+
       {/* ── Modais de Confirmação ── */}
       <ModalConfirmacao
         aberto={modalExcluirPrograma.aberto}
         titulo="Excluir programa"
-        descricao={`Tem certeza que deseja excluir "${modalExcluirPrograma.nome}"? Todas as fichas deste programa também serão excluídas permanentemente.`}
+        descricao={`Tem certeza que deseja excluir "${modalExcluirPrograma.nome}"? As fichas serão desvinculadas mas não excluídas.`}
         textoConfirmar="Excluir"
         textoCancelar="Manter"
         variant="perigo"
@@ -250,6 +341,17 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
         aoConfirmar={handleConfirmarExcluirExercicio}
         aoCancelar={() => setModalExcluirExercicio({ aberto: false, id: null, nome: "" })}
       />
+
+      <ModalConfirmacao
+        aberto={modalExcluirFicha.aberto}
+        titulo="Excluir ficha"
+        descricao={`Tem certeza que deseja excluir "${modalExcluirFicha.nome}"? Esta ação não pode ser desfeita.`}
+        textoConfirmar="Excluir"
+        textoCancelar="Manter"
+        variant="perigo"
+        aoConfirmar={handleConfirmarExcluirFicha}
+        aoCancelar={() => setModalExcluirFicha({ aberto: false, id: null, nome: "" })}
+      />
     </div>
   );
 
@@ -260,6 +362,10 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
 
   function abrirModalExcluirExercicio(id: string, nome: string) {
     setModalExcluirExercicio({ aberto: true, id, nome });
+  }
+
+  function abrirModalExcluirFicha(id: string, nome: string) {
+    setModalExcluirFicha({ aberto: true, id, nome });
   }
 
   // Handlers para confirmar exclusão (com fade-out)
@@ -300,6 +406,25 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
       });
     }, 200);
   }
+
+  function handleConfirmarExcluirFicha() {
+    if (!modalExcluirFicha.id) return;
+
+    // Adicionar ao conjunto de itens sendo excluídos
+    setFichasExcluindo((prev) => new Set(prev).add(modalExcluirFicha.id!));
+    setModalExcluirFicha({ aberto: false, id: null, nome: "" });
+
+    // Aguardar animação de fade-out (200ms)
+    setTimeout(() => {
+      stateManagerRepository.removerFicha(modalExcluirFicha.id!);
+      // Remover do conjunto após exclusão
+      setFichasExcluindo((prev) => {
+        const novo = new Set(prev);
+        novo.delete(modalExcluirFicha.id!);
+        return novo;
+      });
+    }, 200);
+  }
 }
 
 /* ── Componentes Internos ── */
@@ -314,21 +439,9 @@ interface CartaoProgramaProps {
 function CartaoPrograma({ programa, estaSendoExcluido = false, aoEditar, aoExcluir }: CartaoProgramaProps) {
   const fichasDoPrograma = stateManagerRepository.obterFichasDoPrograma(programa.id);
 
-  // Cor do banner
-  const corBanner = programa.corBanner;
-  const classesBanner = corBanner
-    ? {
-        azul: "bg-[oklch(0.95_0.025_250)] text-[oklch(0.52_0.10_250)]",
-        verde: "bg-[oklch(0.95_0.025_155)] text-[oklch(0.52_0.10_155)]",
-        roxo: "bg-[oklch(0.95_0.025_300)] text-[oklch(0.50_0.10_300)]",
-        laranja: "bg-[oklch(0.95_0.030_55)] text-[oklch(0.55_0.12_55)]",
-        rosa: "bg-[oklch(0.95_0.025_350)] text-[oklch(0.52_0.10_350)]",
-        vermelho: "bg-[oklch(0.95_0.025_25)] text-[oklch(0.50_0.11_25)]",
-        amarelo: "bg-[oklch(0.95_0.030_85)] text-[oklch(0.55_0.11_85)]",
-        ciano: "bg-[oklch(0.95_0.020_210)] text-[oklch(0.52_0.08_210)]",
-        indigo: "bg-[oklch(0.95_0.025_280)] text-[oklch(0.50_0.11_280)]",
-      }[corBanner]
-    : "bg-superficie-suave text-texto-secundario";
+  const handleToggleAtivo = () => {
+    stateManagerRepository.atualizarPrograma(programa.id, { ativo: !programa.ativo });
+  };
 
   return (
     <div
@@ -336,22 +449,23 @@ function CartaoPrograma({ programa, estaSendoExcluido = false, aoEditar, aoExclu
         bg-superficie rounded-2xl border border-borda overflow-hidden
         hover:bg-superficie-suave transition-all duration-200
         ${estaSendoExcluido ? "opacity-0 scale-95" : "opacity-100 scale-100"}
+        ${programa.ativo ? "ring-2 ring-acento/20" : ""}
       `}
     >
       {/* Banner */}
-      <div className={`px-5 py-4 ${classesBanner}`}>
+      <div className={`px-5 py-4 ${programa.ativo ? "bg-acento/10" : "bg-superficie-suave"} text-texto-secundario`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-lg font-semibold font-display">{programa.nome}</h3>
               {programa.ativo && (
-                <span className="px-2 py-0.5 bg-acento/20 text-acento text-xs font-semibold rounded-full shrink-0">
+                <span className="px-2 py-0.5 bg-acento text-white text-xs font-semibold rounded-full shrink-0">
                   ATIVO
                 </span>
               )}
             </div>
             {programa.descricao && (
-              <p className="text-sm leading-snug opacity-80">{programa.descricao}</p>
+              <p className="text-sm leading-snug text-texto-secundario">{programa.descricao}</p>
             )}
           </div>
         </div>
@@ -363,21 +477,44 @@ function CartaoPrograma({ programa, estaSendoExcluido = false, aoEditar, aoExclu
           {fichasDoPrograma.length} {fichasDoPrograma.length === 1 ? "ficha" : "fichas"}
         </p>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Toggle ativo */}
           <button
             type="button"
-            onClick={aoEditar}
-            className="px-4 py-2 text-sm font-medium text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
+            onClick={handleToggleAtivo}
+            className={`
+              flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
+              ${programa.ativo
+                ? "bg-acento/20 text-acento hover:bg-acento/30"
+                : "bg-superficie-suave text-texto-secundario hover:bg-superficie-hover"
+              }
+            `}
+            title={programa.ativo ? "Desativar programa" : "Ativar programa"}
           >
-            Editar
+            <span className="text-xs font-medium">
+              {programa.ativo ? "Ativo" : "Ativar"}
+            </span>
+            <div className={`w-9 h-5 rounded-full relative transition-colors duration-200 ${programa.ativo ? "bg-acento" : "bg-borda"}`}>
+              <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${programa.ativo ? "translate-x-4" : "translate-x-0"}`} />
+            </div>
           </button>
-          <button
-            type="button"
-            onClick={aoExcluir}
-            className="px-4 py-2 text-sm font-medium text-error hover:bg-error/10 rounded-lg transition-colors"
-          >
-            Excluir
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={aoEditar}
+              className="px-4 py-2 text-sm font-medium text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={aoExcluir}
+              className="px-4 py-2 text-sm font-medium text-error hover:bg-error/10 rounded-lg transition-colors"
+            >
+              Excluir
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -422,6 +559,67 @@ function LinhaExercicioCustom({
       >
         Excluir
       </button>
+    </div>
+  );
+}
+
+interface CartaoFichaProps {
+  ficha: Ficha;
+  programasDaFicha?: Programa[];
+  estaSendoExcluida?: boolean;
+  aoEditar: () => void;
+  aoExcluir: () => void;
+}
+
+function CartaoFicha({ ficha, programasDaFicha = [], estaSendoExcluida = false, aoEditar, aoExcluir }: CartaoFichaProps) {
+  return (
+    <div
+      className={`
+        bg-superficie rounded-2xl border border-borda overflow-hidden
+        hover:bg-superficie-suave transition-all duration-200
+        ${estaSendoExcluida ? "opacity-0 scale-95" : "opacity-100 scale-100"}
+      `}
+    >
+      <div className="px-5 py-4 flex items-center gap-4">
+        {/* Emoji */}
+        <span className="text-3xl shrink-0">
+          {ficha.emoji || "💪"}
+        </span>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-semibold font-display text-texto-primario truncate">
+            {ficha.nome}
+          </h3>
+          <p className="text-sm text-texto-secundario mt-0.5">
+            {ficha.exercicios.length} {ficha.exercicios.length === 1 ? "exercício" : "exercícios"}
+            {ficha.cardio.length > 0 && ` · ${ficha.cardio.length} ${ficha.cardio.length === 1 ? "cardio" : "cardios"}`}
+          </p>
+          {programasDaFicha.length > 0 && (
+            <p className="text-xs text-texto-sutil mt-1">
+              {programasDaFicha.map((p) => p.nome).join(", ")}
+            </p>
+          )}
+        </div>
+
+        {/* Ações */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={aoEditar}
+            className="px-4 py-2 text-sm font-medium text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            onClick={aoExcluir}
+            className="px-4 py-2 text-sm font-medium text-error hover:bg-error/10 rounded-lg transition-colors"
+          >
+            Excluir
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
