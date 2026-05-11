@@ -82,7 +82,7 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
   })();
 
   return (
-    <div className="px-5 py-4 space-y-6">
+    <div className="px-5 py-4 space-y-4">
       {/* ── Switcher de Visualização ── */}
       <BigSwitcher
         opcoes={OPCOES_VISUALIZACAO}
