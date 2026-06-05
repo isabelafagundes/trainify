@@ -100,6 +100,10 @@ const caminhoIcones: Record<string, { caminhos: string[]; preenchido?: boolean }
     ],
   },
 
+  check: {
+    caminhos: ["M4.5 12.75l6 6 9-13.5"],
+  },
+
   tendencia: {
     caminhos: [
       "M3.75 20.25L9 14.25l3.75 3 4.5-5.25L21 7.5M17.25 7.5H21v3.75",

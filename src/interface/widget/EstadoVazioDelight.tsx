@@ -97,8 +97,8 @@ export function EstadoVazioDelight({
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Animação de entrada
-    setVisible(true);
+    const id = window.setTimeout(() => setVisible(true), 0);
+    return () => window.clearTimeout(id);
   }, []);
 
   const tituloFinal = titulo || mensagem.titulo;

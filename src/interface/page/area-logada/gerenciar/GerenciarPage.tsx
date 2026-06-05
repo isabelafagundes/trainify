@@ -2,7 +2,7 @@
    Tela Principal de Gerenciamento — Trainify
    ═══════════════════════════════════════════ */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Programa, Exercicio, Ficha } from "@/domain/tipos";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Botao } from "@/interface/widget/botao/Botao";
@@ -10,6 +10,7 @@ import { Icone } from "@/interface/widget/svg/Icone";
 import { EstadoVazio } from "@/interface/widget/EstadoVazio";
 import { BigSwitcher } from "@/interface/widget/formulario/BigSwitcher";
 import { ModalConfirmacao } from "@/interface/widget/modal/ModalConfirmacao";
+import { ModalCriarExercicio } from "@/interface/widget/modal/ModalCriarExercicio";
 import { useToast } from "@/interface/widget/toast";
 
 type VisualizacaoGerenciar = "programas" | "fichas" | "exercicios";
@@ -25,12 +26,13 @@ const OPCOES_VISUALIZACAO = [
 ];
 
 export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
-  const { showInfo } = useToast();
+  const { showSuccess } = useToast();
   const [visualizacao, setVisualizacao] = useState<VisualizacaoGerenciar>("programas");
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [fichas, _setFichas] = useState<Ficha[]>([]);
   const [exerciciosCustom, setExerciciosCustom] = useState<Exercicio[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [modalCriarExercicioAberto, setModalCriarExercicioAberto] = useState(false);
 
   // IDs de itens sendo excluídos (para animação de fade-out)
   const [programasExcluindo, setProgramasExcluindo] = useState<Set<string>>(new Set());
@@ -81,14 +83,38 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
     return `${count} exercícios customizados`;
   })();
 
+  // Exercícios agrupados por grupo muscular, ordenados alfabeticamente
+  const gruposDeExercicios = useMemo(() => {
+    const mapa = new Map<string, Exercicio[]>();
+    for (const exercicio of exerciciosCustom) {
+      const lista = mapa.get(exercicio.grupoMuscular) ?? [];
+      lista.push(exercicio);
+      mapa.set(exercicio.grupoMuscular, lista);
+    }
+    return [...mapa.entries()]
+      .map(([grupo, lista]) => ({
+        grupo,
+        lista: [...lista].sort((a, b) => a.nome.localeCompare(b.nome)),
+      }))
+      .sort((a, b) => a.grupo.localeCompare(b.grupo));
+  }, [exerciciosCustom]);
+
+  function handleCriarExercicioCustom(dados: Omit<Exercicio, "id">) {
+    stateManagerRepository.adicionarExercicioCustom(dados);
+    setModalCriarExercicioAberto(false);
+    showSuccess(`"${dados.nome}" adicionado aos seus exercícios.`);
+  }
+
   return (
     <div className="px-5 py-4 space-y-4">
       {/* ── Switcher de Visualização ── */}
-      <BigSwitcher
-        opcoes={OPCOES_VISUALIZACAO}
-        valorSelecionado={visualizacao}
-        aoAlterar={(valor) => setVisualizacao(valor as VisualizacaoGerenciar)}
-      />
+      <div className="reveal-up">
+        <BigSwitcher
+          opcoes={OPCOES_VISUALIZACAO}
+          valorSelecionado={visualizacao}
+          aoAlterar={(valor) => setVisualizacao(valor as VisualizacaoGerenciar)}
+        />
+      </div>
 
       {/* ── Visualização: Programas ── */}
       <div
@@ -122,6 +148,9 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
               {/* Header com ação - só mostra quando há programas */}
               {programas.length > 0 && (
                 <div className="flex items-center justify-between">
+                  <span className="text-sm text-texto-sutil">
+                    {programas.length} {programas.length === 1 ? "programa" : "programas"}
+                  </span>
                   <Botao
                     variante="fantasma"
                     tamanho="compacto"
@@ -150,14 +179,19 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                 />
               ) : (
                 <div className="space-y-3">
-                  {programas.map((programa) => (
-                    <CartaoPrograma
+                  {programas.map((programa, i) => (
+                    <div
                       key={programa.id}
-                      programa={programa}
-                      estaSendoExcluido={programasExcluindo.has(programa.id)}
-                      aoEditar={() => aoNavegar("editarPrograma", { id: programa.id })}
-                      aoExcluir={() => abrirModalExcluirPrograma(programa.id, programa.nome)}
-                    />
+                      className="reveal-up"
+                      style={{ animationDelay: `${60 + i * 60}ms` }}
+                    >
+                      <CartaoPrograma
+                        programa={programa}
+                        estaSendoExcluido={programasExcluindo.has(programa.id)}
+                        aoEditar={() => aoNavegar("editarPrograma", { id: programa.id })}
+                        aoExcluir={() => abrirModalExcluirPrograma(programa.id, programa.nome)}
+                      />
+                    </div>
                   ))}
                 </div>
               )}
@@ -199,7 +233,7 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                     variante="fantasma"
                     tamanho="compacto"
                     icone={<Icone nome="mais" tamanho={16} />}
-                    onClick={() => showInfo("Funcionalidade em desenvolvimento: criar exercício customizado")}
+                    onClick={() => setModalCriarExercicioAberto(true)}
                   >
                     Novo
                   </Botao>
@@ -215,22 +249,40 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                     <Botao
                       variante="secundario"
                       icone={<Icone nome="mais" tamanho={16} />}
-                      onClick={() => showInfo("Funcionalidade em desenvolvimento: criar exercício customizado")}
+                      onClick={() => setModalCriarExercicioAberto(true)}
                     >
                       Criar Exercício
                     </Botao>
                   }
                 />
               ) : (
-                <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
-                  {exerciciosCustom.map((exercicio, index) => (
-                    <LinhaExercicioCustom
-                      key={exercicio.id}
-                      exercicio={exercicio}
-                      estaSendoExcluido={exerciciosExcluindo.has(exercicio.id)}
-                      aoExcluir={() => abrirModalExcluirExercicio(exercicio.id, exercicio.nome)}
-                      semBorda={index === exerciciosCustom.length - 1}
-                    />
+                <div className="space-y-6">
+                  {gruposDeExercicios.map(({ grupo, lista }, i) => (
+                    <section
+                      key={grupo}
+                      className="space-y-2 reveal-up"
+                      style={{ animationDelay: `${60 + i * 70}ms` }}
+                    >
+                      <div className="flex items-baseline justify-between px-1">
+                        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil">
+                          {grupo}
+                        </h3>
+                        <span className="text-xs tabular-nums text-texto-sutil/60">
+                          {lista.length}
+                        </span>
+                      </div>
+                      <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
+                        {lista.map((exercicio, index) => (
+                          <LinhaExercicioCustom
+                            key={exercicio.id}
+                            exercicio={exercicio}
+                            estaSendoExcluido={exerciciosExcluindo.has(exercicio.id)}
+                            aoExcluir={() => abrirModalExcluirExercicio(exercicio.id, exercicio.nome)}
+                            semBorda={index === lista.length - 1}
+                          />
+                        ))}
+                      </div>
+                    </section>
                   ))}
                 </div>
               )}
@@ -302,15 +354,20 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                 />
               ) : (
                 <div className="space-y-3">
-                  {fichas.map((ficha) => (
-                    <CartaoFicha
+                  {fichas.map((ficha, i) => (
+                    <div
                       key={ficha.id}
-                      ficha={ficha}
-                      programasDaFicha={stateManagerRepository.obterProgramasDaFicha(ficha.id)}
-                      estaSendoExcluida={fichasExcluindo.has(ficha.id)}
-                      aoEditar={() => aoNavegar("editarFicha", { id: ficha.id })}
-                      aoExcluir={() => abrirModalExcluirFicha(ficha.id, ficha.nome)}
-                    />
+                      className="reveal-up"
+                      style={{ animationDelay: `${60 + i * 60}ms` }}
+                    >
+                      <CartaoFicha
+                        ficha={ficha}
+                        programasDaFicha={stateManagerRepository.obterProgramasDaFicha(ficha.id)}
+                        estaSendoExcluida={fichasExcluindo.has(ficha.id)}
+                        aoEditar={() => aoNavegar("editarFicha", { id: ficha.id })}
+                        aoExcluir={() => abrirModalExcluirFicha(ficha.id, ficha.nome)}
+                      />
+                    </div>
                   ))}
                 </div>
               )}
@@ -318,6 +375,13 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
           )}
         </section>
       </div>
+
+      {/* ── Modal de Criação de Exercício ── */}
+      <ModalCriarExercicio
+        aberto={modalCriarExercicioAberto}
+        aoCriar={handleCriarExercicioCustom}
+        aoCancelar={() => setModalCriarExercicioAberto(false)}
+      />
 
       {/* ── Modais de Confirmação ── */}
       <ModalConfirmacao
@@ -472,12 +536,12 @@ function CartaoPrograma({ programa, estaSendoExcluido = false, aoEditar, aoExclu
       </div>
 
       {/* Info e ações */}
-      <div className="px-5 py-3 flex items-center justify-between gap-4">
-        <p className="text-sm text-texto-secundario font-medium">
+      <div className="px-5 py-3 flex items-center justify-between gap-3">
+        <p className="text-sm text-texto-secundario font-medium shrink-0 whitespace-nowrap">
           {fichasDoPrograma.length} {fichasDoPrograma.length === 1 ? "ficha" : "fichas"}
         </p>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Toggle ativo */}
           <button
             type="button"
@@ -499,18 +563,18 @@ function CartaoPrograma({ programa, estaSendoExcluido = false, aoEditar, aoExclu
             </div>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={aoEditar}
-              className="px-4 py-2 text-sm font-medium text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
+              className="px-3 py-2 text-sm font-medium text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
             >
               Editar
             </button>
             <button
               type="button"
               onClick={aoExcluir}
-              className="px-4 py-2 text-sm font-medium text-error hover:bg-error/10 rounded-lg transition-colors"
+              className="px-3 py-2 text-sm font-medium text-error hover:bg-error/10 rounded-lg transition-colors"
             >
               Excluir
             </button>
@@ -548,16 +612,16 @@ function LinhaExercicioCustom({
         <p className="text-base font-medium text-texto-primario truncate">
           {exercicio.nome}
         </p>
-        <p className="text-sm text-texto-secundario mt-0.5">{exercicio.grupoMuscular}</p>
       </div>
 
       {/* Ação */}
       <button
         type="button"
         onClick={aoExcluir}
-        className="px-4 py-2 text-sm font-medium text-error hover:bg-error/10 rounded-lg transition-colors shrink-0"
+        aria-label={`Excluir ${exercicio.nome}`}
+        className="p-2 -mr-1 text-texto-sutil hover:text-error hover:bg-error/10 rounded-lg transition-colors shrink-0"
       >
-        Excluir
+        <Icone nome="lixeira" tamanho={18} />
       </button>
     </div>
   );
@@ -580,15 +644,16 @@ function CartaoFicha({ ficha, programasDaFicha = [], estaSendoExcluida = false, 
         ${estaSendoExcluida ? "opacity-0 scale-95" : "opacity-100 scale-100"}
       `}
     >
-      <div className="px-5 py-4 flex items-center gap-4">
+      {/* Conteúdo */}
+      <div className="px-5 pt-4 pb-3 flex items-start gap-4">
         {/* Emoji */}
-        <span className="text-3xl shrink-0">
+        <span className="text-3xl shrink-0 leading-none mt-0.5">
           {ficha.emoji || "💪"}
         </span>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold font-display text-texto-primario truncate">
+          <h3 className="text-base font-semibold font-display text-texto-primario leading-snug">
             {ficha.nome}
           </h3>
           <p className="text-sm text-texto-secundario mt-0.5">
@@ -596,29 +661,29 @@ function CartaoFicha({ ficha, programasDaFicha = [], estaSendoExcluida = false, 
             {ficha.cardio.length > 0 && ` · ${ficha.cardio.length} ${ficha.cardio.length === 1 ? "cardio" : "cardios"}`}
           </p>
           {programasDaFicha.length > 0 && (
-            <p className="text-xs text-texto-sutil mt-1">
+            <p className="text-xs text-texto-sutil mt-1 truncate">
               {programasDaFicha.map((p) => p.nome).join(", ")}
             </p>
           )}
         </div>
+      </div>
 
-        {/* Ações */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={aoEditar}
-            className="px-4 py-2 text-sm font-medium text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={aoExcluir}
-            className="px-4 py-2 text-sm font-medium text-error hover:bg-error/10 rounded-lg transition-colors"
-          >
-            Excluir
-          </button>
-        </div>
+      {/* Ações */}
+      <div className="flex items-center justify-end gap-1 px-3 py-1.5 border-t border-borda-suave">
+        <button
+          type="button"
+          onClick={aoEditar}
+          className="px-3.5 py-2 text-sm font-medium text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
+        >
+          Editar
+        </button>
+        <button
+          type="button"
+          onClick={aoExcluir}
+          className="px-3.5 py-2 text-sm font-medium text-error hover:bg-error/10 rounded-lg transition-colors"
+        >
+          Excluir
+        </button>
       </div>
     </div>
   );

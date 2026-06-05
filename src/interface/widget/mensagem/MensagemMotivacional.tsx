@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface PropriedadesMensagemMotivacional {
   contexto?: "inicio" | "treino" | "conclusao" | "streak" | "recorde";
@@ -59,38 +59,24 @@ const mensagensStreak: Record<number, MensagemMotivacional> = {
   100: { texto: "100 DIAS! ABSURDO! Você é imbatível! 🎊", emoji: "🎊" },
 };
 
-/**
- * Componente que mostra mensagens motivacionais variadas
- * Rotaciona entre mensagens baseadas no contexto
- */
 export function MensagemMotivacional({
   contexto = "inicio",
   indiceStreak,
 }: PropriedadesMensagemMotivacional) {
-  const [mensagem, setMensagem] = useState<MensagemMotivacional>({ texto: "", emoji: "" });
+  const [mensagem, setMensagem] = useState<MensagemMotivacional>(() =>
+    selecionarMensagem(contexto, indiceStreak)
+  );
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Selecionar mensagem baseada no contexto
-    let mensagemSelecionada: MensagemMotivacional;
-
-    if (contexto === "streak" && indiceStreak !== undefined) {
-      // Verificar se há mensagem específica para o streak
-      mensagemSelecionada =
-        mensagensStreak[indiceStreak] ||
-        mensagens.inicio[Math.floor(Math.random() * mensagens.inicio.length)];
-    } else {
-      // Selecionar mensagem aleatória do contexto
-      const mensagensContexto = mensagens[contexto] ?? mensagens.inicio;
-      mensagemSelecionada =
-        mensagensContexto[Math.floor(Math.random() * mensagensContexto.length)];
-    }
-
-    setMensagem(mensagemSelecionada);
-
-    // Animação de entrada
-    const timer = setTimeout(() => setVisible(true), 100);
-    return () => clearTimeout(timer);
+    const timerMensagem = setTimeout(() => {
+      setMensagem(selecionarMensagem(contexto, indiceStreak));
+    }, 0);
+    const timerEntrada = setTimeout(() => setVisible(true), 100);
+    return () => {
+      clearTimeout(timerMensagem);
+      clearTimeout(timerEntrada);
+    };
   }, [contexto, indiceStreak]);
 
   if (!mensagem.texto) return null;
@@ -114,23 +100,18 @@ export function MensagemMotivacional({
   );
 }
 
-/**
- * Hook para usar mensagens motivacionais programaticamente
- */
-export function useMensagemMotivacional() {
-  const [mensagem, setMensagem] = useState<MensagemMotivacional | null>(null);
+function selecionarMensagem(
+  contexto: PropriedadesMensagemMotivacional["contexto"],
+  indiceStreak?: number,
+): MensagemMotivacional {
+  if (contexto === "streak" && indiceStreak !== undefined) {
+    return mensagensStreak[indiceStreak] || sortearMensagem(mensagens.inicio);
+  }
 
-  const mostrar = (contexto: keyof typeof mensagens = "inicio") => {
-    const mensagensContexto = mensagens[contexto] ?? mensagens.inicio;
-    const mensagemAleatoria =
-      mensagensContexto[Math.floor(Math.random() * mensagensContexto.length)];
-    setMensagem(mensagemAleatoria);
+  const mensagensContexto = mensagens[contexto ?? "inicio"] ?? mensagens.inicio;
+  return sortearMensagem(mensagensContexto);
+}
 
-    // Limpar após alguns segundos
-    setTimeout(() => setMensagem(null), 4000);
-  };
-
-  const limpar = () => setMensagem(null);
-
-  return { mensagem, mostrar, limpar };
+function sortearMensagem(opcoes: MensagemMotivacional[]): MensagemMotivacional {
+  return opcoes[Math.floor(Math.random() * opcoes.length)];
 }

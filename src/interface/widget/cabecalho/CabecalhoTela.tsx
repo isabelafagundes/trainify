@@ -8,7 +8,7 @@ interface PropriedadesCabecalhoTela {
 /** Header de tela com título e ação opcional à direita */
 export function CabecalhoTela({ titulo, acaoDireita }: PropriedadesCabecalhoTela) {
   return (
-    <header className="flex items-center justify-between px-5 pt-[max(env(safe-area-inset-top),16px)] pb-3">
+    <header className="flex items-center justify-between px-5 pt-[max(var(--safe-top),16px)] pb-3">
       <h1 className="text-2xl font-bold text-texto-primario tracking-tight font-display">
         {titulo}
       </h1>

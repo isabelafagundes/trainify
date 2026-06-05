@@ -28,8 +28,8 @@ export function ModalConfirmacao({
 
   const coresBotao =
     variant === "perigo"
-      ? "bg-error text-white hover:bg-error/90"
-      : "bg-texto-primario text-white hover:bg-texto-primario/90";
+      ? "bg-perigo text-texto-invertido hover:bg-perigo-hover"
+      : "bg-acento text-texto-invertido hover:bg-acento-hover";
 
   return (
     <div

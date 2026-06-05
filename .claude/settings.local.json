@@ -33,7 +33,12 @@
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\isabe\\\\.claude\\\\statusline-command.ps1\")",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\\\\Users\\\\isabe\\\\.claude\\\\statusline-command.ps1')",
       "Bash(powershell:*)",
-      "Bash(echo '{\"model\":{\"display_name\":\"claude-sonnet-4-6\"},\"workspace\":{\"current_dir\":\"C:\\\\\\\\projetos\\\\\\\\vibe-coding\\\\\\\\trainify\"},\"context_window\":{\"used_percentage\":45,\"current_usage\":{\"cache_read_input_tokens\":1000,\"cache_creation_input_tokens\":500,\"input_tokens\":10000,\"output_tokens\":5000},\"context_window_size\":200000}}')"
+      "Bash(echo '{\"model\":{\"display_name\":\"claude-sonnet-4-6\"},\"workspace\":{\"current_dir\":\"C:\\\\\\\\projetos\\\\\\\\vibe-coding\\\\\\\\trainify\"},\"context_window\":{\"used_percentage\":45,\"current_usage\":{\"cache_read_input_tokens\":1000,\"cache_creation_input_tokens\":500,\"input_tokens\":10000,\"output_tokens\":5000},\"context_window_size\":200000}}')",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(./gradlew installDebug)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew installDebug)",
+      "Bash(adb devices *)",
+      "Bash(where adb *)"
     ]
   }
 }

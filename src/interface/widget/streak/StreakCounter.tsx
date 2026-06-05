@@ -61,9 +61,12 @@ export function StreakCounter({
   // Mostrar mensagem motivacional brevemente ao montar
   useEffect(() => {
     if (diasConsecutivos > 0) {
-      setMostrarMensagem(true);
+      const timerEntrada = setTimeout(() => setMostrarMensagem(true), 0);
       const timer = setTimeout(() => setMostrarMensagem(false), 3000);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timerEntrada);
+        clearTimeout(timer);
+      };
     }
   }, [diasConsecutivos]);
 

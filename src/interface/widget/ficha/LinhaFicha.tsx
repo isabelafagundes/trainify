@@ -1,5 +1,4 @@
 import type { Exercicio, ExercicioFicha, Ficha } from "@/domain/tipos";
-import { Chip } from "@/interface/widget/chip/Chip";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
 import { Botao } from "@/interface/widget/botao/Botao";
 
@@ -58,7 +57,7 @@ export function LinhaFicha({
 
       {/* Conteúdo */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
           <h3 className="text-sm font-semibold text-texto-primario leading-tight font-display truncate transition-colors duration-200 group-hover:text-texto-secundario">
             {ficha.nome}
           </h3>
@@ -66,12 +65,14 @@ export function LinhaFicha({
             {ficha.exercicios.length} exerc.
           </span>
         </div>
-        <div className="flex flex-wrap items-center gap-2 mt-1">
-          {gruposMusculares.map((grupo) => (
-            <Chip key={grupo} rotulo={grupo} />
-          ))}
+        <div className="flex items-center gap-1.5 mt-1 min-w-0">
+          {gruposMusculares.length > 0 && (
+            <p className="flex-1 min-w-0 truncate text-xs text-texto-sutil">
+              {gruposMusculares.join(" · ")}
+            </p>
+          )}
           {ultimoTreino && (
-            <span className="text-xs text-texto-secundario ml-1">
+            <span className="flex-shrink-0 text-xs text-texto-secundario whitespace-nowrap">
               · {formatarDataRelativa(ultimoTreino)}
             </span>
           )}
@@ -80,7 +81,10 @@ export function LinhaFicha({
 
       {/* Botão iniciar */}
       {proximoTreino ? (
-        <button className="relative inline-flex flex-shrink-0 items-center justify-center overflow-hidden rounded-[8px] px-3 py-2 bg-acento text-texto-invertido text-xs font-medium gap-2 transition-all duration-200 hover:bg-acento-hover hover:-translate-y-px hover:shadow-md active:scale-95 group active:translate-y-0">
+        <button
+          onClick={() => aoIniciarTreino(ficha.id)}
+          className="relative inline-flex flex-shrink-0 items-center justify-center overflow-hidden rounded-[8px] px-3 py-2 bg-acento text-texto-invertido text-xs font-medium gap-2 transition-all duration-200 hover:bg-acento-hover hover:-translate-y-px hover:shadow-md active:scale-95 group active:translate-y-0"
+        >
           {/* Efeito shimmer */}
           <div className="absolute inset-0 -translate-x-full animate-shimmer-btn">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />

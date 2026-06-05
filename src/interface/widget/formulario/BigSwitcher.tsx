@@ -23,8 +23,8 @@ export function BigSwitcher({
   aoAlterar,
 }: BigSwitcherProps) {
   return (
-    <div className="bg-superficie-suave rounded-2xl p-1 sm:p-1.5">
-      <div className="flex gap-1.5 sm:gap-2">
+    <div className="bg-superficie-hover border border-borda rounded-2xl p-1.5">
+      <div className="flex gap-1.5">
         {opcoes.map((opcao) => {
           const selecionado = valorSelecionado === opcao.id;
 
@@ -34,22 +34,19 @@ export function BigSwitcher({
               type="button"
               onClick={() => aoAlterar(opcao.id)}
               className={`
-                flex items-center justify-center gap-1.5 sm:gap-2
-                px-2.5 py-2.5 sm:px-4 sm:py-3 rounded-xl
-                font-medium text-sm sm:text-base transition-all duration-200
-                flex-1 sm:flex-none
+                flex flex-1 items-center justify-center gap-1.5
+                px-2 py-2.5 min-h-[44px] rounded-xl
+                text-[13px] sm:text-sm font-medium transition-all duration-200
                 ${
                   selecionado
-                    ? "bg-superficie text-texto-primario shadow-sm"
-                    : "text-texto-secundario hover:text-texto-primario hover:bg-superficie/60"
+                    ? "bg-superficie text-texto-primario shadow-sm ring-1 ring-borda/70"
+                    : "text-texto-secundario hover:text-texto-primario hover:bg-superficie/50"
                 }
               `}
-              aria-label={opcao.label}
+              aria-pressed={selecionado}
             >
-              <Icone nome={opcao.icone as any} tamanho={18} />
-              {!selecionado && (
-                <span className="hidden sm:inline">{opcao.label}</span>
-              )}
+              <Icone nome={opcao.icone} tamanho={16} />
+              <span className="truncate">{opcao.label}</span>
             </button>
           );
         })}

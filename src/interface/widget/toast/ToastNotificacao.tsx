@@ -37,8 +37,7 @@ export function ToastNotificacao({
   const estilo = estilosTipo[tipo];
 
   useEffect(() => {
-    // Animação de entrada
-    setVisivel(true);
+    const timerEntrada = setTimeout(() => setVisivel(true), 0);
 
     // Iniciar saída após duração
     const timerSaida = setTimeout(() => {
@@ -52,6 +51,7 @@ export function ToastNotificacao({
     }, duracao + 300);
 
     return () => {
+      clearTimeout(timerEntrada);
       clearTimeout(timerSaida);
       clearTimeout(timerRemocao);
     };
@@ -97,33 +97,4 @@ export function ToastNotificacao({
       />
     </div>
   );
-}
-
-// Hook para usar o toast facilmente
-export function useToast() {
-  const [toasts, setToasts] = useState<Array<{ id: number; mensagem: string; tipo: "sucesso" | "info" | "celebracao" }>>([]);
-
-  const mostrar = (mensagem: string, tipo: "sucesso" | "info" | "celebracao" = "info") => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, mensagem, tipo }]);
-  };
-
-  const remover = (id: number) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const Container = () => (
-    <>
-      {toasts.map((toast) => (
-        <ToastNotificacao
-          key={toast.id}
-          mensagem={toast.mensagem}
-          tipo={toast.tipo}
-          aoFechar={() => remover(toast.id)}
-        />
-      ))}
-    </>
-  );
-
-  return { mostrar, Container };
 }

@@ -1,27 +1,8 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { ToastContainer } from "./ToastContainer";
-
-interface ToastItem {
-  id: string;
-  message: string;
-  type?: "success" | "error" | "info";
-  duration?: number;
-}
-
-interface ToastContextValue {
-  showToast: (message: string, type?: "success" | "error" | "info", duration?: number) => void;
-  showSuccess: (message: string, duration?: number) => void;
-  showError: (message: string, duration?: number) => void;
-  showInfo: (message: string, duration?: number) => void;
-}
-
-const ToastContext = createContext<ToastContextValue | undefined>(undefined);
-
-// Função para gerar ID único compatível com todos os navegadores
-function generateId(): string {
-  return `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
+import { generateToastId, ToastContext } from "./useToast";
+import type { ToastItem } from "./useToast";
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -32,31 +13,31 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const showToast = useCallback(
     (message: string, type: "success" | "error" | "info" = "info", duration = 4000) => {
-      const id = generateId();
+      const id = generateToastId();
       setToasts((prev) => [...prev, { id, message, type, duration }]);
     },
-    []
+    [],
   );
 
   const showSuccess = useCallback(
     (message: string, duration?: number) => {
       showToast(message, "success", duration);
     },
-    [showToast]
+    [showToast],
   );
 
   const showError = useCallback(
     (message: string, duration?: number) => {
       showToast(message, "error", duration);
     },
-    [showToast]
+    [showToast],
   );
 
   const showInfo = useCallback(
     (message: string, duration?: number) => {
       showToast(message, "info", duration);
     },
-    [showToast]
+    [showToast],
   );
 
   return (
@@ -65,12 +46,4 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </ToastContext.Provider>
   );
-}
-
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error("useToast deve ser usado dentro de um ToastProvider");
-  }
-  return context;
 }

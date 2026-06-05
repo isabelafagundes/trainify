@@ -24,10 +24,9 @@ function extrairGruposMusculares(
   return Array.from(grupos);
 }
 
-function formatarDataRelativa(dataISO: string): string {
-  const agora = new Date();
+function formatarDataRelativa(dataISO: string, agoraMs: number): string {
   const data = new Date(dataISO);
-  const diffMs = agora.getTime() - data.getTime();
+  const diffMs = agoraMs - data.getTime();
   const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDias === 0) return "Hoje";
@@ -46,6 +45,7 @@ export function LinhaFichaDelight({
   const gruposMusculares = extrairGruposMusculares(ficha.exercicios, exerciciosCatalogo);
   const [mostrarConfetti, setMostrarConfetti] = useState(false);
   const [hover, setHover] = useState(false);
+  const [agoraMs] = useState(() => Date.now());
 
   const handleIniciar = () => {
     // Mostrar celebração
@@ -59,7 +59,7 @@ export function LinhaFichaDelight({
 
   // Calcular dias desde o último treino para destacar se está "atrasado"
   const diasDesdeUltimo = ultimoTreino
-    ? Math.floor((Date.now() - new Date(ultimoTreino).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor((agoraMs - new Date(ultimoTreino).getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
   const precisaTreinar = diasDesdeUltimo !== null && diasDesdeUltimo >= 3;
@@ -124,7 +124,7 @@ export function LinhaFichaDelight({
                   ${precisaTreinar ? "text-amber-600 font-medium" : "text-texto-sutil"}
                 `}
               >
-                · {formatarDataRelativa(ultimoTreino)}
+                · {formatarDataRelativa(ultimoTreino, agoraMs)}
                 {precisaTreinar && " 💪"}
               </span>
             )}

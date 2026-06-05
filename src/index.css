@@ -29,6 +29,19 @@
   --color-acento-hover: oklch(0.310 0.018 55);
   --color-acento-suave: oklch(0.935 0.014 65);
 
+  /* Ações destrutivas (vermelho queimado, alinhado à paleta quente) */
+  --color-perigo: oklch(0.455 0.095 35);
+  --color-perigo-hover: oklch(0.385 0.090 35);
+  --color-perigo-suave: oklch(0.930 0.025 35);
+
+  /* Fundo decorativo do app */
+  --background-app-a: oklch(0.91 0.035 55 / 0.5);
+  --background-app-b: oklch(0.90 0.03 40 / 0.4);
+  --background-app-c: oklch(0.91 0.035 50 / 0.5);
+  --background-app-d: oklch(0.90 0.03 35 / 0.4);
+  --background-app-start: oklch(0.95 0.015 55);
+  --background-app-end: oklch(0.95 0.015 50);
+
   /* Tipografia */
   --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
   --font-sans: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -63,6 +76,12 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 ::selection {
@@ -80,6 +99,17 @@ body {
   font-kerning: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 #root {
@@ -88,11 +118,11 @@ body {
   margin: 0 auto;
   min-height: 100dvh;
   background:
-    radial-gradient(ellipse 80% 45% at 20% 0%, oklch(0.91 0.035 55 / 0.5), transparent 70%),
-    radial-gradient(ellipse 60% 35% at 85% 8%, oklch(0.90 0.03 40 / 0.4), transparent 60%),
-    radial-gradient(ellipse 70% 40% at 75% 100%, oklch(0.91 0.035 50 / 0.5), transparent 70%),
-    radial-gradient(ellipse 55% 35% at 15% 95%, oklch(0.90 0.03 35 / 0.4), transparent 60%),
-    linear-gradient(180deg, oklch(0.95 0.015 55), var(--color-fundo) 30%, var(--color-fundo) 70%, oklch(0.95 0.015 50));
+    radial-gradient(ellipse 80% 45% at 20% 0%, var(--background-app-a), transparent 70%),
+    radial-gradient(ellipse 60% 35% at 85% 8%, var(--background-app-b), transparent 60%),
+    radial-gradient(ellipse 70% 40% at 75% 100%, var(--background-app-c), transparent 70%),
+    radial-gradient(ellipse 55% 35% at 15% 95%, var(--background-app-d), transparent 60%),
+    linear-gradient(180deg, var(--background-app-start), var(--color-fundo) 30%, var(--color-fundo) 70%, var(--background-app-end));
   background-color: var(--color-fundo);
 }
 
@@ -287,6 +317,36 @@ html {
   animation: fade-in 0.3s ease-out;
 }
 
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .slide-in-from-top-2 {
   animation: slide-in-from-top-2 0.3s ease-out;
 }
@@ -323,4 +383,42 @@ html {
 
 .animate-shimmer-btn {
   animation: shimmer-btn 2.5s ease-in-out infinite;
+}
+
+/* ── Entrada orquestrada da home (fade + subida) ── */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal-up {
+  animation: reveal-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Confete caindo (celebração de finalização) */
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(var(--confetti-drift, 0), 110vh, 0) rotate(var(--confetti-spin, 360deg));
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation: confetti-fall 3.2s cubic-bezier(0.37, 0, 0.63, 1) both;
 }

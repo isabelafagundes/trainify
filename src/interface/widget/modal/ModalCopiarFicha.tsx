@@ -26,8 +26,11 @@ export function ModalCopiarFicha({
   // Resetar ao abrir
   useEffect(() => {
     if (aberto) {
-      setBusca("");
-      setFichaSelecionada(null);
+      const id = window.setTimeout(() => {
+        setBusca("");
+        setFichaSelecionada(null);
+      }, 0);
+      return () => window.clearTimeout(id);
     }
   }, [aberto]);
 

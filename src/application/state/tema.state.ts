@@ -2,87 +2,89 @@
    Estado do Tema — Trainify
    ═══════════════════════════════════════════ */
 
-import type { Tema } from "@/domain/tema";
 import { STORAGE_KEYS } from "@/constants";
+import type { Tema, TemaId } from "@/domain/tema";
+import { appModule } from "@/interface/configuration/module/app.module";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
 
-/** Tema claro */
+/** Tema base atual do app. Novos temas devem sobrescrever estes mesmos tokens. */
 export const TEMA_CLARO: Tema = {
   id: "claro",
-  nome: "Claro",
-  cores: {
-    accent: "#8B5CF6",
-    primary: "#000000",
-    secondary: "#666666",
-    error: "#EF4444",
-    warning: "#F59E0B",
-    success: "#10B981",
-    base: "#FAFAF9",
-    neutral: "#A1A1AA",
+  nome: "Claro quente",
+  variaveis: {
+    "--color-fundo": "oklch(0.965 0.007 70)",
+    "--color-superficie": "oklch(0.985 0.005 70)",
+    "--color-superficie-elevada": "oklch(0.985 0.005 70)",
+    "--color-superficie-suave": "oklch(0.950 0.008 68)",
+    "--color-superficie-hover": "oklch(0.940 0.010 68)",
+    "--color-texto-primario": "oklch(0.200 0.015 55)",
+    "--color-texto-secundario": "oklch(0.450 0.018 55)",
+    "--color-texto-sutil": "oklch(0.550 0.015 55)",
+    "--color-texto-invertido": "oklch(0.965 0.007 70)",
+    "--color-borda": "oklch(0.895 0.010 65)",
+    "--color-borda-suave": "oklch(0.930 0.008 65)",
+    "--color-acento": "oklch(0.220 0.015 55)",
+    "--color-acento-hover": "oklch(0.310 0.018 55)",
+    "--color-acento-suave": "oklch(0.935 0.014 65)",
+    "--color-perigo": "oklch(0.455 0.095 35)",
+    "--color-perigo-hover": "oklch(0.385 0.090 35)",
+    "--color-perigo-suave": "oklch(0.930 0.025 35)",
+    "--background-app-a": "oklch(0.91 0.035 55 / 0.5)",
+    "--background-app-b": "oklch(0.90 0.03 40 / 0.4)",
+    "--background-app-c": "oklch(0.91 0.035 50 / 0.5)",
+    "--background-app-d": "oklch(0.90 0.03 35 / 0.4)",
+    "--background-app-start": "oklch(0.95 0.015 55)",
+    "--background-app-end": "oklch(0.95 0.015 50)",
   },
-  bordas: {
-    P: "4px",
-    M: "8px",
-    G: "16px",
-    XG: "24px",
-  },
-  fontes: {
-    P: "14px",
-    M: "16px",
-    G: "20px",
-    XG: "24px",
-  },
-  familias: {
-    principal: "Inter, sans-serif",
-    secundaria: "Georgia, serif",
-  },
-  espacamento: "16px",
 };
 
-/** Tema escuro */
+/** Tema pronto para evolução futura, ainda sem controle visível na interface. */
 export const TEMA_ESCURO: Tema = {
   id: "escuro",
-  nome: "Escuro",
-  cores: {
-    accent: "#A78BFA",
-    primary: "#FFFFFF",
-    secondary: "#A1A1AA",
-    error: "#F87171",
-    warning: "#FBBF24",
-    success: "#34D399",
-    base: "#18181B",
-    neutral: "#71717A",
+  nome: "Escuro quente",
+  variaveis: {
+    "--color-fundo": "oklch(0.165 0.010 55)",
+    "--color-superficie": "oklch(0.225 0.010 55)",
+    "--color-superficie-elevada": "oklch(0.275 0.012 55)",
+    "--color-superficie-suave": "oklch(0.315 0.012 55)",
+    "--color-superficie-hover": "oklch(0.365 0.014 55)",
+    "--color-texto-primario": "oklch(0.965 0.006 70)",
+    "--color-texto-secundario": "oklch(0.835 0.010 70)",
+    "--color-texto-sutil": "oklch(0.735 0.012 70)",
+    "--color-texto-invertido": "oklch(0.180 0.010 55)",
+    "--color-borda": "oklch(0.440 0.014 55)",
+    "--color-borda-suave": "oklch(0.380 0.012 55)",
+    "--color-acento": "oklch(0.890 0.012 70)",
+    "--color-acento-hover": "oklch(0.800 0.014 70)",
+    "--color-acento-suave": "oklch(0.355 0.020 55)",
+    "--color-perigo": "oklch(0.565 0.105 35)",
+    "--color-perigo-hover": "oklch(0.625 0.110 35)",
+    "--color-perigo-suave": "oklch(0.300 0.040 35)",
+    "--background-app-a": "oklch(0.32 0.035 55 / 0.45)",
+    "--background-app-b": "oklch(0.30 0.030 40 / 0.35)",
+    "--background-app-c": "oklch(0.28 0.035 50 / 0.45)",
+    "--background-app-d": "oklch(0.27 0.030 35 / 0.35)",
+    "--background-app-start": "oklch(0.205 0.014 55)",
+    "--background-app-end": "oklch(0.175 0.012 50)",
   },
-  bordas: {
-    P: "4px",
-    M: "8px",
-    G: "16px",
-    XG: "24px",
-  },
-  fontes: {
-    P: "14px",
-    M: "16px",
-    G: "20px",
-    XG: "24px",
-  },
-  familias: {
-    principal: "Inter, sans-serif",
-    secundaria: "Georgia, serif",
-  },
-  espacamento: "16px",
 };
+
+export const TEMAS_DISPONIVEIS: Tema[] = [TEMA_CLARO, TEMA_ESCURO];
 
 /** Classe gerenciadora do tema */
 export class TemaManager {
   private static instancia: TemaManager;
   private temaAtual: Tema;
   private modoFonteGrande: boolean;
+  private statusBarConfigurada: boolean;
 
   private constructor() {
-    this.temaAtual = this.carregarTemaSalvo() ?? TEMA_CLARO;
-    this.modoFonteGrande = this.carregarFonteGrandeSalva() ?? false;
+    this.temaAtual = TEMA_CLARO;
+    this.modoFonteGrande = false;
+    this.statusBarConfigurada = false;
   }
 
-  /** Obter instância singleton */
   static obterInstancia(): TemaManager {
     if (!TemaManager.instancia) {
       TemaManager.instancia = new TemaManager();
@@ -90,90 +92,119 @@ export class TemaManager {
     return TemaManager.instancia;
   }
 
-  /** Obter tema atual */
+  async inicializar(): Promise<void> {
+    this.temaAtual = await this.carregarTemaSalvo();
+    this.modoFonteGrande = await this.carregarFonteGrandeSalva();
+    this.aplicarTema(this.temaAtual);
+  }
+
   obterTema(): Tema {
     return this.temaAtual;
   }
 
-  /** Definir tema */
+  listarTemas(): Tema[] {
+    return [...TEMAS_DISPONIVEIS];
+  }
+
+  definirTemaPorId(temaId: TemaId): boolean {
+    const tema = this.encontrarTema(temaId);
+    if (!tema) return false;
+
+    this.definirTema(tema);
+    return true;
+  }
+
   definirTema(tema: Tema): void {
     this.temaAtual = tema;
-    this.salvarTema(tema.id);
+    void this.salvarTema(tema.id);
     this.aplicarTema(tema);
   }
 
-  /** Alternar entre claro/escuro */
   alternarTema(): void {
-    const novoTema = this.temaAtual.id === "claro" ? TEMA_ESCURO : TEMA_CLARO;
-    this.definirTema(novoTema);
+    const indiceAtual = TEMAS_DISPONIVEIS.findIndex((tema) => tema.id === this.temaAtual.id);
+    const proximoTema = TEMAS_DISPONIVEIS[(indiceAtual + 1) % TEMAS_DISPONIVEIS.length] ?? TEMA_CLARO;
+    this.definirTema(proximoTema);
   }
 
-  /** Obter tamanho de fonte com ajuste de acessibilidade */
-  obterTamanhoFonte(base: keyof Tema["fontes"]): string {
-    if (this.modoFonteGrande) {
-      const tamanhos = { P: "M", M: "G", G: "XG", XG: "XG" } as const;
-      return this.temaAtual.fontes[tamanhos[base]];
-    }
-    return this.temaAtual.fontes[base];
-  }
-
-  /** Ativar/desativar modo fonte grande */
   alternarFonteGrande(): void {
     this.modoFonteGrande = !this.modoFonteGrande;
-    this.salvarFonteGrande(this.modoFonteGrande);
+    void this.salvarFonteGrande(this.modoFonteGrande);
     this.aplicarTema(this.temaAtual);
   }
 
-  /** Verificar se modo fonte grande está ativo */
   estaFonteGrandeAtiva(): boolean {
     return this.modoFonteGrande;
   }
 
-  /** Carregar tema salvo */
-  private carregarTemaSalvo(): Tema | null {
+  private encontrarTema(temaId: TemaId): Tema | null {
+    return TEMAS_DISPONIVEIS.find((tema) => tema.id === temaId) ?? null;
+  }
+
+  private async carregarTemaSalvo(): Promise<Tema> {
     try {
-      const salvo = localStorage.getItem(STORAGE_KEYS.TEMA);
-      return salvo === "escuro" ? TEMA_ESCURO : TEMA_CLARO;
+      const salvo = (await appModule.armazenamento.obter(STORAGE_KEYS.TEMA)) as TemaId | null;
+      return (salvo && this.encontrarTema(salvo)) || TEMA_CLARO;
     } catch {
       return TEMA_CLARO;
     }
   }
 
-  /** Carregar configuração de fonte grande */
-  private carregarFonteGrandeSalva(): boolean | null {
+  private async carregarFonteGrandeSalva(): Promise<boolean> {
     try {
-      const salvo = localStorage.getItem(STORAGE_KEYS.FONTE_GRANDE);
-      return salvo === "true";
+      return (await appModule.armazenamento.obter(STORAGE_KEYS.FONTE_GRANDE)) === "true";
     } catch {
       return false;
     }
   }
 
-  /** Salvar preferência de tema */
-  private salvarTema(temaId: string): void {
+  private async salvarTema(temaId: TemaId): Promise<void> {
     try {
-      localStorage.setItem(STORAGE_KEYS.TEMA, temaId);
+      await appModule.armazenamento.definir(STORAGE_KEYS.TEMA, temaId);
     } catch {
-      // Silencioso - falha no localStorage não deve quebrar o app
+      // Falha no localStorage não deve quebrar o app.
     }
   }
 
-  /** Salvar preferência de fonte grande */
-  private salvarFonteGrande(ativo: boolean): void {
+  private async salvarFonteGrande(ativo: boolean): Promise<void> {
     try {
-      localStorage.setItem(STORAGE_KEYS.FONTE_GRANDE, String(ativo));
+      await appModule.armazenamento.definir(STORAGE_KEYS.FONTE_GRANDE, String(ativo));
     } catch {
-      // Silencioso
+      // Falha no localStorage não deve quebrar o app.
     }
   }
 
-  /** Aplicar tema ao DOM */
   private aplicarTema(tema: Tema): void {
     const root = document.documentElement;
+
     root.setAttribute("data-tema", tema.id);
     root.setAttribute("data-fonte-grande", String(this.modoFonteGrande));
+
+    Object.entries(tema.variaveis).forEach(([nome, valor]) => {
+      root.style.setProperty(nome, valor);
+    });
+
+    void this.atualizarStatusBar(tema);
+  }
+
+  private async atualizarStatusBar(tema: Tema): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+
+    try {
+      if (!this.statusBarConfigurada) {
+        await StatusBar.setOverlaysWebView({ overlay: false });
+        this.statusBarConfigurada = true;
+      }
+
+      await StatusBar.setStyle({
+        style: tema.id === "escuro" ? Style.Dark : Style.Light,
+      });
+      await StatusBar.setBackgroundColor({
+        color: tema.id === "escuro" ? "#24211f" : "#f5f1ea",
+      });
+    } catch {
+      // Plugins nativos podem nao estar disponiveis durante preview web.
+    }
   }
 }
 
-/** Instância global do gerenciador de tema */
 export const temaManager = TemaManager.obterInstancia();

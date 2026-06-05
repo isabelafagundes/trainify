@@ -15,7 +15,7 @@ const abasEsquerda: { id: AbaNavegacao; rotulo: string; icone: string }[] = [
 
 const abasDireita: { id: AbaNavegacao; rotulo: string; icone: string }[] = [
   { id: "estatisticas", rotulo: "Estatísticas", icone: "tendencia" },
-  { id: "gerenciar", rotulo: "Gerenciar", icone: "engrenagem" },
+  { id: "gerenciar", rotulo: "Gerenciar", icone: "listaVerificacao" },
 ];
 
 export type { AbaNavegacao };
@@ -59,7 +59,7 @@ export function NavegacaoInferior({ abaAtiva, aoMudarAba, aoCriarPrograma }: Pro
         fixed bottom-0 left-5 right-5 z-50
         bg-superficie/70 backdrop-blur-xl backdrop-saturate-150
         border border-borda-suave/60
-        mb-[max(env(safe-area-inset-bottom),16px)]
+        mb-[max(var(--safe-bottom),16px)]
         rounded-2xl
         shadow-md shadow-black/[0.04]
       "

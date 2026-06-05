@@ -63,21 +63,18 @@ function TooltipDia({ registro, posicao }: { registro: RegistroAtividadeDiaria; 
 export function TrackerFrequencia({ dados }: PropriedadesTrackerFrequencia) {
   const [tooltip, setTooltip] = useState<{ registro: RegistroAtividadeDiaria; x: number; y: number } | null>(null);
 
-  // Calcular streak atual (dias consecutivos com treino)
+  // Calcular streak atual (dias consecutivos com treino).
+  // Os registros são uma janela diária contígua terminando em hoje (dataFim),
+  // já em ISO local — iteramos de trás pra frente para evitar conversões UTC.
   const streakAtual = useMemo(() => {
+    const registros = dados.registros;
     let streak = 0;
-    const hoje = new Date();
 
-    for (let i = 0; i < 365; i++) {
-      const data = new Date(hoje);
-      data.setDate(data.getDate() - i);
-      const dataISO = data.toISOString().split("T")[0];
-      const registro = dados.registros.find(r => r.data === dataISO);
-
-      if (registro?.completou) {
+    for (let i = registros.length - 1; i >= 0; i--) {
+      if (registros[i].completou) {
         streak++;
-      } else if (i > 0) {
-        // Se não treinou ontem ou antes, parar (mas não considera hoje como quebra)
+      } else if (i < registros.length - 1) {
+        // Não treinou neste dia; só não quebra se for o último dia (hoje).
         break;
       }
     }

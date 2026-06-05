@@ -13,6 +13,9 @@ import { trainifyState } from "@/application/state/trainify.state";
 
 /** Interface do repositório de state manager */
 export interface StateManagerRepository {
+  inicializar(): Promise<void>;
+  estaInicializado(): boolean;
+
   // Programas
   listarProgramas(): Programa[];
   obterProgramaPorId(id: string): Programa | null;
@@ -68,6 +71,9 @@ export interface StateManagerRepository {
 
 /** Implementação do repositório usando o state manager */
 export const stateManagerRepository: StateManagerRepository = {
+  inicializar: () => trainifyState.inicializar(),
+  estaInicializado: () => trainifyState.estaInicializado(),
+
   // Programas
   listarProgramas: () => trainifyState.getProgramas(),
   obterProgramaPorId: (id) => trainifyState.getProgramaPorId(id),

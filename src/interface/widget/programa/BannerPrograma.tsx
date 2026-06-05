@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 interface PropriedadesBannerPrograma {
   nome: string;
   descricao: string;
@@ -9,6 +11,13 @@ export function BannerPrograma({ nome, descricao, totalFichas, fichasConcluidas 
   const temProgresso = fichasConcluidas !== undefined && totalFichas > 0;
   const porcentagem = temProgresso ? Math.round((fichasConcluidas / totalFichas) * 100) : 0;
   const completo = temProgresso && fichasConcluidas >= totalFichas;
+
+  // Preenche a barra a partir do zero ao montar (acompanha a entrada da home)
+  const [larguraBarra, setLarguraBarra] = useState(0);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setLarguraBarra(Math.min(porcentagem, 100)));
+    return () => cancelAnimationFrame(id);
+  }, [porcentagem]);
 
   return (
     <div className="flex-1 min-w-0 py-1">
@@ -32,7 +41,7 @@ export function BannerPrograma({ nome, descricao, totalFichas, fichasConcluidas 
           <div className="flex-1 h-2 rounded-full bg-borda-suave overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-700 ease-out ${completo ? "bg-acento animate-pulse-subtle" : "bg-texto-secundario/50 group-hover:bg-texto-secundario/60"} relative`}
-              style={{ width: `${Math.min(porcentagem, 100)}%` }}
+              style={{ width: `${larguraBarra}%` }}
             >
               {completo && (
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />

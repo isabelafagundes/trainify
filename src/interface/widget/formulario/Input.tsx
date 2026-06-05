@@ -44,7 +44,7 @@ export function Input(props: Props) {
   `;
 
   if (isTextarea(props)) {
-    const { tipo, linhas, value, onChange, placeholder, className, ...rest } = props;
+    const { linhas, value, onChange, placeholder, className } = props;
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -53,7 +53,6 @@ export function Input(props: Props) {
           </label>
         )}
         <textarea
-          {...rest}
           value={value}
           onChange={onChange}
           placeholder={placeholder}
@@ -66,7 +65,7 @@ export function Input(props: Props) {
     );
   }
 
-  const { tipo, value, onChange, placeholder, className: customClassName, ...rest } = props;
+  const { tipo, value, onChange, placeholder, className: customClassName } = props;
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
@@ -75,7 +74,6 @@ export function Input(props: Props) {
         </label>
       )}
       <input
-        {...rest}
         type={tipo || "text"}
         value={value}
         onChange={onChange}

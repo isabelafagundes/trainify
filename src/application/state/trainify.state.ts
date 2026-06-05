@@ -10,6 +10,7 @@ import type {
 } from "@/domain/tipos";
 import { STORAGE_KEYS } from "@/constants";
 import { exerciciosPadrao } from "@/infrastructure/repo/mock/exercicio-mock.repo";
+import { appModule } from "@/interface/configuration/module/app.module";
 
 /** Interface dos dados persistidos */
 interface DadosTreino {
@@ -32,10 +33,12 @@ export class TrainifyStateManager {
   private static instancia: TrainifyStateManager;
   private estado: TrainifyState;
   private listeners: Set<() => void>;
+  private inicializado: boolean;
 
   private constructor() {
     this.listeners = new Set();
-    this.estado = this.carregarDadosSalvos() || this.criarEstadoInicial();
+    this.estado = this.criarEstadoInicial();
+    this.inicializado = false;
   }
 
   /** Obter instância singleton */
@@ -50,6 +53,18 @@ export class TrainifyStateManager {
   inscrever(callback: () => void): () => void {
     this.listeners.add(callback);
     return () => this.listeners.delete(callback);
+  }
+
+  async inicializar(): Promise<void> {
+    if (this.inicializado) return;
+
+    this.estado = (await this.carregarDadosSalvos()) || this.criarEstadoInicial();
+    this.inicializado = true;
+    this.notificar();
+  }
+
+  estaInicializado(): boolean {
+    return this.inicializado;
   }
 
   /** Notificar todos os listeners */
@@ -139,7 +154,7 @@ export class TrainifyStateManager {
     }
 
     this.estado.programas.push(novo);
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return novo;
   }
@@ -161,7 +176,7 @@ export class TrainifyStateManager {
       ...this.estado.programas[index],
       ...atualizacoes,
     };
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return this.estado.programas[index];
   }
@@ -179,7 +194,7 @@ export class TrainifyStateManager {
     // Remover o programa
     this.estado.programas.splice(index, 1);
 
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return true;
   }
@@ -204,7 +219,7 @@ export class TrainifyStateManager {
     }
 
     programa.fichaIds.push(fichaId);
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return true;
   }
@@ -218,7 +233,7 @@ export class TrainifyStateManager {
     if (index === -1) return false;
 
     programa.fichaIds.splice(index, 1);
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return true;
   }
@@ -249,7 +264,7 @@ export class TrainifyStateManager {
       this.vincularFichaAoPrograma(nova.id, programaId);
     }
 
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return nova;
   }
@@ -266,7 +281,7 @@ export class TrainifyStateManager {
       ...this.estado.fichas[index],
       ...atualizacoes,
     };
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return this.estado.fichas[index];
   }
@@ -288,7 +303,7 @@ export class TrainifyStateManager {
       (h) => h.fichaId !== id
     );
 
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return true;
   }
@@ -303,7 +318,7 @@ export class TrainifyStateManager {
     };
 
     this.estado.exerciciosCustom.push(novo);
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return novo;
   }
@@ -314,7 +329,7 @@ export class TrainifyStateManager {
     if (index === -1) return false;
 
     this.estado.exerciciosCustom.splice(index, 1);
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return true;
   }
@@ -329,7 +344,7 @@ export class TrainifyStateManager {
     };
 
     this.estado.historico.unshift(novo);
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
     return novo;
   }
@@ -397,7 +412,7 @@ export class TrainifyStateManager {
     });
 
     // Salvar novamente para garantir consistência
-    this.salvarDados();
+    void this.salvarDados();
 
     return copia;
   }
@@ -442,9 +457,9 @@ export class TrainifyStateManager {
   }
 
   /** Carregar dados salvos do localStorage */
-  private carregarDadosSalvos(): TrainifyState | null {
+  private async carregarDadosSalvos(): Promise<TrainifyState | null> {
     try {
-      const salvo = localStorage.getItem(STORAGE_KEYS.DADOS_TREINO);
+      const salvo = await appModule.armazenamento.obter(STORAGE_KEYS.DADOS_TREINO);
       if (salvo) {
         const dados: DadosTreino = JSON.parse(salvo);
 
@@ -473,7 +488,7 @@ export class TrainifyStateManager {
   }
 
   /** Salvar dados no localStorage */
-  private salvarDados(): void {
+  private async salvarDados(): Promise<void> {
     try {
       const dados: DadosTreino = {
         programas: this.estado.programas,
@@ -481,7 +496,7 @@ export class TrainifyStateManager {
         historico: this.estado.historico,
         exerciciosCustom: this.estado.exerciciosCustom,
       };
-      localStorage.setItem(STORAGE_KEYS.DADOS_TREINO, JSON.stringify(dados));
+      await appModule.armazenamento.definir(STORAGE_KEYS.DADOS_TREINO, JSON.stringify(dados));
     } catch (erro) {
       console.error("Erro ao salvar dados:", erro);
     }
@@ -490,7 +505,7 @@ export class TrainifyStateManager {
   /** Limpar todos os dados (útil para testes) */
   limparDados(): void {
     this.estado = this.criarEstadoInicial();
-    this.salvarDados();
+    void this.salvarDados();
     this.notificar();
   }
 }

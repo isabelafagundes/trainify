@@ -2,10 +2,11 @@
    Editor de Ficha — Criar/Editar Fichas (Wizard 3 etapas)
    ═══════════════════════════════════════════ */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Ficha, Exercicio, ExercicioFicha, TipoCardio, Programa } from "@/domain/tipos";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Input } from "@/interface/widget/formulario/Input";
+import { CampoNumerico } from "@/interface/widget/formulario/CampoNumerico";
 import { SeletorIcone } from "@/interface/widget/formulario/SeletorIcone";
 import { PickerExercicios } from "@/interface/widget/formulario/PickerExercicios";
 import { Botao } from "@/interface/widget/botao/Botao";
@@ -29,6 +30,15 @@ const TIPOS_CARDIO: TipoCardio[] = [
   "Pular Corda",
 ];
 
+const EMOJI_CARDIO: Record<TipoCardio, string> = {
+  Esteira: "🏃",
+  Bike: "🚴",
+  Elíptico: "🌀",
+  Remo: "🚣",
+  Escada: "🪜",
+  "Pular Corda": "🤸",
+};
+
 type EtapaWizard = 0 | 1 | 2; // 0: Info básica, 1: Exercícios, 2: Cardio
 
 const ETAPAS = [
@@ -43,6 +53,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   const [todosExercicios, setTodosExercicios] = useState<Exercicio[]>([]);
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [programasVinculados, setProgramasVinculados] = useState<Programa[]>([]);
+  const vinculosProgramasAlteradosRef = useRef(false);
 
   // Estado do formulário
   const [nome, setNome] = useState("");
@@ -68,6 +79,8 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
 
   // Carregar dados
   useEffect(() => {
+    vinculosProgramasAlteradosRef.current = false;
+
     const carregarDados = () => {
       const exercicios = stateManagerRepository.listarTodosExercicios();
       const programas = stateManagerRepository.listarProgramas();
@@ -86,8 +99,10 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
           setMostraCardio(f.cardio.length > 0);
 
           // Carregar programas vinculados
-          const programasVinc = stateManagerRepository.obterProgramasDaFicha(fichaId);
-          setProgramasVinculados(programasVinc);
+          if (!vinculosProgramasAlteradosRef.current) {
+            const programasVinc = stateManagerRepository.obterProgramasDaFicha(fichaId);
+            setProgramasVinculados(programasVinc);
+          }
         }
       } else {
         const nomeGerado = stateManagerRepository.gerarNomeFicha();
@@ -99,6 +114,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
           const programa = programas.find((p) => p.id === programaId);
           if (programa) {
             setProgramasVinculados([programa]);
+            vinculosProgramasAlteradosRef.current = true;
           }
         }
       }
@@ -159,26 +175,30 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
     };
 
     if (editando && ficha) {
+      const programasAntesDeSalvar = stateManagerRepository.obterProgramasDaFicha(ficha.id);
+      const deveAtualizarVinculos = vinculosProgramasAlteradosRef.current;
+
       stateManagerRepository.atualizarFicha(ficha.id, dadosFicha);
 
       // Atualizar vínculos de programas
-      const programasAntigos = stateManagerRepository.obterProgramasDaFicha(ficha.id);
-      const programasAntigosIds = new Set(programasAntigos.map((p) => p.id));
-      const programasNovosIds = new Set(programasVinculados.map((p) => p.id));
+      if (deveAtualizarVinculos) {
+        const programasAntigosIds = new Set(programasAntesDeSalvar.map((p) => p.id));
+        const programasNovosIds = new Set(programasVinculados.map((p) => p.id));
 
-      // Desvincular programas removidos
-      programasAntigos.forEach((p) => {
-        if (!programasNovosIds.has(p.id)) {
-          stateManagerRepository.desvincularFichaDoPrograma(ficha.id, p.id);
-        }
-      });
+        // Desvincular programas removidos
+        programasAntesDeSalvar.forEach((p) => {
+          if (!programasNovosIds.has(p.id)) {
+            stateManagerRepository.desvincularFichaDoPrograma(ficha.id, p.id);
+          }
+        });
 
-      // Vincular novos programas
-      programasVinculados.forEach((p) => {
-        if (!programasAntigosIds.has(p.id)) {
-          stateManagerRepository.vincularFichaAoPrograma(ficha.id, p.id);
-        }
-      });
+        // Vincular novos programas
+        programasVinculados.forEach((p) => {
+          if (!programasAntigosIds.has(p.id)) {
+            stateManagerRepository.vincularFichaAoPrograma(ficha.id, p.id);
+          }
+        });
+      }
     } else {
       // Criar nova ficha
       const novaFicha = stateManagerRepository.adicionarFicha(dadosFicha);
@@ -200,7 +220,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       usaCarga: true,
       descansoSegundos: 60,
     };
-    setExercicios([...exercicios, novoExercicio]);
+    setExercicios((exerciciosAtuais) => [...exerciciosAtuais, novoExercicio]);
     setMostraPicker(false);
   };
 
@@ -253,7 +273,9 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   };
 
   const handleCriarExercicioCustom = (exercicio: Omit<Exercicio, "id">) => {
-    stateManagerRepository.adicionarExercicioCustom(exercicio);
+    const novoExercicio = stateManagerRepository.adicionarExercicioCustom(exercicio);
+    setTodosExercicios((exerciciosAtuais) => [...exerciciosAtuais, novoExercicio]);
+    handleAdicionarExercicio(novoExercicio.id);
     setModalCriarExercicioAberto(false);
   };
 
@@ -274,6 +296,22 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   const getNomeExercicio = (exercicioId: string): string => {
     const exercicio = todosExercicios.find((e) => e.id === exercicioId);
     return exercicio?.nome || "Exercício não encontrado";
+  };
+
+  const textoResumoFicha = () => {
+    const partes = [
+      `${exercicios.length} ${exercicios.length === 1 ? "exercício" : "exercícios"}`,
+    ];
+
+    if (mostraCardio && cardio.length > 0) {
+      partes.push(`${cardio.length} ${cardio.length === 1 ? "cardio" : "cardios"}`);
+    }
+
+    if (programasVinculados.length > 0) {
+      partes.push(`${programasVinculados.length} ${programasVinculados.length === 1 ? "programa" : "programas"}`);
+    }
+
+    return partes.join(" · ");
   };
 
   return (
@@ -341,7 +379,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
 
       {/* Conteúdo scrollável */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="px-5 py-4 pb-32">
+        <div className="px-5 py-4 pb-6">
           {/* ETAPA 0: Info básica */}
           {etapaAtual === 0 && (
             <div className="space-y-6">
@@ -374,29 +412,6 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
               />
 
               <SeletorIcone valor={icone} aoAlterar={setIcone} />
-
-              {/* Preview */}
-              {icone && nome && (
-                <div className="flex items-center gap-3 px-4 py-3 bg-superficie-suave rounded-xl border border-borda-suave">
-                  <span className="text-3xl">{icone}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-texto-primario truncate">
-                      {nome}
-                    </p>
-                    {descricao && (
-                      <p className="text-xs text-texto-secundario truncate">
-                        {descricao}
-                      </p>
-                    )}
-                    {exercicios.length > 0 && (
-                      <p className="text-xs text-texto-sutil">
-                        {exercicios.length} {exercicios.length === 1 ? "exercício" : "exercícios"}
-                        {cardio.length > 0 && " · cardio"}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -407,7 +422,16 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                 <h2 className="text-sm font-medium text-texto-primario">
                   Exercícios
                 </h2>
-                {!mostraPicker && (
+                {mostraPicker ? (
+                  <Botao
+                    variante="fantasma"
+                    tamanho="compacto"
+                    icone={<Icone nome="fechar" tamanho={16} />}
+                    onClick={() => setMostraPicker(false)}
+                  >
+                    Cancelar
+                  </Botao>
+                ) : (
                   <Botao
                     variante="fantasma"
                     tamanho="compacto"
@@ -454,6 +478,50 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                       })}
                     </div>
                   )}
+
+                  <div className="pt-2">
+                    <h3 className="text-sm font-medium text-texto-primario mb-3">
+                      Prévia da ficha
+                    </h3>
+                    <div className="bg-superficie-suave rounded-xl border border-borda-suave overflow-hidden">
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <span className="text-2xl shrink-0">{icone || "💪"}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-texto-primario truncate">
+                            {nome || "Nome da ficha"}
+                          </p>
+                          <p className="text-xs text-texto-secundario">
+                            {exercicios.length === 0
+                              ? "Adicione exercícios para montar a ficha"
+                              : `${exercicios.length} ${exercicios.length === 1 ? "exercício configurado" : "exercícios configurados"}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {exercicios.length > 0 && (
+                        <div className="border-t border-borda-suave">
+                          {exercicios.slice(0, 3).map((exercicio, index) => (
+                            <div
+                              key={`preview-${exercicio.exercicioId}-${index}`}
+                              className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-borda-suave last:border-b-0"
+                            >
+                              <span className="text-xs text-texto-secundario truncate">
+                                {index + 1}. {getNomeExercicio(exercicio.exercicioId)}
+                              </span>
+                              <span className="text-xs font-medium text-texto-primario whitespace-nowrap">
+                                {exercicio.series}x{exercicio.repeticoes}
+                              </span>
+                            </div>
+                          ))}
+                          {exercicios.length > 3 && (
+                            <p className="px-4 py-2.5 text-xs text-texto-sutil">
+                              +{exercicios.length - 3} {exercicios.length - 3 === 1 ? "exercício" : "exercícios"}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -515,6 +583,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                         <button
                           type="button"
                           onClick={() => {
+                            vinculosProgramasAlteradosRef.current = true;
                             setProgramasVinculados(programasVinculados.filter((p) => p.id !== programa.id));
                           }}
                           className="text-texto-secundario hover:text-error transition-colors"
@@ -528,24 +597,12 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
               </div>
 
               {/* Cardio */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium text-texto-primario">
-                  Cardio (opcional)
-                </h2>
-              </div>
-
-              {!mostraCardio ? (
-                <Botao
-                  variante="secundario"
-                  onClick={() => setMostraCardio(true)}
-                  className="w-full border-dashed"
-                >
-                  + Adicionar seção de cardio
-                </Botao>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-texto-secundario">Atividades de cardio</span>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-medium text-texto-primario">
+                    Cardio (opcional)
+                  </h2>
+                  {mostraCardio && (
                     <button
                       type="button"
                       onClick={() => setMostraCardio(false)}
@@ -553,56 +610,152 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                     >
                       Remover seção
                     </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {TIPOS_CARDIO.map((tipo) => (
-                      <Botao
-                        key={tipo}
-                        variante="fantasma"
-                        tamanho="compacto"
-                        onClick={() => handleAdicionarCardio(tipo)}
-                      >
-                        +{tipo}
-                      </Botao>
-                    ))}
-                  </div>
-
-                  {cardio.length === 0 ? (
-                    <p className="text-xs text-texto-sutil text-center py-4">
-                      Selecione um tipo de cardio acima
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {cardio.map((entrada, index) => (
-                        <CardCardioConfig
-                          key={entrada.id}
-                          config={entrada}
-                          aoAtualizar={(atualizacoes) =>
-                            handleAtualizarCardio(index, atualizacoes)
-                          }
-                          aoRemover={() => handleRemoverCardio(index)}
-                        />
-                      ))}
-                    </div>
                   )}
                 </div>
-              )}
+
+                {!mostraCardio ? (
+                  <Botao
+                    variante="secundario"
+                    onClick={() => setMostraCardio(true)}
+                    className="w-full border-dashed"
+                  >
+                    + Adicionar seção de cardio
+                  </Botao>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-texto-sutil">
+                      Toque para adicionar uma atividade
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {TIPOS_CARDIO.map((tipo) => (
+                        <button
+                          key={tipo}
+                          type="button"
+                          onClick={() => handleAdicionarCardio(tipo)}
+                          className="
+                            group flex items-center gap-2.5 px-3 py-2.5 min-h-[52px]
+                            rounded-xl border border-borda bg-superficie text-left
+                            hover:border-acento hover:bg-acento/5
+                            active:scale-[0.98] transition-all duration-150
+                          "
+                        >
+                          <span className="text-xl leading-none shrink-0">
+                            {EMOJI_CARDIO[tipo]}
+                          </span>
+                          <span className="flex-1 min-w-0 text-[13px] font-medium leading-tight text-texto-primario">
+                            {tipo}
+                          </span>
+                          <span
+                            className="
+                              flex h-6 w-6 shrink-0 items-center justify-center
+                              rounded-full bg-superficie-suave text-texto-sutil
+                              transition-colors duration-150
+                              group-hover:bg-acento group-hover:text-texto-invertido
+                            "
+                            aria-hidden="true"
+                          >
+                            <Icone nome="mais" tamanho={14} />
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {cardio.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        {cardio.map((entrada, index) => (
+                          <CardCardioConfig
+                            key={entrada.id}
+                            config={entrada}
+                            aoAtualizar={(atualizacoes) =>
+                              handleAtualizarCardio(index, atualizacoes)
+                            }
+                            aoRemover={() => handleRemoverCardio(index)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Resumo final */}
               {(nome || icone) && (
                 <div className="pt-4 border-t border-borda-suave">
-                  <h3 className="text-sm font-medium text-texto-primario mb-3">Resumo da ficha</h3>
-                  <div className="flex items-center gap-3 px-4 py-3 bg-superficie-suave rounded-xl border border-borda-suave">
-                    <span className="text-3xl">{icone || "💪"}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-texto-primario truncate">
-                        {nome || "Nome da ficha"}
-                      </p>
-                      <p className="text-xs text-texto-secundario">
-                        {exercicios.length} {exercicios.length === 1 ? "exercício" : "exercícios"}
-                        {mostraCardio && cardio.length > 0 && " · cardio"}
-                      </p>
+                  <h3 className="text-sm font-medium text-texto-primario mb-3">Resumo final</h3>
+                  <div className="bg-superficie-suave rounded-xl border border-borda-suave overflow-hidden">
+                    <div className="flex items-start gap-3 px-4 py-3">
+                      <span className="text-3xl shrink-0">{icone || "💪"}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-texto-primario truncate">
+                          {nome || "Nome da ficha"}
+                        </p>
+                        {descricao && (
+                          <p className="text-xs text-texto-secundario line-clamp-2">
+                            {descricao}
+                          </p>
+                        )}
+                        <p className="text-xs text-texto-sutil mt-1">
+                          {textoResumoFicha()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-borda-suave divide-y divide-borda-suave">
+                      <div className="px-4 py-3">
+                        <p className="text-xs font-medium text-texto-primario mb-2">
+                          Exercícios
+                        </p>
+                        <div className="space-y-1.5">
+                          {exercicios.slice(0, 4).map((exercicio, index) => (
+                            <div
+                              key={`resumo-${exercicio.exercicioId}-${index}`}
+                              className="flex items-center justify-between gap-3"
+                            >
+                              <span className="text-xs text-texto-secundario truncate">
+                                {index + 1}. {getNomeExercicio(exercicio.exercicioId)}
+                              </span>
+                              <span className="text-xs font-medium text-texto-primario whitespace-nowrap">
+                                {exercicio.series}x{exercicio.repeticoes}
+                              </span>
+                            </div>
+                          ))}
+                          {exercicios.length > 4 && (
+                            <p className="text-xs text-texto-sutil">
+                              +{exercicios.length - 4} {exercicios.length - 4 === 1 ? "exercício" : "exercícios"}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {mostraCardio && cardio.length > 0 && (
+                        <div className="px-4 py-3">
+                          <p className="text-xs font-medium text-texto-primario mb-2">
+                            Cardio
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {cardio.map((entrada) => (
+                              <span
+                                key={entrada.id}
+                                className="px-2 py-1 rounded-md bg-superficie border border-borda-suave text-xs text-texto-secundario"
+                              >
+                                {entrada.tipo} · {entrada.duracaoMinutos}min
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {programasVinculados.length > 0 && (
+                        <div className="px-4 py-3">
+                          <p className="text-xs font-medium text-texto-primario mb-2">
+                            Programas vinculados
+                          </p>
+                          <p className="text-xs text-texto-secundario">
+                            {programasVinculados.map((programa) => programa.nome).join(", ")}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -613,7 +766,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       </div>
 
       {/* Footer fixo com botões */}
-      <div className="absolute bottom-0 left-0 right-0 px-5 py-4 border-t border-borda bg-superficie/95 backdrop-blur-sm">
+      <div className="shrink-0 px-5 pt-4 pb-[max(var(--safe-bottom),16px)] border-t border-borda bg-superficie/95 backdrop-blur-sm">
         <div className="max-w-[480px] mx-auto flex gap-3">
           {etapaAtual > 0 && (
             <Botao
@@ -677,6 +830,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                       key={programa.id}
                       type="button"
                       onClick={() => {
+                        vinculosProgramasAlteradosRef.current = true;
                         setProgramasVinculados([...programasVinculados, programa]);
                         setModalVincularProgramaAberto(false);
                       }}
@@ -752,14 +906,12 @@ function CardExercicioConfig({
           <label className="text-xs text-texto-secundario mb-1 block">
             Séries
           </label>
-          <input
-            type="number"
-            min={1}
-            max={20}
-            value={config.series}
-            onChange={(e) =>
-              aoAtualizar({ series: parseInt(e.target.value) || 1 })
-            }
+          <CampoNumerico
+            valor={config.series}
+            minimo={1}
+            maximo={20}
+            aoAlterar={(series) => aoAtualizar({ series })}
+            ariaLabel="Series"
             className="
               w-full px-2 py-2
               bg-superficie-suave border border-borda
@@ -774,14 +926,12 @@ function CardExercicioConfig({
           <label className="text-xs text-texto-secundario mb-1 block">
             Reps
           </label>
-          <input
-            type="number"
-            min={1}
-            max={100}
-            value={config.repeticoes}
-            onChange={(e) =>
-              aoAtualizar({ repeticoes: parseInt(e.target.value) || 1 })
-            }
+          <CampoNumerico
+            valor={config.repeticoes}
+            minimo={1}
+            maximo={100}
+            aoAlterar={(repeticoes) => aoAtualizar({ repeticoes })}
+            ariaLabel="Repeticoes"
             className="
               w-full px-2 py-2
               bg-superficie-suave border border-borda
@@ -816,17 +966,13 @@ function CardExercicioConfig({
             Descanso
           </label>
           <div className="flex items-center gap-1">
-            <input
-              type="number"
-              min={10}
-              max={600}
-              step={10}
-              value={config.descansoSegundos}
-              onChange={(e) =>
-                aoAtualizar({
-                  descansoSegundos: parseInt(e.target.value) || 60,
-                })
-              }
+            <CampoNumerico
+              valor={config.descansoSegundos}
+              minimo={10}
+              maximo={600}
+              passo={10}
+              aoAlterar={(descansoSegundos) => aoAtualizar({ descansoSegundos })}
+              ariaLabel="Descanso em segundos"
               className="
                 w-full px-2 py-2
                 bg-superficie-suave border border-borda
@@ -850,16 +996,19 @@ interface CardCardioConfigProps {
 
 function CardCardioConfig({ config, aoAtualizar, aoRemover }: CardCardioConfigProps) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-superficie-suave rounded-lg">
+    <div className="px-4 py-3 bg-superficie-suave rounded-xl border border-borda-suave">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-2">
-          <span className="px-2 py-1 bg-acento/20 text-acento text-xs font-medium rounded">
+          <span className="text-lg leading-none shrink-0">
+            {EMOJI_CARDIO[config.tipo]}
+          </span>
+          <span className="text-sm font-medium text-texto-primario">
             {config.tipo}
           </span>
           <button
             type="button"
             onClick={aoRemover}
-            className="text-xs text-texto-secundario hover:text-error ml-auto"
+            className="text-xs text-texto-secundario hover:text-error ml-auto transition-colors"
           >
             Remover
           </button>
@@ -870,14 +1019,12 @@ function CardCardioConfig({ config, aoAtualizar, aoRemover }: CardCardioConfigPr
             <label className="text-xs text-texto-secundario mb-1 block">
               Duração (min)
             </label>
-            <input
-              type="number"
-              min={1}
-              max={180}
-              value={config.duracaoMinutos}
-              onChange={(e) =>
-                aoAtualizar({ duracaoMinutos: parseInt(e.target.value) || 1 })
-              }
+            <CampoNumerico
+              valor={config.duracaoMinutos}
+              minimo={1}
+              maximo={180}
+              aoAlterar={(duracaoMinutos) => aoAtualizar({ duracaoMinutos })}
+              ariaLabel="Duracao em minutos"
               className="
                 w-full px-2 py-2
                 bg-superficie border border-borda

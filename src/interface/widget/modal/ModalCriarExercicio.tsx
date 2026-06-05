@@ -42,10 +42,13 @@ export function ModalCriarExercicio({
   // Resetar formulário ao abrir
   useEffect(() => {
     if (aberto) {
-      setNome("");
-      setGrupoMuscular("");
-      setGrupoCustomizado("");
-      setUsarGrupoCustomizado(false);
+      const id = window.setTimeout(() => {
+        setNome("");
+        setGrupoMuscular("");
+        setGrupoCustomizado("");
+        setUsarGrupoCustomizado(false);
+      }, 0);
+      return () => window.clearTimeout(id);
     }
   }, [aberto]);
 

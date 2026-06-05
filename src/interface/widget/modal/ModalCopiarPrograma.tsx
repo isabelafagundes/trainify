@@ -24,8 +24,11 @@ export function ModalCopiarPrograma({
   // Resetar ao abrir
   useEffect(() => {
     if (aberto) {
-      setBusca("");
-      setProgramaSelecionado(null);
+      const id = window.setTimeout(() => {
+        setBusca("");
+        setProgramaSelecionado(null);
+      }, 0);
+      return () => window.clearTimeout(id);
     }
   }, [aberto]);
 

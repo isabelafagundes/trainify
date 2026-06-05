@@ -121,7 +121,7 @@ export function EditorProgramaPage({
 
       {/* Conteúdo scrollável */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="px-5 py-4 pb-32 space-y-6">
+        <div className="px-5 py-4 pb-6 space-y-6">
           {/* Copiar de existente */}
           <Botao
             variante="secundario"
@@ -264,7 +264,7 @@ export function EditorProgramaPage({
       </div>
 
       {/* Footer fixo com botões */}
-      <div className="absolute bottom-0 left-0 right-0 px-5 py-4 border-t border-borda bg-superficie/95 backdrop-blur-sm">
+      <div className="shrink-0 px-5 pt-4 pb-[max(var(--safe-bottom),16px)] border-t border-borda bg-superficie/95 backdrop-blur-sm">
         <div className="max-w-[480px] mx-auto">
           <Botao
             variante="primario"

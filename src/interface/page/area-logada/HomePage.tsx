@@ -1,6 +1,7 @@
+import { useMemo } from "react";
 import type { Ficha, Programa, RegistroTreino } from "@/domain/tipos";
 import { exerciciosPadrao } from "@/infrastructure/repo/mock/exercicio-mock.repo";
-import { dadosFrequencia } from "@/infrastructure/repo/mock/dados-mock.repo";
+import { construirDadosFrequencia } from "@/interface/page/area-logada/estatisticas/utils";
 import { BannerPrograma } from "@/interface/widget/programa/BannerPrograma";
 import { LinhaFicha } from "@/interface/widget/ficha/LinhaFicha";
 import { EstadoVazio } from "@/interface/widget/EstadoVazio";
@@ -27,6 +28,13 @@ export function HomePage({
   aoNavegar,
 }: PropriedadesHomePage) {
   const programaAtivo = programas.find((p) => p.ativo) ?? null;
+
+  // Frequência derivada do histórico real (mesma fonte da tela de Estatísticas),
+  // para que o streak da home fique consistente com as estatísticas.
+  const dadosFrequencia = useMemo(
+    () => construirDadosFrequencia(historico),
+    [historico],
+  );
 
   // Fichas do programa ativo
   const fichasDoPrograma = programaAtivo
@@ -76,7 +84,7 @@ export function HomePage({
     <div className="px-4 py-4 space-y-5">
       {/* ── Resumo semanal (sutil) ── */}
       {programaAtivo && (
-        <section>
+        <section className="reveal-up">
           <StripSemanal dados={dadosFrequencia} />
         </section>
       )}
@@ -85,7 +93,10 @@ export function HomePage({
       {programaAtivo ? (
         <section className="rounded-2xl overflow-hidden bg-superficie shadow-sm">
           {/* Banner header — integrado com borda */}
-          <div className="px-4 py-5 border-b border-borda-suave">
+          <div
+            className="px-4 py-5 border-b border-borda-suave reveal-up"
+            style={{ animationDelay: "90ms" }}
+          >
             <BannerPrograma
               nome={programaAtivo.nome}
               descricao={programaAtivo.descricao}
@@ -99,11 +110,12 @@ export function HomePage({
             fichasOrdenadas.map((ficha, i) => (
               <div
                 key={ficha.id}
-                className={
+                className={`reveal-up ${
                   i < fichasOrdenadas.length - 1
                     ? "border-b border-borda-suave"
                     : ""
-                }
+                }`}
+                style={{ animationDelay: `${150 + i * 70}ms` }}
               >
                 <LinhaFicha
                   ficha={ficha}
@@ -125,7 +137,7 @@ export function HomePage({
           )}
         </section>
       ) : (
-        <section>
+        <section className="reveal-up">
           <EstadoVazio
             icone="halter"
             titulo="Comece sua jornada 💪"
@@ -134,7 +146,7 @@ export function HomePage({
               <Botao
                 variante="primario"
                 icone={<Icone nome="mais" tamanho={16} />}
-                onClick={() => aoNavegar("gerenciar")}
+                onClick={() => aoNavegar("criarPrograma")}
               >
                 Criar primeiro programa
               </Botao>

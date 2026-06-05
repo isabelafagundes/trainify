@@ -2,37 +2,12 @@
    Modelo de Tema — Trainify
    ═══════════════════════════════════════════ */
 
-/** Cores do sistema */
-export interface CoresTema {
-  accent: string;
-  primary: string;
-  secondary: string;
-  error: string;
-  warning: string;
-  success: string;
-  base: string;
-  neutral: string;
-}
+export type TemaId = "claro" | "escuro" | (string & {});
 
-/** Border radius disponíveis */
-export type BorderRadius = "P" | "M" | "G" | "XG";
+export type VariavelCssTema = `--${string}`;
 
-/** Tamanhos de fonte disponíveis */
-export type FontSize = "P" | "M" | "G" | "XG";
-
-/** Família de fontes */
-export interface FontFamily {
-  principal: string;
-  secundaria: string;
-}
-
-/** Tema completo da aplicação */
 export interface Tema {
-  id: string;
+  id: TemaId;
   nome: string;
-  cores: CoresTema;
-  bordas: Record<BorderRadius, string>;
-  fontes: Record<FontSize, string>;
-  familias: FontFamily;
-  espacamento: string;
+  variaveis: Record<VariavelCssTema, string>;
 }

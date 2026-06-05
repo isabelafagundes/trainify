@@ -3,6 +3,7 @@ interface PropriedadesChip {
   tamanho?: "pequeno" | "normal";
   ativo?: boolean;
   aoClicar?: () => void;
+  className?: string;
 }
 
 /** Chip compacto para grupos musculares */
@@ -10,7 +11,8 @@ export function Chip({
   rotulo,
   tamanho = "normal",
   ativo = false,
-  aoClicar
+  aoClicar,
+  className = "",
 }: PropriedadesChip) {
   const classes = [
     "inline-flex items-center justify-center",
@@ -19,6 +21,7 @@ export function Chip({
     ativo
       ? "bg-acento text-texto-invertido"
       : "bg-superficie-suave/80 text-texto-secundario hover:bg-superficie-suave hover:text-texto-primario hover:scale-105",
+    className,
   ].join(" ");
 
   return (

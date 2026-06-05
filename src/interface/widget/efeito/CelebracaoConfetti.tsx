@@ -36,19 +36,20 @@ export function CelebracaoConfetti({
 
   useEffect(() => {
     if (ativo) {
-      // Gerar partículas
-      const novasParticulas: Particula[] = Array.from({ length: quantidade }, (_, i) => ({
-        id: i,
-        x: 50, // Começa no centro (50%)
-        y: 50,
-        rotacao: Math.random() * 360,
-        cor: cores[Math.floor(Math.random() * cores.length)],
-        velocidadeX: (Math.random() - 0.5) * 40, // Espalha horizontalmente
-        velocidadeY: -Math.random() * 30 - 20, // Explode para cima
-        rotacaoVel: (Math.random() - 0.5) * 720, // Rotação rápida
-      }));
+      const timerInicio = setTimeout(() => {
+        const novasParticulas: Particula[] = Array.from({ length: quantidade }, (_, i) => ({
+          id: i,
+          x: 50,
+          y: 50,
+          rotacao: Math.random() * 360,
+          cor: cores[Math.floor(Math.random() * cores.length)],
+          velocidadeX: (Math.random() - 0.5) * 40,
+          velocidadeY: -Math.random() * 30 - 20,
+          rotacaoVel: (Math.random() - 0.5) * 720,
+        }));
 
-      setParticulas(novasParticulas);
+        setParticulas(novasParticulas);
+      }, 0);
 
       // Limpar após duração
       const timer = setTimeout(() => {
@@ -56,9 +57,13 @@ export function CelebracaoConfetti({
         aoCompletar?.();
       }, duracao);
 
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timerInicio);
+        clearTimeout(timer);
+      };
     } else {
-      setParticulas([]);
+      const timerLimpeza = setTimeout(() => setParticulas([]), 0);
+      return () => clearTimeout(timerLimpeza);
     }
   }, [ativo, quantidade, duracao, aoCompletar]);
 

@@ -8,6 +8,14 @@ interface PropriedadesStripSemanal {
 
 const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
+/** Data ISO (YYYY-MM-DD) em horário local — alinhada com os registros de frequência */
+function toISODateLocal(data: Date): string {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
 export function StripSemanal({ dados }: PropriedadesStripSemanal) {
   const registrosPorData = useMemo(() => {
     const mapa = new Map<string, boolean>();
@@ -23,7 +31,7 @@ export function StripSemanal({ dados }: PropriedadesStripSemanal) {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(hoje);
       d.setDate(d.getDate() - (6 - i));
-      const iso = d.toISOString().split("T")[0];
+      const iso = toISODateLocal(d);
       return {
         iso,
         diaSemana: diasSemana[d.getDay()],
@@ -41,7 +49,7 @@ export function StripSemanal({ dados }: PropriedadesStripSemanal) {
     for (let i = 0; i < 365; i++) {
       const d = new Date(hoje);
       d.setDate(d.getDate() - i);
-      const iso = d.toISOString().split("T")[0];
+      const iso = toISODateLocal(d);
       if (registrosPorData.get(iso)) {
         count++;
       } else if (i > 0) {
@@ -68,7 +76,7 @@ export function StripSemanal({ dados }: PropriedadesStripSemanal) {
             : "Lendário!";
 
   return (
-    <div className="bg-superficie rounded-2xl px-5 py-5 space-y-4 fade-in shadow-sm">
+    <div className="bg-superficie rounded-2xl px-5 py-5 space-y-4 shadow-sm">
       {/* Sequência */}
       <div className="flex items-center gap-3">
         <div className={`
