@@ -9,6 +9,10 @@ import {
   type Armazenamento,
 } from "@/infrastructure/service/armazenamento.service";
 import {
+  criarBackupArquivoService,
+  type BackupArquivoService,
+} from "@/infrastructure/service/backup-arquivo.service";
+import {
   criarFeedbackTatilService,
   type FeedbackTatilService,
 } from "@/infrastructure/service/feedback-tatil.service";
@@ -24,6 +28,7 @@ export type Ambiente = "development" | "production";
 export interface AppModule {
   fichas: FichaApiRepository;
   armazenamento: Armazenamento;
+  backupArquivo: BackupArquivoService;
   feedbackTatil: FeedbackTatilService;
   notificacoesTreino: NotificacoesTreinoService;
 }
@@ -35,6 +40,7 @@ export function criarModule(ambiente: Ambiente = "development"): AppModule {
   return {
     fichas: usarMock ? fichaMockRepository : fichaMockRepository, // TODO: substituir por API real
     armazenamento: criarArmazenamento(),
+    backupArquivo: criarBackupArquivoService(),
     feedbackTatil: criarFeedbackTatilService(),
     notificacoesTreino: criarNotificacoesTreinoService(),
   };

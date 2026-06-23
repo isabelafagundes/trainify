@@ -1,10 +1,15 @@
 import { useState, type ReactNode } from "react";
+import { snapshotService } from "@/application/snapshot/snapshot.service";
 import { temaManager } from "@/application/state/tema.state";
 import { usuarioManager } from "@/application/state/usuario.state";
+import type { SnapshotTrainify } from "@/domain/snapshot";
 import type { Tema } from "@/domain/tema";
 import { AVATAR_EMOJI_PADRAO } from "@/domain/usuario";
+import { appModule } from "@/interface/configuration/module/app.module";
+import { ModalConfirmacao } from "@/interface/widget/modal/ModalConfirmacao";
 import { Icone } from "@/interface/widget/svg/Icone";
 import { FormularioPerfil } from "@/interface/widget/formulario/FormularioPerfil";
+import { useToast } from "@/interface/widget/toast";
 
 interface PropriedadesCabecalhoApp {
   tituloTela: string;
@@ -18,8 +23,12 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
   const [menuAberto, setMenuAberto] = useState(false);
   const [editandoPerfil, setEditandoPerfil] = useState(false);
   const [temaAtualId, setTemaAtualId] = useState(() => temaManager.obterTema().id);
+  const [exportandoDados, setExportandoDados] = useState(false);
+  const [importandoDados, setImportandoDados] = useState(false);
+  const [snapshotPendente, setSnapshotPendente] = useState<SnapshotTrainify | null>(null);
   const temas = temaManager.listarTemas();
   const emoji = avatarEmoji || AVATAR_EMOJI_PADRAO;
+  const { showSuccess, showError } = useToast();
 
   function selecionarTema(tema: Tema) {
     temaManager.definirTema(tema);
@@ -34,6 +43,51 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
   function salvarPerfil(dados: { nome: string; avatarEmoji: string }) {
     usuarioManager.definirUsuario(dados);
     setEditandoPerfil(false);
+  }
+
+  async function exportarDados() {
+    setExportandoDados(true);
+    try {
+      const snapshot = await snapshotService.exportarSnapshot();
+      const nomeArquivo = await appModule.backupArquivo.exportar(
+        snapshotService.serializar(snapshot)
+      );
+      showSuccess(`Dados exportados em ${nomeArquivo}.`);
+    } catch {
+      showError("Nao foi possivel exportar seus dados.");
+    } finally {
+      setExportandoDados(false);
+    }
+  }
+
+  async function iniciarImportacao() {
+    setImportandoDados(true);
+    try {
+      const texto = await appModule.backupArquivo.importar();
+      if (!texto) return;
+
+      setSnapshotPendente(snapshotService.desserializar(texto));
+    } catch {
+      showError("Arquivo de backup invalido.");
+    } finally {
+      setImportandoDados(false);
+    }
+  }
+
+  async function confirmarImportacao() {
+    if (!snapshotPendente) return;
+
+    setImportandoDados(true);
+    try {
+      await snapshotService.importarSnapshot(snapshotPendente, "substituir");
+      setSnapshotPendente(null);
+      fecharMenu();
+      showSuccess("Dados importados com sucesso.");
+    } catch {
+      showError("Nao foi possivel importar seus dados.");
+    } finally {
+      setImportandoDados(false);
+    }
   }
 
   return (
@@ -210,12 +264,60 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
                 })}
               </div>
             </div>
+
+            <div className="mt-7 space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil">
+                Dados
+              </h2>
+
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={exportarDados}
+                  disabled={exportandoDados || importandoDados}
+                  className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl border border-borda-suave bg-superficie-suave text-left text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <Icone nome="clipboard" tamanho={16} />
+                    <span className="truncate text-sm font-medium">
+                      {exportandoDados ? "Exportando..." : "Exportar dados"}
+                    </span>
+                  </span>
+                  <Icone nome="setaDireita" tamanho={14} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={iniciarImportacao}
+                  disabled={exportandoDados || importandoDados}
+                  className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl border border-borda-suave bg-superficie-suave text-left text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <Icone nome="setaBaixo" tamanho={16} />
+                    <span className="truncate text-sm font-medium">
+                      {importandoDados ? "Importando..." : "Importar dados"}
+                    </span>
+                  </span>
+                  <Icone nome="setaDireita" tamanho={14} />
+                </button>
+              </div>
+            </div>
             </>
             )}
           </aside>
         </div>
       )}
       </div>
+      <ModalConfirmacao
+        aberto={snapshotPendente !== null}
+        titulo="Importar dados"
+        descricao="Isto vai substituir seus dados atuais neste aparelho. Tem certeza que deseja continuar?"
+        textoConfirmar={importandoDados ? "Importando..." : "Importar"}
+        textoCancelar="Cancelar"
+        variant="atencao"
+        aoConfirmar={confirmarImportacao}
+        aoCancelar={() => setSnapshotPendente(null)}
+      />
       <div className="h-[calc(max(var(--safe-top),8px)+68px)]" aria-hidden="true" />
     </>
   );
