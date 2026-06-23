@@ -109,8 +109,6 @@ export function DetalheHistoricoPage({
                 aoVerGrafico={() =>
                   aoNavegar("graficoProgressao", {
                     exercicioId: registroExercicio.exercicioId,
-                    voltarPara: "detalheHistorico",
-                    registroId: registro.id,
                   })
                 }
               />
