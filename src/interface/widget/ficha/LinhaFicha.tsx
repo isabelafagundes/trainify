@@ -1,6 +1,7 @@
 import type { Exercicio, ExercicioFicha, Ficha } from "@/domain/tipos";
-import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
+import { formatarDataRelativa } from "@/interface/page/area-logada/programa/utils";
 import { Botao } from "@/interface/widget/botao/Botao";
+import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
 
 interface PropriedadesLinhaFicha {
   ficha: Ficha;
@@ -12,7 +13,7 @@ interface PropriedadesLinhaFicha {
 
 function extrairGruposMusculares(
   exerciciosFicha: ExercicioFicha[],
-  catalogo: Exercicio[]
+  catalogo: Exercicio[],
 ): string[] {
   const grupos = new Set<string>();
   for (const ef of exerciciosFicha) {
@@ -20,18 +21,6 @@ function extrairGruposMusculares(
     if (exercicio) grupos.add(exercicio.grupoMuscular);
   }
   return Array.from(grupos);
-}
-
-function formatarDataRelativa(dataISO: string): string {
-  const agora = new Date();
-  const data = new Date(dataISO);
-  const diffMs = agora.getTime() - data.getTime();
-  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDias === 0) return "Hoje";
-  if (diffDias === 1) return "Ontem";
-  if (diffDias < 7) return `${diffDias}d atrás`;
-  return data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
 export function LinhaFicha({
@@ -45,7 +34,6 @@ export function LinhaFicha({
 
   return (
     <div className={`flex items-center gap-4 py-3 px-4 transition-all duration-200 group ${proximoTreino ? "bg-acento-suave/50 animate-highlight-pulse" : "hover:bg-superficie-suave"}`}>
-      {/* Ícone */}
       <div className="relative flex-shrink-0">
         <div className="w-12 h-12 rounded-[10px] bg-acento-suave flex items-center justify-center text-texto-primario transition-all duration-200 group-hover:scale-105 shadow-sm">
           <IconeFicha nome={ficha.icone} tamanho={26} emoji={ficha.emoji} />
@@ -55,7 +43,6 @@ export function LinhaFicha({
         )}
       </div>
 
-      {/* Conteúdo */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
           <h3 className="text-sm font-semibold text-texto-primario leading-tight font-display truncate transition-colors duration-200 group-hover:text-texto-secundario">
@@ -79,17 +66,14 @@ export function LinhaFicha({
         </div>
       </div>
 
-      {/* Botão iniciar */}
       {proximoTreino ? (
         <button
           onClick={() => aoIniciarTreino(ficha.id)}
           className="relative inline-flex flex-shrink-0 items-center justify-center overflow-hidden rounded-[8px] px-3 py-2 bg-acento text-texto-invertido text-xs font-medium gap-2 transition-all duration-200 hover:bg-acento-hover hover:-translate-y-px hover:shadow-md active:scale-95 group active:translate-y-0"
         >
-          {/* Efeito shimmer */}
           <div className="absolute inset-0 -translate-x-full animate-shimmer-btn">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
           </div>
-          {/* Conteúdo do botão */}
           <Icone nome="reproduzir" tamanho={13} />
           <span className="relative">Iniciar</span>
         </button>

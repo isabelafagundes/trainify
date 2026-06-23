@@ -5,8 +5,8 @@
 import { STORAGE_KEYS } from "@/constants";
 import type { Tema, TemaId } from "@/domain/tema";
 import { appModule } from "@/interface/configuration/module/app.module";
+import { SafeArea, SystemBarsStyle } from "@capacitor-community/safe-area";
 import { Capacitor } from "@capacitor/core";
-import { StatusBar, Style } from "@capacitor/status-bar";
 
 /** Tema base atual do app. Novos temas devem sobrescrever estes mesmos tokens. */
 export const TEMA_CLARO: Tema = {
@@ -77,12 +77,10 @@ export class TemaManager {
   private static instancia: TemaManager;
   private temaAtual: Tema;
   private modoFonteGrande: boolean;
-  private statusBarConfigurada: boolean;
 
   private constructor() {
     this.temaAtual = TEMA_CLARO;
     this.modoFonteGrande = false;
-    this.statusBarConfigurada = false;
   }
 
   static obterInstancia(): TemaManager {
@@ -190,16 +188,8 @@ export class TemaManager {
     if (!Capacitor.isNativePlatform()) return;
 
     try {
-      if (!this.statusBarConfigurada) {
-        await StatusBar.setOverlaysWebView({ overlay: false });
-        this.statusBarConfigurada = true;
-      }
-
-      await StatusBar.setStyle({
-        style: tema.id === "escuro" ? Style.Dark : Style.Light,
-      });
-      await StatusBar.setBackgroundColor({
-        color: tema.id === "escuro" ? "#24211f" : "#f5f1ea",
+      await SafeArea.setSystemBarsStyle({
+        style: tema.id === "escuro" ? SystemBarsStyle.Dark : SystemBarsStyle.Light,
       });
     } catch {
       // Plugins nativos podem nao estar disponiveis durante preview web.

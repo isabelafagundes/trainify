@@ -12,7 +12,7 @@ export function BarraProgressoExercicios({
   aoIrPara,
 }: BarraProgressoExerciciosProps) {
   return (
-    <div className="sticky top-[calc(65px+var(--safe-top))] z-10 bg-fundo/95 px-4 pb-3 pt-1 backdrop-blur">
+    <div className="sticky top-[calc(63px+var(--safe-top))] z-10 -mt-px bg-fundo px-4 pb-3 pt-1">
       <div className="flex items-center gap-1.5" aria-label="Progresso dos exercícios">
         {Array.from({ length: total }, (_, indice) => {
           const ativo = indice === indiceAtual;

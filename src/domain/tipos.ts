@@ -52,22 +52,9 @@ export interface Programa {
   id: string;
   nome: string;
   descricao: string;
-  corBanner: CorBanner | null;
   fichaIds: string[];
   ativo: boolean;
 }
-
-/** Cores disponíveis para banner */
-export type CorBanner =
-  | "azul"
-  | "verde"
-  | "roxo"
-  | "laranja"
-  | "rosa"
-  | "vermelho"
-  | "amarelo"
-  | "ciano"
-  | "indigo";
 
 /** Registro de série durante execução */
 export interface RegistroSerie {

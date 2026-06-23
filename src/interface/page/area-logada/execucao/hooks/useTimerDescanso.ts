@@ -51,10 +51,16 @@ export function useTimerDescanso(segundosIniciais: number) {
   );
   const alternar = useCallback(
     () =>
-      setEstado({
-        base: segundosIniciais,
-        segundosRestantes,
-        rodando: !rodando,
+      setEstado(() => {
+        const vaiIniciar = !rodando;
+        // Ao dar play com o tempo zerado, reinicia o descanso do começo.
+        const restantes =
+          vaiIniciar && segundosRestantes <= 0 ? segundosIniciais : segundosRestantes;
+        return {
+          base: segundosIniciais,
+          segundosRestantes: restantes,
+          rodando: vaiIniciar,
+        };
       }),
     [rodando, segundosIniciais, segundosRestantes]
   );

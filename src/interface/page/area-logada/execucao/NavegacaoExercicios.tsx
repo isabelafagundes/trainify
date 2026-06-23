@@ -18,7 +18,7 @@ export function NavegacaoExercicios({
   aoFinalizar,
 }: NavegacaoExerciciosProps) {
   return (
-    <footer className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 bg-fundo/95 px-4 pb-4 pt-3 backdrop-blur border-t border-borda-suave">
+    <footer className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 bg-fundo/95 px-4 pb-[calc(var(--safe-bottom)+16px)] pt-3 backdrop-blur border-t border-borda-suave">
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"

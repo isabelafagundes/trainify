@@ -92,6 +92,20 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
 
   return (
     <>
+      {/* Scrim glass de largura total: o conteúdo da rolagem some suavemente
+          atrás de um blur/gradiente no topo, cobrindo a área da status bar. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed left-1/2 top-0 z-30 w-full max-w-[480px] -translate-x-1/2"
+        style={{
+          height: "calc(var(--safe-top) + 72px)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          background: "linear-gradient(to bottom, var(--color-fundo) 35%, transparent)",
+          WebkitMaskImage: "linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%)",
+        }}
+      />
       <div className="fixed left-0 right-0 top-0 z-40 mx-auto w-full max-w-[480px] px-5 pt-[max(var(--safe-top),8px)] pb-1">
         <header className="
           flex items-center justify-between gap-3
@@ -318,7 +332,6 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
         aoConfirmar={confirmarImportacao}
         aoCancelar={() => setSnapshotPendente(null)}
       />
-      <div className="h-[calc(max(var(--safe-top),8px)+68px)]" aria-hidden="true" />
     </>
   );
 }

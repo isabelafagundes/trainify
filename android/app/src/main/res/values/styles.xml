@@ -1,22 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
+    <!-- Base application theme.
+         O app web é SEMPRE claro (creme) e não tem modo escuro, então o shell
+         nativo é forçado claro (Light, não DayNight) para o fundo da janela atrás
+         da status bar transparente não ficar preto no modo escuro do sistema.
+         Sem ActionBar: a UI inteira é renderizada pela WebView. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
-    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <!-- Tema da activity depois que o splash some (postSplashScreenTheme).
+         Fundo creme + barras de sistema transparentes com ícones escuros,
+         para o edge-to-edge não revelar faixa preta atrás da status bar/nav bar. -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:background">@null</item>
+        <item name="android:windowBackground">#f5f1ea</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
-
+    <!-- Tema de launch (cold start): mostra o splash e, ao terminar, troca para
+         AppTheme.NoActionBar via postSplashScreenTheme. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <!-- O decor da janela é criado com ESTE tema (launch). Sem isso, a ActionBar
+             nativa (faixa preta com "Trainify") é inflada e persiste. -->
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
     </style>
 </resources>

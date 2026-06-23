@@ -54,7 +54,22 @@ export function NavegacaoInferior({ abaAtiva, aoMudarAba, aoCriarPrograma }: Pro
   };
 
   return (
-    <nav
+    <>
+      {/* Scrim glass de largura total: o conteúdo da rolagem some suavemente
+          atrás de um blur/gradiente no rodapé, cobrindo a área da navigation bar. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed bottom-0 left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2"
+        style={{
+          height: "calc(var(--safe-bottom) + 96px)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          background: "linear-gradient(to top, var(--color-fundo) 35%, transparent)",
+          WebkitMaskImage: "linear-gradient(to top, #000 0%, #000 62%, transparent 100%)",
+          maskImage: "linear-gradient(to top, #000 0%, #000 62%, transparent 100%)",
+        }}
+      />
+      <nav
       className="
         fixed bottom-0 left-5 right-5 z-50
         bg-superficie/70 backdrop-blur-xl backdrop-saturate-150
@@ -97,6 +112,7 @@ export function NavegacaoInferior({ abaAtiva, aoMudarAba, aoCriarPrograma }: Pro
 
         {abasDireita.map(renderizarAba)}
       </div>
-    </nav>
+      </nav>
+    </>
   );
 }

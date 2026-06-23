@@ -29,6 +29,10 @@
   --color-acento-hover: oklch(0.310 0.018 55);
   --color-acento-suave: oklch(0.935 0.014 65);
 
+  /* Gráficos (amber quente vibrante, dentro da paleta) */
+  --color-grafico: oklch(0.78 0.115 70);
+  --color-grafico-forte: oklch(0.66 0.150 55);
+
   /* Ações destrutivas (vermelho queimado, alinhado à paleta quente) */
   --color-perigo: oklch(0.455 0.095 35);
   --color-perigo-hover: oklch(0.385 0.090 35);

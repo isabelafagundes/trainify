@@ -78,21 +78,30 @@ export function GraficoProgressao({
         </div>
       </div>
 
-      {pontos.length > 0 ? (
+      {pontos.length >= 2 ? (
         <>
-          <div className="mt-5 flex h-44 items-end gap-2 rounded-[10px] bg-fundo px-3 pb-3 pt-4">
-            {pontos.map((ponto) => {
+          <div className="mt-5 flex h-44 items-end justify-center gap-3 rounded-[10px] bg-fundo px-3 pb-3 pt-4">
+            {pontos.map((ponto, indice) => {
               const altura = Math.max(12, (ponto.maiorCarga / maiorCargaGeral) * 100);
+              const ehUltimo = indice === pontos.length - 1;
               return (
-                <div key={ponto.id} className="flex h-full min-w-0 flex-1 flex-col justify-end gap-2">
-                  <div className="flex flex-1 items-end">
+                <div key={ponto.id} className="flex h-full w-10 flex-col justify-end gap-2">
+                  <div className="flex flex-1 items-end justify-center">
                     <div
-                      className="w-full rounded-t-[6px] bg-acento-suave transition-all"
+                      className={`w-full rounded-t-[6px] bg-gradient-to-t transition-all ${
+                        ehUltimo
+                          ? "from-grafico-forte to-grafico shadow-sm"
+                          : "from-grafico/70 to-grafico/45"
+                      }`}
                       style={{ height: `${altura}%` }}
                       title={`${formatarCarga(ponto.maiorCarga)} kg`}
                     />
                   </div>
-                  <span className="truncate text-center text-[11px] text-texto-sutil tabular-nums">
+                  <span
+                    className={`truncate text-center text-[11px] tabular-nums ${
+                      ehUltimo ? "font-semibold text-texto-secundario" : "text-texto-sutil"
+                    }`}
+                  >
                     {formatarData(ponto.data)}
                   </span>
                 </div>
@@ -109,10 +118,42 @@ export function GraficoProgressao({
             <ResumoGrafico rotulo="Volume" valor={`${Math.round(ultimo.volume)} kg`} />
           </div>
         </>
+      ) : pontos.length === 1 ? (
+        <div className="mt-5 flex flex-col items-center gap-3 rounded-[10px] bg-fundo px-4 py-8 text-center">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-acento-suave text-texto-secundario">
+            <Icone nome="tendencia" tamanho={20} />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-texto-primario">
+              Só falta treinar mais uma vez
+            </p>
+            <p className="mt-1 text-sm text-texto-sutil">
+              Registre este exercício em pelo menos 2 treinos para ver a evolução da carga aqui.
+            </p>
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-xs text-texto-sutil">
+            <span className="rounded-full bg-superficie px-3 py-1 tabular-nums">
+              1ª sessão · {formatarData(ultimo.data)}
+            </span>
+            <span className="rounded-full bg-superficie px-3 py-1 tabular-nums">
+              {formatarCarga(ultimo.maiorCarga)} kg
+            </span>
+          </div>
+        </div>
       ) : (
-        <p className="mt-4 rounded-[10px] bg-fundo px-3 py-4 text-sm text-texto-sutil">
-          Sem séries registradas para montar a progressão deste exercício.
-        </p>
+        <div className="mt-5 flex flex-col items-center gap-3 rounded-[10px] bg-fundo px-4 py-8 text-center">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-acento-suave text-texto-secundario">
+            <Icone nome="grafico" tamanho={20} />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-texto-primario">
+              Nenhum treino registrado ainda
+            </p>
+            <p className="mt-1 text-sm text-texto-sutil">
+              Conclua este exercício em um treino para começar a acompanhar sua progressão.
+            </p>
+          </div>
+        </div>
       )}
     </section>
   );
@@ -139,7 +180,7 @@ export function OverlayGraficoProgressao({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/25" onClick={aoFechar}>
       <div
-        className="w-full max-w-[480px] rounded-t-[16px] border border-borda bg-superficie px-4 pb-5 pt-4 shadow-xl"
+        className="w-full max-w-[480px] rounded-t-[16px] border border-borda bg-superficie px-4 pb-[calc(var(--safe-bottom)+20px)] pt-4 shadow-xl"
         onClick={(evento) => evento.stopPropagation()}
       >
         <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-borda" />

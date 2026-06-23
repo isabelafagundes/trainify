@@ -22,7 +22,7 @@ export function HeaderExecucao({
   aoCancelar,
 }: HeaderExecucaoProps) {
   return (
-    <header className="sticky top-0 z-20 bg-fundo/95 pt-[var(--safe-top)] backdrop-blur">
+    <header className="sticky top-0 z-20 bg-fundo pt-[var(--safe-top)]">
       <div className="flex items-center gap-2 px-4 py-3">
         <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-[8px] bg-acento-suave text-texto-primario">
           <IconeFicha nome={iconeFicha} emoji={emojiFicha} tamanho={22} />

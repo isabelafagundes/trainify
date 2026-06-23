@@ -46,6 +46,8 @@ export function ExecucaoTreinoPage({
     if (rodandoAnterior.current && !timer.rodando && timer.segundosRestantes === 0) {
       const id = window.setTimeout(() => setTimerAberto(false), 0);
       void appModule.feedbackTatil.sucesso();
+      // Descanso terminou: volta para o tempo programado em vez de travar em 0:00.
+      timer.resetar();
       rodandoAnterior.current = timer.rodando;
       return () => window.clearTimeout(id);
     }
@@ -76,9 +78,15 @@ export function ExecucaoTreinoPage({
       exercicios: registro.exercicios,
       cardio: registro.cardio,
     });
+    void sessao.encerrar();
     setConfirmarFinalizarAberto(false);
     setFinalizadoAberto(true);
     void appModule.feedbackTatil.sucesso();
+  };
+
+  const descartarTreino = () => {
+    void sessao.encerrar();
+    aoVoltar();
   };
 
   const solicitarFinalizacao = () => {
@@ -133,7 +141,7 @@ export function ExecucaoTreinoPage({
             aoIrPara={sessao.irPara}
           />
 
-          <main className="px-4 pb-32 pt-7">
+          <main className="px-4 pb-32 pt-3">
             <section className="mb-8 transition-transform duration-300">
               <div className="flex items-start justify-between gap-3">
                 <h1 className="min-w-0 flex-1 font-display text-[clamp(22px,6.5vw,32px)] font-semibold leading-[1.1] text-texto-primario break-words">
@@ -221,7 +229,7 @@ export function ExecucaoTreinoPage({
       <OverlayConfirmarCancelar
         aberto={confirmarCancelarAberto}
         aoContinuar={() => setConfirmarCancelarAberto(false)}
-        aoDescartar={aoVoltar}
+        aoDescartar={descartarTreino}
       />
       <OverlayHistoricoSerie
         aberto={serieHistoricoAlvo !== null}
