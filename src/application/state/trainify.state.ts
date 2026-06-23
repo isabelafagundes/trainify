@@ -12,21 +12,21 @@ import { STORAGE_KEYS } from "@/constants";
 import { exerciciosPadrao } from "@/infrastructure/repo/mock/exercicio-mock.repo";
 import { appModule } from "@/interface/configuration/module/app.module";
 
-/** Interface dos dados persistidos */
-interface DadosTreino {
+/** Dados portateis do usuario no snapshot */
+export interface DadosTreinoPortateis {
   programas: Programa[];
   fichas: Ficha[];
   historico: RegistroTreino[];
   exerciciosCustom: Exercicio[];
 }
 
-/** Estado gerenciado pelo Trainify */
-interface TrainifyState {
-  programas: Programa[];
-  fichas: Ficha[];
-  historico: RegistroTreino[];
-  exerciciosCustom: Exercicio[];
+/** Interface dos dados persistidos */
+interface DadosTreino extends DadosTreinoPortateis {
+  atualizadoEm: string;
 }
+
+/** Estado gerenciado pelo Trainify */
+type TrainifyState = DadosTreino;
 
 /** Gerenciador de estado global para dados de treino */
 export class TrainifyStateManager {
@@ -93,6 +93,31 @@ export class TrainifyStateManager {
   }
 
   /** Obter todos os exercícios (padrão + customizados) */
+  getAtualizadoEm(): string {
+    return this.estado.atualizadoEm;
+  }
+
+  getDadosPortateis(): DadosTreinoPortateis {
+    return {
+      programas: [...this.estado.programas],
+      fichas: [...this.estado.fichas],
+      historico: [...this.estado.historico],
+      exerciciosCustom: [...this.estado.exerciciosCustom],
+    };
+  }
+
+  substituirDados(dados: DadosTreinoPortateis, atualizadoEm: string): void {
+    this.estado = {
+      programas: [...dados.programas],
+      fichas: [...dados.fichas],
+      historico: [...dados.historico],
+      exerciciosCustom: [...dados.exerciciosCustom],
+      atualizadoEm,
+    };
+    void this.persistirDados();
+    this.notificar();
+  }
+
   getTodosExercicios(): Exercicio[] {
     return [...exerciciosPadrao, ...this.estado.exerciciosCustom];
   }
@@ -469,6 +494,10 @@ export class TrainifyStateManager {
           fichas: dados.fichas || [],
           historico: dados.historico || [],
           exerciciosCustom: dados.exerciciosCustom || [],
+          atualizadoEm:
+            typeof dados.atualizadoEm === "string"
+              ? dados.atualizadoEm
+              : new Date().toISOString(),
         };
       }
     } catch (erro) {
@@ -484,17 +513,24 @@ export class TrainifyStateManager {
       fichas: [],
       historico: [],
       exerciciosCustom: [],
+      atualizadoEm: new Date().toISOString(),
     };
   }
 
   /** Salvar dados no localStorage */
   private async salvarDados(): Promise<void> {
+    this.estado.atualizadoEm = new Date().toISOString();
+    await this.persistirDados();
+  }
+
+  private async persistirDados(): Promise<void> {
     try {
       const dados: DadosTreino = {
         programas: this.estado.programas,
         fichas: this.estado.fichas,
         historico: this.estado.historico,
         exerciciosCustom: this.estado.exerciciosCustom,
+        atualizadoEm: this.estado.atualizadoEm,
       };
       await appModule.armazenamento.definir(STORAGE_KEYS.DADOS_TREINO, JSON.stringify(dados));
     } catch (erro) {

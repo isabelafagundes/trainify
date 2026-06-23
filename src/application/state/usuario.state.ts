@@ -61,6 +61,24 @@ export class UsuarioManager {
     return usuario;
   }
 
+  substituirUsuario(usuario: Usuario | null): void {
+    this.usuario = usuario
+      ? {
+          nome: usuario.nome.trim(),
+          avatarEmoji: usuario.avatarEmoji,
+          criadoEm: usuario.criadoEm,
+        }
+      : null;
+
+    if (this.usuario) {
+      void this.salvar(this.usuario);
+    } else {
+      void appModule.armazenamento.remover(STORAGE_KEYS.USUARIO);
+    }
+
+    this.notificar();
+  }
+
   private notificar(): void {
     this.listeners.forEach((listener) => listener());
   }
