@@ -317,7 +317,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-superficie">
       {/* Header fixo */}
-      <div className="px-5 py-4 border-b border-borda shrink-0">
+      <div className="px-5 pt-[max(var(--safe-top),16px)] pb-4 border-b border-borda shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold font-display tracking-tight text-texto-primario">
             {titulo}

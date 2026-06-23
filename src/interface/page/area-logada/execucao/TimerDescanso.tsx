@@ -46,7 +46,7 @@ export function TimerDescanso({
         className="absolute inset-0 bg-texto-primario/30 backdrop-blur-sm animate-fade-in"
       />
 
-      <div className="relative w-full max-w-[480px] rounded-t-[16px] border-t border-borda-suave bg-fundo px-6 pb-8 pt-5 shadow-xl animate-slide-up">
+      <div className="relative w-full max-w-[480px] rounded-t-[16px] border-t border-borda-suave bg-fundo px-6 pb-[calc(var(--safe-bottom)+32px)] pt-5 shadow-xl animate-slide-up">
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-borda-suave" />
 
         <div className="flex items-center justify-between">

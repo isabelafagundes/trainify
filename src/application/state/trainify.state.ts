@@ -401,7 +401,6 @@ export class TrainifyStateManager {
     const copia = this.adicionarPrograma({
       nome: `${programa.nome} (cópia)`,
       descricao: programa.descricao,
-      corBanner: programa.corBanner,
       fichaIds: [], // Será preenchido com as cópias das fichas
       ativo: false,
     });

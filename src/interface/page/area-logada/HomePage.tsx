@@ -2,6 +2,13 @@ import { useMemo } from "react";
 import type { Ficha, Programa, RegistroTreino } from "@/domain/tipos";
 import { exerciciosPadrao } from "@/infrastructure/repo/mock/exercicio-mock.repo";
 import { construirDadosFrequencia } from "@/interface/page/area-logada/estatisticas/utils";
+import {
+  obterFichasDoPrograma,
+  obterFichasTreinadasNaSemana,
+  obterProximaFichaId,
+  obterUltimoTreinoDaFicha,
+  ordenarFichasComProximaPrimeiro,
+} from "@/interface/page/area-logada/programa/utils";
 import { BannerPrograma } from "@/interface/widget/programa/BannerPrograma";
 import { LinhaFicha } from "@/interface/widget/ficha/LinhaFicha";
 import { EstadoVazio } from "@/interface/widget/EstadoVazio";
@@ -14,11 +21,6 @@ interface PropriedadesHomePage {
   fichas: Ficha[];
   historico: RegistroTreino[];
   aoNavegar: (destino: string, params?: Record<string, string>) => void;
-}
-
-function ultimoTreinoDaFicha(fichaId: string, historico: RegistroTreino[]): string | null {
-  const registro = historico.find((r) => r.fichaId === fichaId);
-  return registro?.iniciadoEm ?? null;
 }
 
 export function HomePage({
@@ -36,65 +38,35 @@ export function HomePage({
     [historico],
   );
 
-  // Fichas do programa ativo
   const fichasDoPrograma = programaAtivo
-    ? fichas.filter((f) => programaAtivo.fichaIds.includes(f.id))
+    ? obterFichasDoPrograma(programaAtivo, fichas)
     : [];
 
-  // Fichas treinadas esta semana
-  const fichasTreinadasSemana = (() => {
-    const hoje = new Date();
-    const diaSemana = hoje.getDay(); // 0=dom
-    const inicioSemana = new Date(hoje);
-    inicioSemana.setDate(hoje.getDate() - diaSemana);
-    inicioSemana.setHours(0, 0, 0, 0);
-
-    const ids = new Set<string>();
-    for (const reg of historico) {
-      const data = new Date(reg.iniciadoEm);
-      if (data >= inicioSemana && fichasDoPrograma.some((f) => f.id === reg.fichaId)) {
-        ids.add(reg.fichaId);
-      }
-    }
-    return ids;
-  })();
-
-  // Determina a próxima ficha: nunca treinada ou treinada há mais tempo
-  const proximaFichaId = programaAtivo
-    ? fichasDoPrograma.reduce<string | null>((melhorId, ficha) => {
-        const ultimo = ultimoTreinoDaFicha(ficha.id, historico);
-        if (!ultimo) return ficha.id;
-        if (!melhorId) return ficha.id;
-        const melhorUltimo = ultimoTreinoDaFicha(melhorId, historico);
-        if (!melhorUltimo) return melhorId;
-        return ultimo < melhorUltimo ? ficha.id : melhorId;
-      }, null)
-    : null;
-
-  // Reordenar fichas: próxima ficha sempre no topo
-  const fichasOrdenadas = programaAtivo
-    ? [...fichasDoPrograma].sort((a, b) => {
-        if (a.id === proximaFichaId) return -1;
-        if (b.id === proximaFichaId) return 1;
-        return 0;
-      })
-    : [];
+  const fichasTreinadasSemana = obterFichasTreinadasNaSemana(fichasDoPrograma, historico);
+  const proximaFichaId = obterProximaFichaId(fichasDoPrograma, historico);
+  const fichasOrdenadas = ordenarFichasComProximaPrimeiro(fichasDoPrograma, proximaFichaId);
 
   return (
     <div className="px-4 py-4 space-y-5">
       {/* ── Resumo semanal (sutil) ── */}
       {programaAtivo && (
         <section className="reveal-up">
-          <StripSemanal dados={dadosFrequencia} />
+          <StripSemanal
+            dados={dadosFrequencia}
+            aoAbrirDetalhe={() => aoNavegar("detalheSequencia")}
+          />
         </section>
       )}
 
       {/* ── Programa ativo (integrado) ── */}
       {programaAtivo ? (
         <section className="rounded-2xl overflow-hidden bg-superficie shadow-sm">
-          {/* Banner header — integrado com borda */}
-          <div
-            className="px-4 py-5 border-b border-borda-suave reveal-up"
+          {/* Banner header — abre o resumo do programa em tela cheia */}
+          <button
+            type="button"
+            onClick={() => aoNavegar("resumoPrograma", { id: programaAtivo.id })}
+            aria-label={`Ver resumo de ${programaAtivo.nome}`}
+            className="w-full flex items-center gap-3 px-4 py-5 border-b border-borda-suave text-left transition-colors duration-200 hover:bg-superficie-suave active:bg-superficie-suave/70 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-acento reveal-up"
             style={{ animationDelay: "90ms" }}
           >
             <BannerPrograma
@@ -103,7 +75,10 @@ export function HomePage({
               totalFichas={fichasDoPrograma.length}
               fichasConcluidas={fichasTreinadasSemana.size}
             />
-          </div>
+            <span className="flex-shrink-0 self-center text-texto-sutil" aria-hidden="true">
+              <Icone nome="setaDireita" tamanho={18} />
+            </span>
+          </button>
 
           {/* Fichas — sempre visíveis, ordenadas */}
           {fichasOrdenadas.length > 0 ? (
@@ -120,7 +95,7 @@ export function HomePage({
                 <LinhaFicha
                   ficha={ficha}
                   exerciciosCatalogo={exerciciosPadrao}
-                  ultimoTreino={ultimoTreinoDaFicha(ficha.id, historico)}
+                  ultimoTreino={obterUltimoTreinoDaFicha(ficha.id, historico)}
                   proximoTreino={ficha.id === proximaFichaId}
                   aoIniciarTreino={(fichaId) =>
                     aoNavegar("execucao", { fichaId })

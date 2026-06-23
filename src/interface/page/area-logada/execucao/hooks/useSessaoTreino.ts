@@ -1,12 +1,22 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import type {
   Ficha,
   RegistroCardio,
   RegistroSerie,
   RegistroTreino,
 } from "@/domain/tipos";
+import {
+  carregarSessaoAtiva,
+  limparSessaoAtiva,
+  salvarSessaoAtiva,
+  type ModoExecucao,
+  type SessaoTreinoSalva,
+} from "@/application/state/sessao-ativa";
 
-type ModoExecucao = "musculacao" | "cardio";
+/** Intervalo de espera antes de gravar alterações (ms). */
+const DEBOUNCE_SALVAR_MS = 400;
 
 export interface SessaoExercicio {
   exercicioId: string;
@@ -38,7 +48,7 @@ function clonarExercicios(exercicios: SessaoExercicio[]): SessaoExercicio[] {
 }
 
 export function useSessaoTreino(ficha: Ficha) {
-  const [iniciadoEm] = useState(() => new Date().toISOString());
+  const [iniciadoEm, setIniciadoEm] = useState(() => new Date().toISOString());
   const [modo, setModo] = useState<ModoExecucao>("musculacao");
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [exercicios, setExercicios] = useState<SessaoExercicio[]>(() =>
@@ -59,6 +69,105 @@ export function useSessaoTreino(ficha: Ficha) {
     }))
   );
   const [cardioConcluido, setCardioConcluido] = useState<Set<string>>(() => new Set());
+
+  // ── Persistência da sessão (recuperação após segundo plano) ──
+  const prontoRef = useRef(false); // só grava após checar restauração
+  const encerradaRef = useRef(false); // bloqueia gravação após finalizar/descartar
+  const debounceRef = useRef<number | null>(null);
+
+  // Restaura o treino em andamento ao montar, se houver um salvo para esta ficha.
+  useEffect(() => {
+    let ativo = true;
+    void carregarSessaoAtiva().then((salva) => {
+      if (!ativo) return;
+      if (salva && salva.fichaId === ficha.id && !encerradaRef.current) {
+        setIniciadoEm(salva.iniciadoEm);
+        setModo(salva.modo);
+        setIndiceAtual(
+          Math.max(0, Math.min(salva.indiceAtual, ficha.exercicios.length - 1))
+        );
+        setExercicios(
+          salva.exercicios.map((exercicio) => ({
+            exercicioId: exercicio.exercicioId,
+            series: exercicio.series.map((serie) => ({ ...serie })),
+            nota: exercicio.nota,
+            concluidas: new Set(exercicio.concluidas),
+            visitado: exercicio.visitado,
+          }))
+        );
+        setCardio(salva.cardio.map((item) => ({ ...item })));
+        setCardioConcluido(new Set(salva.cardioConcluido));
+      }
+      prontoRef.current = true;
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [ficha.id, ficha.exercicios.length]);
+
+  // Snapshot serializável do estado atual.
+  const sessaoSerializada = useMemo<SessaoTreinoSalva>(
+    () => ({
+      fichaId: ficha.id,
+      iniciadoEm,
+      modo,
+      indiceAtual,
+      exercicios: exercicios.map((exercicio) => ({
+        exercicioId: exercicio.exercicioId,
+        series: exercicio.series,
+        nota: exercicio.nota,
+        concluidas: Array.from(exercicio.concluidas),
+        visitado: exercicio.visitado,
+      })),
+      cardio,
+      cardioConcluido: Array.from(cardioConcluido),
+      atualizadoEm: new Date().toISOString(),
+    }),
+    [ficha.id, iniciadoEm, modo, indiceAtual, exercicios, cardio, cardioConcluido]
+  );
+
+  const serializadaRef = useRef(sessaoSerializada);
+  serializadaRef.current = sessaoSerializada;
+
+  // Gravação imediata do último estado conhecido (usada no flush de ciclo de vida).
+  const gravarAgora = useCallback(() => {
+    if (!prontoRef.current || encerradaRef.current) return;
+    if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
+    void salvarSessaoAtiva(serializadaRef.current);
+  }, []);
+
+  // Auto-save com debounce a cada alteração da sessão.
+  useEffect(() => {
+    if (!prontoRef.current || encerradaRef.current) return;
+    if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      void salvarSessaoAtiva(serializadaRef.current);
+    }, DEBOUNCE_SALVAR_MS);
+    return () => {
+      if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
+    };
+  }, [sessaoSerializada]);
+
+  // Flush imediato quando o app vai para segundo plano / é fechado.
+  useEffect(() => {
+    const aoMudarVisibilidade = () => {
+      if (document.visibilityState === "hidden") gravarAgora();
+    };
+    document.addEventListener("visibilitychange", aoMudarVisibilidade);
+    window.addEventListener("pagehide", gravarAgora);
+
+    let removerPause: (() => void) | undefined;
+    if (Capacitor.isNativePlatform()) {
+      const registro = CapacitorApp.addListener("pause", gravarAgora);
+      removerPause = () => void registro.then((listener) => listener.remove());
+    }
+
+    return () => {
+      document.removeEventListener("visibilitychange", aoMudarVisibilidade);
+      window.removeEventListener("pagehide", gravarAgora);
+      removerPause?.();
+    };
+  }, [gravarAgora]);
 
   const temCardio = cardio.length > 0;
 
@@ -242,7 +351,15 @@ export function useSessaoTreino(ficha: Ficha) {
     };
   }, [cardio, cardioConcluido, exercicios, ficha.id, iniciadoEm]);
 
-  const cancelar = useCallback(() => undefined, []);
+  // Encerra a sessão: bloqueia novas gravações e remove o snapshot salvo.
+  // Chamado ao finalizar (já persistido no histórico) ou ao descartar o treino.
+  const encerrar = useCallback(async () => {
+    encerradaRef.current = true;
+    if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
+    await limparSessaoAtiva();
+  }, []);
+
+  const cancelar = encerrar;
 
   const exercicioAtual = exercicios[indiceAtual];
   const configuracaoAtual = ficha.exercicios[indiceAtual];
@@ -275,6 +392,7 @@ export function useSessaoTreino(ficha: Ficha) {
       marcarCardioConcluido,
       finalizar,
       cancelar,
+      encerrar,
       resumoFinalizacao,
     }),
     [
@@ -303,6 +421,7 @@ export function useSessaoTreino(ficha: Ficha) {
       marcarCardioConcluido,
       finalizar,
       cancelar,
+      encerrar,
       resumoFinalizacao,
     ]
   );

@@ -72,7 +72,6 @@ export function EditorProgramaPage({
       stateManagerRepository.atualizarPrograma(programa.id, {
         nome: nome.trim(),
         descricao: descricao.trim(),
-        corBanner: null,
         ativo,
       });
     } else {
@@ -80,7 +79,6 @@ export function EditorProgramaPage({
       stateManagerRepository.adicionarPrograma({
         nome: nome.trim(),
         descricao: descricao.trim(),
-        corBanner: null,
         ativo,
         fichaIds: [],
       });
@@ -103,7 +101,7 @@ export function EditorProgramaPage({
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-superficie">
       {/* Header fixo */}
-      <div className="px-5 py-4 border-b border-borda shrink-0">
+      <div className="px-5 pt-[max(var(--safe-top),16px)] pb-4 border-b border-borda shrink-0">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold font-display tracking-tight text-texto-primario">
             {titulo}
@@ -227,7 +225,7 @@ export function EditorProgramaPage({
                           <Botao
                             variante="fantasma"
                             tamanho="compacto"
-                            onClick={() => aoNavegar("editarFicha", { id: ficha.id, voltarPara: "editarPrograma", programaIdVoltar: idParaUsar })}
+                            onClick={() => aoNavegar("editarFicha", { id: ficha.id })}
                           >
                             Editar
                           </Botao>
@@ -312,7 +310,6 @@ export function EditorProgramaPage({
                     const novoPrograma = stateManagerRepository.adicionarPrograma({
                       nome: nome.trim(),
                       descricao: descricao.trim(),
-                      corBanner: null,
                       ativo,
                       fichaIds: [],
                     });
@@ -321,11 +318,7 @@ export function EditorProgramaPage({
                   }
 
                   setModalNovaFicha(false);
-                  aoNavegar("criarFicha", {
-                    programaId: programaIdFinal,
-                    voltarPara: "editarPrograma",
-                    programaIdVoltar: programaIdFinal
-                  });
+                  aoNavegar("criarFicha", { programaId: programaIdFinal });
                 }}
                 className="w-full px-4 py-3 bg-superficie-suave hover:bg-superficie-hover rounded-xl border border-borda-suave text-left transition-colors"
               >
@@ -351,7 +344,6 @@ export function EditorProgramaPage({
                     const novoPrograma = stateManagerRepository.adicionarPrograma({
                       nome: nome.trim(),
                       descricao: descricao.trim(),
-                      corBanner: null,
                       ativo,
                       fichaIds: [],
                     });

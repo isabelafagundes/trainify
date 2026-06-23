@@ -22,6 +22,8 @@ export const STORAGE_KEYS = {
   TOKEN: "trainify_token",
   // Dados de treino
   DADOS_TREINO: "trainify_dados_treino",
+  // Treino em execução (recuperável após segundo plano / fechamento)
+  SESSAO_ATIVA: "trainify_sessao_ativa",
   // Identificador estavel desta instalacao
   INSTALACAO_ID: "trainify_instalacao_id",
 } as const;
