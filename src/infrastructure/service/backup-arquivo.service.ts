@@ -15,24 +15,57 @@ function criarNomeArquivo(): string {
 function selecionarArquivoTexto(): Promise<string | null> {
   return new Promise((resolve, reject) => {
     const input = document.createElement("input");
+    let resolvido = false;
+
+    const limpar = () => {
+      window.removeEventListener("focus", aoVoltarParaJanela);
+      input.removeEventListener("cancel", aoCancelar);
+      input.remove();
+    };
+
+    const finalizar = (valor: string | null) => {
+      if (resolvido) return;
+      resolvido = true;
+      limpar();
+      resolve(valor);
+    };
+
+    const falhar = (erro: Error) => {
+      if (resolvido) return;
+      resolvido = true;
+      limpar();
+      reject(erro);
+    };
+
+    const aoVoltarParaJanela = () => {
+      window.setTimeout(() => {
+        if (!input.files?.length) {
+          finalizar(null);
+        }
+      }, 250);
+    };
+
+    const aoCancelar = () => finalizar(null);
+
     input.type = "file";
     input.accept = "application/json,.json";
     input.style.display = "none";
 
     input.onchange = () => {
       const arquivo = input.files?.[0];
-      input.remove();
       if (!arquivo) {
-        resolve(null);
+        finalizar(null);
         return;
       }
 
       const leitor = new FileReader();
-      leitor.onload = () => resolve(String(leitor.result ?? ""));
-      leitor.onerror = () => reject(new Error("Nao foi possivel ler o arquivo."));
+      leitor.onload = () => finalizar(String(leitor.result ?? ""));
+      leitor.onerror = () => falhar(new Error("Nao foi possivel ler o arquivo."));
       leitor.readAsText(arquivo);
     };
 
+    input.addEventListener("cancel", aoCancelar);
+    window.addEventListener("focus", aoVoltarParaJanela);
     document.body.appendChild(input);
     input.click();
   });

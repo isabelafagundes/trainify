@@ -7,7 +7,6 @@ import {
   obterFichasTreinadasNaSemana,
   obterProximaFichaId,
   obterUltimoTreinoDaFicha,
-  ordenarFichasComProximaPrimeiro,
 } from "@/interface/page/area-logada/programa/utils";
 import { BannerPrograma } from "@/interface/widget/programa/BannerPrograma";
 import { LinhaFicha } from "@/interface/widget/ficha/LinhaFicha";
@@ -44,74 +43,16 @@ export function HomePage({
 
   const fichasTreinadasSemana = obterFichasTreinadasNaSemana(fichasDoPrograma, historico);
   const proximaFichaId = obterProximaFichaId(fichasDoPrograma, historico);
-  const fichasOrdenadas = ordenarFichasComProximaPrimeiro(fichasDoPrograma, proximaFichaId);
 
-  return (
-    <div className="px-4 py-4 space-y-5">
-      {/* ── Resumo semanal (sutil) ── */}
-      {programaAtivo && (
-        <section className="reveal-up">
-          <StripSemanal
-            dados={dadosFrequencia}
-            aoAbrirDetalhe={() => aoNavegar("detalheSequencia")}
-          />
-        </section>
-      )}
+  // Ação acima de informação: a próxima ficha sobe para o topo como
+  // sugestão de "próximo treino". O card do programa lista TODAS as fichas
+  // — o usuário pode optar por treinar outra ficha hoje.
+  const proximaFicha =
+    fichasDoPrograma.find((ficha) => ficha.id === proximaFichaId) ?? null;
 
-      {/* ── Programa ativo (integrado) ── */}
-      {programaAtivo ? (
-        <section className="rounded-2xl overflow-hidden bg-superficie shadow-sm">
-          {/* Banner header — abre o resumo do programa em tela cheia */}
-          <button
-            type="button"
-            onClick={() => aoNavegar("resumoPrograma", { id: programaAtivo.id })}
-            aria-label={`Ver resumo de ${programaAtivo.nome}`}
-            className="w-full flex items-center gap-3 px-4 py-5 border-b border-borda-suave text-left transition-colors duration-200 hover:bg-superficie-suave active:bg-superficie-suave/70 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-acento reveal-up"
-            style={{ animationDelay: "90ms" }}
-          >
-            <BannerPrograma
-              nome={programaAtivo.nome}
-              descricao={programaAtivo.descricao}
-              totalFichas={fichasDoPrograma.length}
-              fichasConcluidas={fichasTreinadasSemana.size}
-            />
-            <span className="flex-shrink-0 self-center text-texto-sutil" aria-hidden="true">
-              <Icone nome="setaDireita" tamanho={18} />
-            </span>
-          </button>
-
-          {/* Fichas — sempre visíveis, ordenadas */}
-          {fichasOrdenadas.length > 0 ? (
-            fichasOrdenadas.map((ficha, i) => (
-              <div
-                key={ficha.id}
-                className={`reveal-up ${
-                  i < fichasOrdenadas.length - 1
-                    ? "border-b border-borda-suave"
-                    : ""
-                }`}
-                style={{ animationDelay: `${150 + i * 70}ms` }}
-              >
-                <LinhaFicha
-                  ficha={ficha}
-                  exerciciosCatalogo={exerciciosPadrao}
-                  ultimoTreino={obterUltimoTreinoDaFicha(ficha.id, historico)}
-                  proximoTreino={ficha.id === proximaFichaId}
-                  aoIniciarTreino={(fichaId) =>
-                    aoNavegar("execucao", { fichaId })
-                  }
-                />
-              </div>
-            ))
-          ) : (
-            <div className="px-4 py-8 text-center">
-              <p className="text-sm text-texto-sutil">
-                Nenhuma ficha adicionada ao programa ainda.
-              </p>
-            </div>
-          )}
-        </section>
-      ) : (
+  if (!programaAtivo) {
+    return (
+      <div className="px-4 py-4">
         <section className="reveal-up">
           <EstadoVazio
             icone="halter"
@@ -128,7 +69,89 @@ export function HomePage({
             }
           />
         </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-4 space-y-5">
+      {/* ── Próximo treino (ação primeiro) ── */}
+      {proximaFicha && (
+        <section className="reveal-up space-y-2">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-texto-sutil font-display">
+            Seu próximo treino
+          </h2>
+          <div className="rounded-2xl overflow-hidden bg-superficie shadow-sm">
+            <LinhaFicha
+              ficha={proximaFicha}
+              exerciciosCatalogo={exerciciosPadrao}
+              ultimoTreino={obterUltimoTreinoDaFicha(proximaFicha.id, historico)}
+              proximoTreino
+              aoIniciarTreino={(fichaId) => aoNavegar("execucao", { fichaId })}
+            />
+          </div>
+        </section>
       )}
+
+      {/* ── Resumo semanal (sutil, suporte) ── */}
+      <section className="reveal-up" style={{ animationDelay: "90ms" }}>
+        <StripSemanal
+          dados={dadosFrequencia}
+          aoAbrirDetalhe={() => aoNavegar("detalheSequencia")}
+        />
+      </section>
+
+      {/* ── Programa: banner + demais fichas ── */}
+      <section
+        className="rounded-2xl overflow-hidden bg-superficie shadow-sm reveal-up"
+        style={{ animationDelay: "150ms" }}
+      >
+        {/* Banner header — abre o resumo do programa em tela cheia */}
+        <button
+          type="button"
+          onClick={() => aoNavegar("resumoPrograma", { id: programaAtivo.id })}
+          aria-label={`Ver resumo de ${programaAtivo.nome}`}
+          className="w-full flex items-center gap-3 px-4 py-5 text-left border-b border-borda-suave transition-colors duration-200 hover:bg-superficie-suave active:bg-superficie-suave/70 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-acento"
+        >
+          <BannerPrograma
+            nome={programaAtivo.nome}
+            descricao={programaAtivo.descricao}
+            totalFichas={fichasDoPrograma.length}
+            fichasConcluidas={fichasTreinadasSemana.size}
+          />
+          <span className="flex-shrink-0 self-center text-texto-sutil" aria-hidden="true">
+            <Icone nome="setaDireita" tamanho={18} />
+          </span>
+        </button>
+
+        {fichasDoPrograma.length === 0 ? (
+          <div className="px-4 py-8 text-center">
+            <p className="text-sm text-texto-sutil">
+              Nenhuma ficha adicionada ao programa ainda.
+            </p>
+          </div>
+        ) : (
+          fichasDoPrograma.map((ficha, i) => (
+            <div
+              key={ficha.id}
+              className={`reveal-up ${
+                i < fichasDoPrograma.length - 1
+                  ? "border-b border-borda-suave"
+                  : ""
+              }`}
+              style={{ animationDelay: `${200 + i * 70}ms` }}
+            >
+              <LinhaFicha
+                ficha={ficha}
+                exerciciosCatalogo={exerciciosPadrao}
+                ultimoTreino={obterUltimoTreinoDaFicha(ficha.id, historico)}
+                proximoTreino={false}
+                aoIniciarTreino={(fichaId) => aoNavegar("execucao", { fichaId })}
+              />
+            </div>
+          ))
+        )}
+      </section>
     </div>
   );
 }

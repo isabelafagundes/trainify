@@ -24,6 +24,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
   const [editandoPerfil, setEditandoPerfil] = useState(false);
   const [temaAtualId, setTemaAtualId] = useState(() => temaManager.obterTema().id);
   const [exportandoDados, setExportandoDados] = useState(false);
+  const [selecionandoArquivo, setSelecionandoArquivo] = useState(false);
   const [importandoDados, setImportandoDados] = useState(false);
   const [snapshotPendente, setSnapshotPendente] = useState<SnapshotTrainify | null>(null);
   const temas = temaManager.listarTemas();
@@ -61,16 +62,16 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
   }
 
   async function iniciarImportacao() {
-    setImportandoDados(true);
+    setSelecionandoArquivo(true);
     try {
       const texto = await appModule.backupArquivo.importar();
       if (!texto) return;
 
       setSnapshotPendente(snapshotService.desserializar(texto));
-    } catch {
-      showError("Arquivo de backup invalido.");
+    } catch (erro) {
+      showError(mensagemErroBackup(erro));
     } finally {
-      setImportandoDados(false);
+      setSelecionandoArquivo(false);
     }
   }
 
@@ -83,12 +84,44 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
       setSnapshotPendente(null);
       fecharMenu();
       showSuccess("Dados importados com sucesso.");
-    } catch {
-      showError("Nao foi possivel importar seus dados.");
+    } catch (erro) {
+      showError(mensagemErroBackup(erro));
     } finally {
       setImportandoDados(false);
     }
   }
+
+  function cancelarImportacao() {
+    if (importandoDados) return;
+    setSnapshotPendente(null);
+  }
+
+  function mensagemErroBackup(erro: unknown): string {
+    if (!(erro instanceof Error)) {
+      return "Nao foi possivel importar seus dados.";
+    }
+
+    if (erro.message.includes("versao mais nova")) {
+      return "Este backup foi criado por uma versao mais nova do Trainify.";
+    }
+
+    if (erro.message.includes("schema") || erro.message.includes("Versao")) {
+      return "Este arquivo nao parece ser um backup compativel do Trainify.";
+    }
+
+    if (
+      erro.message.includes("invalido") ||
+      erro.message.includes("invalid") ||
+      erro.message.includes("JSON")
+    ) {
+      return "Nao consegui ler esse backup. Confira se o arquivo JSON esta correto.";
+    }
+
+    return erro.message || "Nao foi possivel importar seus dados.";
+  }
+
+  const operacaoDadosEmAndamento =
+    exportandoDados || selecionandoArquivo || importandoDados;
 
   return (
     <>
@@ -288,7 +321,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
                 <button
                   type="button"
                   onClick={exportarDados}
-                  disabled={exportandoDados || importandoDados}
+                  disabled={operacaoDadosEmAndamento}
                   className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl border border-borda-suave bg-superficie-suave text-left text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <span className="flex items-center gap-2.5 min-w-0">
@@ -303,7 +336,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
                 <button
                   type="button"
                   onClick={iniciarImportacao}
-                  disabled={exportandoDados || importandoDados}
+                  disabled={operacaoDadosEmAndamento}
                   className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl border border-borda-suave bg-superficie-suave text-left text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <span className="flex items-center gap-2.5 min-w-0">
@@ -330,8 +363,26 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
         textoCancelar="Cancelar"
         variant="atencao"
         aoConfirmar={confirmarImportacao}
-        aoCancelar={() => setSnapshotPendente(null)}
+        aoCancelar={cancelarImportacao}
       />
+      {importandoDados && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 px-6 backdrop-blur-sm"
+          role="status"
+          aria-live="polite"
+          aria-label="Importando dados"
+        >
+          <div className="flex min-w-[220px] flex-col items-center rounded-2xl border border-borda bg-superficie p-6 shadow-2xl shadow-black/20">
+            <span
+              className="h-9 w-9 rounded-full border-2 border-acento/25 border-t-acento animate-spin"
+              aria-hidden="true"
+            />
+            <p className="mt-4 text-sm font-semibold text-texto-primario">
+              Importando dados...
+            </p>
+          </div>
+        </div>
+      )}
     </>
   );
 }

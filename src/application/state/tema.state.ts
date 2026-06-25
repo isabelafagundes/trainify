@@ -20,7 +20,7 @@ export const TEMA_CLARO: Tema = {
     "--color-superficie-hover": "oklch(0.940 0.010 68)",
     "--color-texto-primario": "oklch(0.200 0.015 55)",
     "--color-texto-secundario": "oklch(0.450 0.018 55)",
-    "--color-texto-sutil": "oklch(0.550 0.015 55)",
+    "--color-texto-sutil": "oklch(0.510 0.015 55)",
     "--color-texto-invertido": "oklch(0.965 0.007 70)",
     "--color-borda": "oklch(0.895 0.010 65)",
     "--color-borda-suave": "oklch(0.930 0.008 65)",
@@ -58,8 +58,8 @@ export const TEMA_ESCURO: Tema = {
     "--color-acento": "oklch(0.890 0.012 70)",
     "--color-acento-hover": "oklch(0.800 0.014 70)",
     "--color-acento-suave": "oklch(0.355 0.020 55)",
-    "--color-perigo": "oklch(0.565 0.105 35)",
-    "--color-perigo-hover": "oklch(0.625 0.110 35)",
+    "--color-perigo": "oklch(0.640 0.105 35)",
+    "--color-perigo-hover": "oklch(0.700 0.105 35)",
     "--color-perigo-suave": "oklch(0.300 0.040 35)",
     "--background-app-a": "oklch(0.32 0.035 55 / 0.45)",
     "--background-app-b": "oklch(0.30 0.030 40 / 0.35)",
@@ -176,6 +176,7 @@ export class TemaManager {
 
     root.setAttribute("data-tema", tema.id);
     root.setAttribute("data-fonte-grande", String(this.modoFonteGrande));
+    root.style.colorScheme = tema.id === "escuro" ? "dark" : "light";
 
     Object.entries(tema.variaveis).forEach(([nome, valor]) => {
       root.style.setProperty(nome, valor);

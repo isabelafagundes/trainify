@@ -31,7 +31,6 @@ export function AreaLogadaPage({
         <NavegacaoInferior
           abaAtiva={abaAtiva}
           aoMudarAba={aoMudarAba}
-          aoCriarPrograma={() => {}}
         />
       )}
     </div>

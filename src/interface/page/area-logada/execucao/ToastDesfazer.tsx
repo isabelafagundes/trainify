@@ -19,7 +19,7 @@ export function ToastDesfazer({ mensagem, aoDesfazer, aoFechar }: ToastDesfazerP
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed top-4 left-1/2 z-50 w-full max-w-[480px] -translate-x-1/2 px-4"
+      className="pointer-events-none fixed top-[max(calc(var(--safe-top)+16px),16px)] left-1/2 z-50 w-full max-w-[480px] -translate-x-1/2 px-4"
     >
       <div className="pointer-events-auto mx-auto flex w-fit items-center gap-3 rounded-full border border-borda-suave bg-texto-primario px-4 py-2 text-sm text-texto-invertido shadow-md animate-fade-in">
         <span>{mensagem}</span>

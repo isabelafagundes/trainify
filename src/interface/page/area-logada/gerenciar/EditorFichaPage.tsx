@@ -354,7 +354,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                     w-8 h-8 rounded-full flex items-center justify-center
                     text-xs font-medium transition-all duration-200
                     ${atual
-                      ? "bg-acento text-white scale-110 shadow-sm"
+                      ? "bg-acento text-texto-invertido scale-110 shadow-sm"
                       : completo
                       ? "bg-texto-primario text-superficie hover:bg-texto-primario/90"
                       : "bg-borda-suave text-texto-sutil"
@@ -586,7 +586,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                             vinculosProgramasAlteradosRef.current = true;
                             setProgramasVinculados(programasVinculados.filter((p) => p.id !== programa.id));
                           }}
-                          className="text-texto-secundario hover:text-error transition-colors"
+                          className="text-texto-secundario hover:text-perigo transition-colors"
                         >
                           <Icone nome="fechar" tamanho={14} />
                         </button>
@@ -606,7 +606,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                     <button
                       type="button"
                       onClick={() => setMostraCardio(false)}
-                      className="text-xs text-texto-secundario hover:text-error transition-colors"
+                      className="text-xs text-texto-secundario hover:text-perigo transition-colors"
                     >
                       Remover seção
                     </button>
@@ -894,7 +894,7 @@ function CardExercicioConfig({
         <button
           type="button"
           onClick={aoRemover}
-          className="text-xs text-texto-secundario hover:text-error"
+          className="text-xs text-texto-secundario hover:text-perigo"
         >
           Remover
         </button>
@@ -1008,7 +1008,7 @@ function CardCardioConfig({ config, aoAtualizar, aoRemover }: CardCardioConfigPr
           <button
             type="button"
             onClick={aoRemover}
-            className="text-xs text-texto-secundario hover:text-error ml-auto transition-colors"
+            className="text-xs text-texto-secundario hover:text-perigo ml-auto transition-colors"
           >
             Remover
           </button>

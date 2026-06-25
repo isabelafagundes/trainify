@@ -141,7 +141,7 @@ export function ExecucaoTreinoPage({
             aoIrPara={sessao.irPara}
           />
 
-          <main className="px-4 pb-32 pt-3">
+          <main className="px-4 pb-[calc(var(--safe-bottom)+180px)] pt-3">
             <section className="mb-8 transition-transform duration-300">
               <div className="flex items-start justify-between gap-3">
                 <h1 className="min-w-0 flex-1 font-display text-[clamp(22px,6.5vw,32px)] font-semibold leading-[1.1] text-texto-primario break-words">

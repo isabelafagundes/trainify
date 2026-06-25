@@ -14,6 +14,16 @@ import { ModalCriarExercicio } from "@/interface/widget/modal/ModalCriarExercici
 import { useToast } from "@/interface/widget/toast";
 
 type VisualizacaoGerenciar = "programas" | "fichas" | "exercicios";
+type TipoExclusaoGerenciar = "programa" | "exercicio" | "ficha";
+
+interface ModalExclusaoGerenciar {
+  aberto: boolean;
+  tipo: TipoExclusaoGerenciar | null;
+  id: string | null;
+  nome: string;
+}
+
+type ItensExcluindoGerenciar = Record<TipoExclusaoGerenciar, Set<string>>;
 
 interface PropriedadesGerenciarPage {
   aoNavegar: (destino: string, params?: Record<string, string>) => void;
@@ -25,6 +35,46 @@ const OPCOES_VISUALIZACAO = [
   { id: "exercicios", label: "Exercícios", icone: "alvo" },
 ];
 
+const MODAL_EXCLUSAO_FECHADO: ModalExclusaoGerenciar = {
+  aberto: false,
+  tipo: null,
+  id: null,
+  nome: "",
+};
+
+const CONFIG_EXCLUSAO_GERENCIAR: Record<
+  TipoExclusaoGerenciar,
+  {
+    titulo: string;
+    descricao: (nome: string) => string;
+    remover: (id: string) => void;
+  }
+> = {
+  programa: {
+    titulo: "Excluir programa",
+    descricao: (nome) => `Tem certeza que deseja excluir "${nome}"? As fichas serão desvinculadas mas não excluídas.`,
+    remover: (id) => stateManagerRepository.removerPrograma(id),
+  },
+  exercicio: {
+    titulo: "Excluir exercício",
+    descricao: (nome) => `Tem certeza que deseja excluir "${nome}"? Esta ação não pode ser desfeita.`,
+    remover: (id) => stateManagerRepository.removerExercicioCustom(id),
+  },
+  ficha: {
+    titulo: "Excluir ficha",
+    descricao: (nome) => `Tem certeza que deseja excluir "${nome}"? Esta ação não pode ser desfeita.`,
+    remover: (id) => stateManagerRepository.removerFicha(id),
+  },
+};
+
+function criarItensExcluindo(): ItensExcluindoGerenciar {
+  return {
+    programa: new Set(),
+    exercicio: new Set(),
+    ficha: new Set(),
+  };
+}
+
 export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
   const { showSuccess } = useToast();
   const [visualizacao, setVisualizacao] = useState<VisualizacaoGerenciar>("programas");
@@ -35,26 +85,10 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
   const [modalCriarExercicioAberto, setModalCriarExercicioAberto] = useState(false);
 
   // IDs de itens sendo excluídos (para animação de fade-out)
-  const [programasExcluindo, setProgramasExcluindo] = useState<Set<string>>(new Set());
-  const [fichasExcluindo, setFichasExcluindo] = useState<Set<string>>(new Set());
-  const [exerciciosExcluindo, setExerciciosExcluindo] = useState<Set<string>>(new Set());
+  const [itensExcluindo, setItensExcluindo] = useState<ItensExcluindoGerenciar>(criarItensExcluindo);
 
-  // Estado dos modais de confirmação
-  const [modalExcluirPrograma, setModalExcluirPrograma] = useState<{ aberto: boolean; id: string | null; nome: string }>({
-    aberto: false,
-    id: null,
-    nome: "",
-  });
-  const [modalExcluirExercicio, setModalExcluirExercicio] = useState<{ aberto: boolean; id: string | null; nome: string }>({
-    aberto: false,
-    id: null,
-    nome: "",
-  });
-  const [modalExcluirFicha, setModalExcluirFicha] = useState<{ aberto: boolean; id: string | null; nome: string }>({
-    aberto: false,
-    id: null,
-    nome: "",
-  });
+  // Estado do modal de confirmação
+  const [modalExclusao, setModalExclusao] = useState<ModalExclusaoGerenciar>(MODAL_EXCLUSAO_FECHADO);
 
   // Carregar dados e inscrever para mudanças
   useEffect(() => {
@@ -104,6 +138,8 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
     setModalCriarExercicioAberto(false);
     showSuccess(`"${dados.nome}" adicionado aos seus exercícios.`);
   }
+
+  const configModalExclusao = modalExclusao.tipo ? CONFIG_EXCLUSAO_GERENCIAR[modalExclusao.tipo] : null;
 
   return (
     <div className="px-5 py-4 space-y-4">
@@ -187,9 +223,9 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                     >
                       <CartaoPrograma
                         programa={programa}
-                        estaSendoExcluido={programasExcluindo.has(programa.id)}
+                        estaSendoExcluido={itensExcluindo.programa.has(programa.id)}
                         aoEditar={() => aoNavegar("editarPrograma", { id: programa.id })}
-                        aoExcluir={() => abrirModalExcluirPrograma(programa.id, programa.nome)}
+                        aoExcluir={() => abrirModalExclusao("programa", programa.id, programa.nome)}
                       />
                     </div>
                   ))}
@@ -235,7 +271,7 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                     icone={<Icone nome="mais" tamanho={16} />}
                     onClick={() => setModalCriarExercicioAberto(true)}
                   >
-                    Novo
+                    Novo Exercício
                   </Botao>
                 )}
               </div>
@@ -276,8 +312,8 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                           <LinhaExercicioCustom
                             key={exercicio.id}
                             exercicio={exercicio}
-                            estaSendoExcluido={exerciciosExcluindo.has(exercicio.id)}
-                            aoExcluir={() => abrirModalExcluirExercicio(exercicio.id, exercicio.nome)}
+                            estaSendoExcluido={itensExcluindo.exercicio.has(exercicio.id)}
+                            aoExcluir={() => abrirModalExclusao("exercicio", exercicio.id, exercicio.nome)}
                             semBorda={index === lista.length - 1}
                           />
                         ))}
@@ -363,9 +399,9 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                       <CartaoFicha
                         ficha={ficha}
                         programasDaFicha={stateManagerRepository.obterProgramasDaFicha(ficha.id)}
-                        estaSendoExcluida={fichasExcluindo.has(ficha.id)}
+                        estaSendoExcluida={itensExcluindo.ficha.has(ficha.id)}
                         aoEditar={() => aoNavegar("editarFicha", { id: ficha.id })}
-                        aoExcluir={() => abrirModalExcluirFicha(ficha.id, ficha.nome)}
+                        aoExcluir={() => abrirModalExclusao("ficha", ficha.id, ficha.nome)}
                       />
                     </div>
                   ))}
@@ -383,115 +419,76 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
         aoCancelar={() => setModalCriarExercicioAberto(false)}
       />
 
-      {/* ── Modais de Confirmação ── */}
+      {/* ── Modal de Confirmação ── */}
       <ModalConfirmacao
-        aberto={modalExcluirPrograma.aberto}
-        titulo="Excluir programa"
-        descricao={`Tem certeza que deseja excluir "${modalExcluirPrograma.nome}"? As fichas serão desvinculadas mas não excluídas.`}
+        aberto={modalExclusao.aberto}
+        titulo={configModalExclusao?.titulo ?? ""}
+        descricao={configModalExclusao?.descricao(modalExclusao.nome) ?? ""}
         textoConfirmar="Excluir"
         textoCancelar="Manter"
         variant="perigo"
-        aoConfirmar={handleConfirmarExcluirPrograma}
-        aoCancelar={() => setModalExcluirPrograma({ aberto: false, id: null, nome: "" })}
-      />
-
-      <ModalConfirmacao
-        aberto={modalExcluirExercicio.aberto}
-        titulo="Excluir exercício"
-        descricao={`Tem certeza que deseja excluir "${modalExcluirExercicio.nome}"? Esta ação não pode ser desfeita.`}
-        textoConfirmar="Excluir"
-        textoCancelar="Manter"
-        variant="perigo"
-        aoConfirmar={handleConfirmarExcluirExercicio}
-        aoCancelar={() => setModalExcluirExercicio({ aberto: false, id: null, nome: "" })}
-      />
-
-      <ModalConfirmacao
-        aberto={modalExcluirFicha.aberto}
-        titulo="Excluir ficha"
-        descricao={`Tem certeza que deseja excluir "${modalExcluirFicha.nome}"? Esta ação não pode ser desfeita.`}
-        textoConfirmar="Excluir"
-        textoCancelar="Manter"
-        variant="perigo"
-        aoConfirmar={handleConfirmarExcluirFicha}
-        aoCancelar={() => setModalExcluirFicha({ aberto: false, id: null, nome: "" })}
+        aoConfirmar={handleConfirmarExclusao}
+        aoCancelar={fecharModalExclusao}
       />
     </div>
   );
 
-  // Handlers para abrir modais
-  function abrirModalExcluirPrograma(id: string, nome: string) {
-    setModalExcluirPrograma({ aberto: true, id, nome });
+  function abrirModalExclusao(tipo: TipoExclusaoGerenciar, id: string, nome: string) {
+    setModalExclusao({ aberto: true, tipo, id, nome });
   }
 
-  function abrirModalExcluirExercicio(id: string, nome: string) {
-    setModalExcluirExercicio({ aberto: true, id, nome });
+  function fecharModalExclusao() {
+    setModalExclusao(MODAL_EXCLUSAO_FECHADO);
   }
 
-  function abrirModalExcluirFicha(id: string, nome: string) {
-    setModalExcluirFicha({ aberto: true, id, nome });
+  function marcarItemExcluindo(tipo: TipoExclusaoGerenciar, id: string, excluindo: boolean) {
+    setItensExcluindo((prev) => {
+      const itensDoTipo = new Set(prev[tipo]);
+
+      if (excluindo) {
+        itensDoTipo.add(id);
+      } else {
+        itensDoTipo.delete(id);
+      }
+
+      return { ...prev, [tipo]: itensDoTipo };
+    });
   }
 
-  // Handlers para confirmar exclusão (com fade-out)
-  function handleConfirmarExcluirPrograma() {
-    if (!modalExcluirPrograma.id) return;
+  function handleConfirmarExclusao() {
+    const { tipo, id } = modalExclusao;
+    if (!tipo || !id) return;
 
-    // Adicionar ao conjunto de itens sendo excluídos
-    setProgramasExcluindo((prev) => new Set(prev).add(modalExcluirPrograma.id!));
-    setModalExcluirPrograma({ aberto: false, id: null, nome: "" });
+    const { remover } = CONFIG_EXCLUSAO_GERENCIAR[tipo];
+    marcarItemExcluindo(tipo, id, true);
+    fecharModalExclusao();
 
-    // Aguardar animação de fade-out (200ms)
     setTimeout(() => {
-      stateManagerRepository.removerPrograma(modalExcluirPrograma.id!);
-      // Remover do conjunto após exclusão
-      setProgramasExcluindo((prev) => {
-        const novo = new Set(prev);
-        novo.delete(modalExcluirPrograma.id!);
-        return novo;
-      });
-    }, 200);
-  }
-
-  function handleConfirmarExcluirExercicio() {
-    if (!modalExcluirExercicio.id) return;
-
-    // Adicionar ao conjunto de itens sendo excluídos
-    setExerciciosExcluindo((prev) => new Set(prev).add(modalExcluirExercicio.id!));
-    setModalExcluirExercicio({ aberto: false, id: null, nome: "" });
-
-    // Aguardar animação de fade-out (200ms)
-    setTimeout(() => {
-      stateManagerRepository.removerExercicioCustom(modalExcluirExercicio.id!);
-      // Remover do conjunto após exclusão
-      setExerciciosExcluindo((prev) => {
-        const novo = new Set(prev);
-        novo.delete(modalExcluirExercicio.id!);
-        return novo;
-      });
-    }, 200);
-  }
-
-  function handleConfirmarExcluirFicha() {
-    if (!modalExcluirFicha.id) return;
-
-    // Adicionar ao conjunto de itens sendo excluídos
-    setFichasExcluindo((prev) => new Set(prev).add(modalExcluirFicha.id!));
-    setModalExcluirFicha({ aberto: false, id: null, nome: "" });
-
-    // Aguardar animação de fade-out (200ms)
-    setTimeout(() => {
-      stateManagerRepository.removerFicha(modalExcluirFicha.id!);
-      // Remover do conjunto após exclusão
-      setFichasExcluindo((prev) => {
-        const novo = new Set(prev);
-        novo.delete(modalExcluirFicha.id!);
-        return novo;
-      });
+      remover(id);
+      marcarItemExcluindo(tipo, id, false);
     }, 200);
   }
 }
 
 /* ── Componentes Internos ── */
+
+interface BotaoExcluirItemProps {
+  nome: string;
+  aoExcluir: () => void;
+}
+
+function BotaoExcluirItem({ nome, aoExcluir }: BotaoExcluirItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={aoExcluir}
+      aria-label={`Excluir ${nome}`}
+      className="p-2 text-texto-sutil hover:text-perigo hover:bg-perigo/10 rounded-lg transition-colors shrink-0"
+    >
+      <Icone nome="lixeira" tamanho={18} />
+    </button>
+  );
+}
 
 interface CartaoProgramaProps {
   programa: Programa;
@@ -513,20 +510,14 @@ function CartaoPrograma({ programa, estaSendoExcluido = false, aoEditar, aoExclu
         bg-superficie rounded-2xl border border-borda overflow-hidden
         hover:bg-superficie-suave transition-all duration-200
         ${estaSendoExcluido ? "opacity-0 scale-95" : "opacity-100 scale-100"}
-        ${programa.ativo ? "ring-2 ring-acento/20" : ""}
       `}
     >
       {/* Banner */}
-      <div className={`px-5 py-4 ${programa.ativo ? "bg-acento/10" : "bg-superficie-suave"} text-texto-secundario`}>
+      <div className="px-5 py-4 bg-superficie-suave text-texto-secundario">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center mb-1">
               <h3 className="text-lg font-semibold font-display">{programa.nome}</h3>
-              {programa.ativo && (
-                <span className="px-2 py-0.5 bg-acento text-white text-xs font-semibold rounded-full shrink-0">
-                  ATIVO
-                </span>
-              )}
             </div>
             {programa.descricao && (
               <p className="text-sm leading-snug text-texto-secundario">{programa.descricao}</p>
@@ -541,27 +532,27 @@ function CartaoPrograma({ programa, estaSendoExcluido = false, aoEditar, aoExclu
           {fichasDoPrograma.length} {fichasDoPrograma.length === 1 ? "ficha" : "fichas"}
         </p>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Toggle ativo */}
-          <button
-            type="button"
-            onClick={handleToggleAtivo}
-            className={`
-              flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
-              ${programa.ativo
-                ? "bg-acento/20 text-acento hover:bg-acento/30"
-                : "bg-superficie-suave text-texto-secundario hover:bg-superficie-hover"
-              }
-            `}
-            title={programa.ativo ? "Desativar programa" : "Ativar programa"}
-          >
-            <span className="text-xs font-medium">
-              {programa.ativo ? "Ativo" : "Ativar"}
-            </span>
-            <div className={`w-9 h-5 rounded-full relative transition-colors duration-200 ${programa.ativo ? "bg-acento" : "bg-borda"}`}>
-              <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${programa.ativo ? "translate-x-4" : "translate-x-0"}`} />
-            </div>
-          </button>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            {programa.ativo && (
+              <span className="px-2 py-0.5 bg-acento text-texto-invertido text-xs font-semibold rounded-full shrink-0">
+                ATIVO
+              </span>
+            )}
+
+            {/* Toggle ativo */}
+            <button
+              type="button"
+              onClick={handleToggleAtivo}
+              className="flex items-center justify-center p-1 rounded-lg transition-colors hover:bg-superficie-suave"
+              title={programa.ativo ? "Desativar programa" : "Ativar programa"}
+              aria-label={programa.ativo ? "Programa ativo" : "Ativar programa"}
+            >
+              <div className={`w-9 h-5 rounded-full relative transition-colors duration-200 ${programa.ativo ? "bg-acento" : "bg-borda"}`}>
+                <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-superficie transition-transform duration-200 ${programa.ativo ? "translate-x-4" : "translate-x-0"}`} />
+              </div>
+            </button>
+          </div>
 
           <div className="flex items-center gap-1">
             <button
@@ -571,13 +562,7 @@ function CartaoPrograma({ programa, estaSendoExcluido = false, aoEditar, aoExclu
             >
               Editar
             </button>
-            <button
-              type="button"
-              onClick={aoExcluir}
-              className="px-3 py-2 text-sm font-medium text-error hover:bg-error/10 rounded-lg transition-colors"
-            >
-              Excluir
-            </button>
+            <BotaoExcluirItem nome={programa.nome} aoExcluir={aoExcluir} />
           </div>
         </div>
       </div>
@@ -585,6 +570,7 @@ function CartaoPrograma({ programa, estaSendoExcluido = false, aoEditar, aoExclu
   );
 }
 
+// Exercicios customizados nao exibem editar: hoje so possuem nome e grupo.
 interface LinhaExercicioCustomProps {
   exercicio: Exercicio;
   estaSendoExcluido?: boolean;
@@ -615,14 +601,7 @@ function LinhaExercicioCustom({
       </div>
 
       {/* Ação */}
-      <button
-        type="button"
-        onClick={aoExcluir}
-        aria-label={`Excluir ${exercicio.nome}`}
-        className="p-2 -mr-1 text-texto-sutil hover:text-error hover:bg-error/10 rounded-lg transition-colors shrink-0"
-      >
-        <Icone nome="lixeira" tamanho={18} />
-      </button>
+      <BotaoExcluirItem nome={exercicio.nome} aoExcluir={aoExcluir} />
     </div>
   );
 }
@@ -677,13 +656,7 @@ function CartaoFicha({ ficha, programasDaFicha = [], estaSendoExcluida = false, 
         >
           Editar
         </button>
-        <button
-          type="button"
-          onClick={aoExcluir}
-          className="px-3.5 py-2 text-sm font-medium text-error hover:bg-error/10 rounded-lg transition-colors"
-        >
-          Excluir
-        </button>
+        <BotaoExcluirItem nome={ficha.nome} aoExcluir={aoExcluir} />
       </div>
     </div>
   );

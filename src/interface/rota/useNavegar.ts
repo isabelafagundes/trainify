@@ -6,12 +6,16 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { construirCaminho, type ParamsRota } from "./rotas";
 
+export type OpcoesNavegacao = {
+  substituir?: boolean;
+};
+
 export function useNavegar() {
   const navigate = useNavigate();
 
   const aoNavegar = useCallback(
-    (destino: string, params?: ParamsRota) => {
-      navigate(construirCaminho(destino, params));
+    (destino: string, params?: ParamsRota, opcoes?: OpcoesNavegacao) => {
+      navigate(construirCaminho(destino, params), { replace: opcoes?.substituir });
     },
     [navigate]
   );

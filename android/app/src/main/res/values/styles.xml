@@ -30,7 +30,9 @@
     <!-- Tema de launch (cold start): mostra o splash e, ao terminar, troca para
          AppTheme.NoActionBar via postSplashScreenTheme. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">#f5f1ea</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">#f5f1ea</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
         <!-- O decor da janela é criado com ESTE tema (launch). Sem isso, a ActionBar
              nativa (faixa preta com "Trainify") é inflada e persiste. -->

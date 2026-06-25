@@ -17,7 +17,7 @@
   /* Texto */
   --color-texto-primario: oklch(0.200 0.015 55);
   --color-texto-secundario: oklch(0.450 0.018 55);
-  --color-texto-sutil: oklch(0.550 0.015 55);
+  --color-texto-sutil: oklch(0.510 0.015 55);
   --color-texto-invertido: oklch(0.965 0.007 70);
 
   /* Bordas */

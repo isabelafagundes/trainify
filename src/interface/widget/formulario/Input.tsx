@@ -35,7 +35,7 @@ export function Input(props: Props) {
   const classesInput = `
     w-full px-4 py-3
     bg-superficie
-    border ${erro ? "border-error" : "border-borda"}
+    border ${erro ? "border-perigo" : "border-borda"}
     rounded-[10px]
     text-base text-texto-primario placeholder:text-texto-sutil
     transition-all duration-200 ease-out
@@ -60,7 +60,7 @@ export function Input(props: Props) {
           rows={linhas || 3}
         />
         {ajuda && !erro && <p className="text-xs text-texto-secundario">{ajuda}</p>}
-        {erro && <p className="text-xs text-error">{erro}</p>}
+        {erro && <p className="text-xs text-perigo">{erro}</p>}
       </div>
     );
   }
@@ -81,7 +81,7 @@ export function Input(props: Props) {
         className={classesInput.trim() + " " + (customClassName || "")}
       />
       {ajuda && !erro && <p className="text-xs text-texto-secundario">{ajuda}</p>}
-      {erro && <p className="text-xs text-error">{erro}</p>}
+      {erro && <p className="text-xs text-perigo">{erro}</p>}
     </div>
   );
 }

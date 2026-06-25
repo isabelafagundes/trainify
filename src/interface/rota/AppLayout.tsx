@@ -48,7 +48,6 @@ export function AppLayout() {
         <NavegacaoInferior
           abaAtiva={abaDoCaminho(location.pathname)}
           aoMudarAba={(aba) => navigate(construirCaminho(aba))}
-          aoCriarPrograma={() => navigate(construirCaminho("criarPrograma"))}
         />
       )}
     </div>

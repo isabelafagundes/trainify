@@ -10,11 +10,16 @@ import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
 import { useToast } from "@/interface/widget/toast";
 import { ModalCopiarPrograma } from "@/interface/widget/modal/ModalCopiarPrograma";
+import type { OpcoesNavegacao } from "@/interface/rota/useNavegar";
 
 interface PropriedadesEditorProgramaPage {
   programaId?: string;
   aoVoltar: () => void;
-  aoNavegar: (destino: string, params?: Record<string, string>) => void;
+  aoNavegar: (
+    destino: string,
+    params?: Record<string, string>,
+    opcoes?: OpcoesNavegacao
+  ) => void;
 }
 
 export function EditorProgramaPage({
@@ -23,7 +28,7 @@ export function EditorProgramaPage({
   aoNavegar,
 }: PropriedadesEditorProgramaPage) {
   const { showError } = useToast();
-  const [programa, setPrograma] = useState<Programa | null>(null);
+  const [, setPrograma] = useState<Programa | null>(null);
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [ativo, setAtivo] = useState(false);
@@ -35,6 +40,7 @@ export function EditorProgramaPage({
   const editando = Boolean(programaId);
   const titulo = editando ? "Editar Programa" : "Novo Programa";
   const idParaUsar = programaId || programaTempId;
+  const programaPersistido = Boolean(idParaUsar);
 
   // Carregar dados
   useEffect(() => {
@@ -67,9 +73,9 @@ export function EditorProgramaPage({
       return;
     }
 
-    if (editando && programa) {
+    if (idParaUsar) {
       // Ao editar, atualizamos apenas os campos editáveis, preservando fichaIds
-      stateManagerRepository.atualizarPrograma(programa.id, {
+      stateManagerRepository.atualizarPrograma(idParaUsar, {
         nome: nome.trim(),
         descricao: descricao.trim(),
         ativo,
@@ -173,13 +179,13 @@ export function EditorProgramaPage({
               </p>
             </div>
             <div className={`w-11 h-6 rounded-full relative transition-colors duration-200 ${ativo ? "bg-acento" : "bg-borda"}`}>
-              <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-200 ${ativo ? "translate-x-5" : "translate-x-0"}`} />
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-superficie transition-transform duration-200 ${ativo ? "translate-x-5" : "translate-x-0"}`} />
             </div>
           </button>
 
           {/* Info sobre fichas */}
           <div className="px-4 py-3 bg-superficie-suave rounded-xl border border-borda-suave">
-            {editando && idParaUsar ? (
+            {programaPersistido && idParaUsar ? (
               <>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium text-texto-primario">
@@ -269,7 +275,7 @@ export function EditorProgramaPage({
             onClick={handleSalvar}
             className="w-full"
           >
-            {editando ? "Salvar" : "Criar Programa"}
+            {programaPersistido ? "Salvar" : "Criar Programa"}
           </Botao>
         </div>
       </div>
@@ -315,6 +321,7 @@ export function EditorProgramaPage({
                     });
                     setProgramaTempId(novoPrograma.id);
                     programaIdFinal = novoPrograma.id;
+                    aoNavegar("editarPrograma", { id: programaIdFinal }, { substituir: true });
                   }
 
                   setModalNovaFicha(false);
