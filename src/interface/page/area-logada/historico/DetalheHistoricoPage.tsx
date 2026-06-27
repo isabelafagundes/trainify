@@ -1,5 +1,16 @@
-import type { Exercicio, Ficha, RegistroCardio, RegistroExercicio, RegistroSerie, RegistroTreino } from "@/domain/tipos";
+import {
+  META_METRICA_CARDIO,
+  resolverTipoCardio,
+  type ChaveMetricaCardio,
+  type Exercicio,
+  type Ficha,
+  type RegistroCardio,
+  type RegistroExercicio,
+  type RegistroSerie,
+  type RegistroTreino,
+} from "@/domain/tipos";
 import { EstadoVazio } from "@/interface/widget/EstadoVazio";
+import { criarIdGraficoCardio } from "@/interface/widget/grafico/cardioGraficoId";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
 
 interface DetalheHistoricoPageProps {
@@ -33,6 +44,62 @@ function calcularDuracaoMinutos(inicio: string, fim: string) {
 
 function formatarCarga(carga: number) {
   return Number.isInteger(carga) ? String(carga) : carga.toFixed(1);
+}
+
+const METRICAS_CARDIO_HISTORICO: ChaveMetricaCardio[] = [
+  "duracaoMinutos",
+  "distanciaKm",
+  "passos",
+  "niveis",
+  "pulos",
+  "inclinacaoPct",
+  "resistencia",
+  "rpm",
+  "ritmo500m",
+  "spm",
+];
+
+function formatarNumero(valor: number, casasDecimais = 1) {
+  return Number.isInteger(valor) ? String(valor) : valor.toFixed(casasDecimais);
+}
+
+function formatarRitmo(segundos: number) {
+  const total = Math.max(0, Math.round(segundos));
+  const minutos = Math.floor(total / 60);
+  const restoSegundos = String(total % 60).padStart(2, "0");
+  return `${minutos}:${restoSegundos}`;
+}
+
+function obterValorCardio(cardio: RegistroCardio, metrica: ChaveMetricaCardio): number | null {
+  const valor = cardio[metrica];
+  return typeof valor === "number" && Number.isFinite(valor) ? valor : null;
+}
+
+function formatarValorCardio(metrica: ChaveMetricaCardio, valor: number) {
+  const meta = META_METRICA_CARDIO[metrica];
+  if (metrica === "ritmo500m") return `${formatarRitmo(valor)}${meta.unidade}`;
+  if (metrica === "distanciaKm") return `${formatarNumero(valor, 2)} ${meta.unidade}`;
+  if (meta.unidade) return `${formatarNumero(valor)} ${meta.unidade}`;
+  return formatarNumero(valor);
+}
+
+function obterMetricasRegistradas(cardio: RegistroCardio) {
+  return METRICAS_CARDIO_HISTORICO.flatMap((metrica) => {
+    const valor = obterValorCardio(cardio, metrica);
+    return valor === null ? [] : [{ metrica, valor }];
+  });
+}
+
+function obterRitmoMedioKm(cardio: RegistroCardio): string | null {
+  if (!cardio.distanciaKm || !cardio.duracaoMinutos) return null;
+  const segundosPorKm = (cardio.duracaoMinutos * 60) / cardio.distanciaKm;
+  return `${formatarRitmo(segundosPorKm)}/km`;
+}
+
+function obterVelocidadeMedia(cardio: RegistroCardio): string | null {
+  if (!cardio.distanciaKm || !cardio.duracaoMinutos) return null;
+  const kmh = cardio.distanciaKm / (cardio.duracaoMinutos / 60);
+  return `${formatarNumero(kmh, 1)} km/h`;
 }
 
 export function DetalheHistoricoPage({
@@ -126,7 +193,15 @@ export function DetalheHistoricoPage({
       {registro.cardio.length > 0 ? (
         <div className="mt-4 space-y-3">
           {registro.cardio.map((cardio) => (
-            <BlocoCardioHistorico key={cardio.cardioId} cardio={cardio} />
+            <BlocoCardioHistorico
+              key={cardio.cardioId}
+              cardio={cardio}
+              aoVerGrafico={(metrica) =>
+                aoNavegar("graficoProgressao", {
+                  exercicioId: criarIdGraficoCardio(cardio.tipo, metrica),
+                })
+              }
+            />
           ))}
         </div>
       ) : null}
@@ -209,25 +284,64 @@ function TabelaSeries({ series }: { series: RegistroSerie[] }) {
   );
 }
 
-function BlocoCardioHistorico({ cardio }: { cardio: RegistroCardio }) {
+function BlocoCardioHistorico({
+  cardio,
+  aoVerGrafico,
+}: {
+  cardio: RegistroCardio;
+  aoVerGrafico: (metrica: ChaveMetricaCardio) => void;
+}) {
+  const tipo = resolverTipoCardio(cardio.tipo);
+  const metricas = obterMetricasRegistradas(cardio);
+  const metricaPrincipal = metricas[0]?.metrica ?? "duracaoMinutos";
+  const ritmoMedio = obterRitmoMedioKm(cardio);
+  const velocidadeMedia = obterVelocidadeMedia(cardio);
+
   return (
     <section className="rounded-[12px] border border-borda bg-superficie p-4">
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[8px] bg-acento-suave text-texto-secundario">
-          <Icone nome="coracao" tamanho={17} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[8px] bg-acento-suave text-lg text-texto-secundario">
+            {tipo.emoji || <Icone nome="coracao" tamanho={17} />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-display text-base font-semibold text-texto-primario">{tipo.nome}</h2>
+            <p className="mt-1 text-sm text-texto-secundario">Cardio</p>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <h2 className="font-display text-base font-semibold text-texto-primario">Cardio</h2>
-          <p className="mt-1 text-sm text-texto-secundario">
-            {cardio.tipo} · {cardio.duracaoMinutos} min
-          </p>
-          {cardio.nota.trim() ? (
-            <p className="mt-3 rounded-[8px] bg-fundo px-3 py-2 text-sm text-texto-secundario">
-              {cardio.nota}
-            </p>
-          ) : null}
-        </div>
+        <button
+          type="button"
+          onClick={() => aoVerGrafico(metricaPrincipal)}
+          className="inline-flex min-h-[36px] flex-shrink-0 items-center gap-1.5 rounded-[8px] px-2.5 text-sm text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario"
+        >
+          <Icone nome="tendencia" tamanho={15} />
+          Ver gráfico
+        </button>
       </div>
+
+      {metricas.length > 0 ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {metricas.map(({ metrica, valor }) => (
+            <ResumoMeta
+              key={metrica}
+              rotulo={META_METRICA_CARDIO[metrica].rotulo}
+              valor={formatarValorCardio(metrica, valor)}
+            />
+          ))}
+          {ritmoMedio ? <ResumoMeta rotulo="Ritmo médio" valor={ritmoMedio} /> : null}
+          {velocidadeMedia ? <ResumoMeta rotulo="Velocidade média" valor={velocidadeMedia} /> : null}
+        </div>
+      ) : (
+        <p className="mt-3 rounded-[8px] bg-fundo px-3 py-2 text-sm text-texto-sutil">
+          Sem métricas registradas.
+        </p>
+      )}
+
+      {cardio.nota.trim() ? (
+        <p className="mt-3 rounded-[8px] bg-fundo px-3 py-2 text-sm text-texto-secundario">
+          {cardio.nota}
+        </p>
+      ) : null}
     </section>
   );
 }

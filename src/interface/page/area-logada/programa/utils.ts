@@ -30,7 +30,8 @@ export function formatarDataRelativa(dataISO: string): string {
 }
 
 export function obterFichasDoPrograma(programa: Programa, fichas: Ficha[]): Ficha[] {
-  return programa.fichaIds
+  const fichaIds = Array.isArray(programa.fichaIds) ? programa.fichaIds : [];
+  return fichaIds
     .map((fichaId) => fichas.find((ficha) => ficha.id === fichaId))
     .filter((ficha): ficha is Ficha => Boolean(ficha));
 }
@@ -93,7 +94,7 @@ export function extrairGruposMusculares(
   catalogo: Exercicio[],
 ): string[] {
   const grupos = new Set<string>();
-  for (const ef of exerciciosFicha) {
+  for (const ef of Array.isArray(exerciciosFicha) ? exerciciosFicha : []) {
     const exercicio = catalogo.find((e) => e.id === ef.exercicioId);
     if (exercicio) grupos.add(exercicio.grupoMuscular);
   }

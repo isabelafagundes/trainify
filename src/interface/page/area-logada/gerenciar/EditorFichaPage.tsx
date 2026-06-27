@@ -3,12 +3,24 @@
    ═══════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
-import type { Ficha, Exercicio, ExercicioFicha, TipoCardio, Programa } from "@/domain/tipos";
+import type {
+  EntradaCardio,
+  ChaveMetricaCardio,
+  Exercicio,
+  ExercicioFicha,
+  Ficha,
+  ModalidadeTreino,
+  Programa,
+  TipoCardioDef,
+  TipoCardio,
+} from "@/domain/tipos";
+import { META_METRICA_CARDIO, resolverTipoCardio } from "@/domain/tipos";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Input } from "@/interface/widget/formulario/Input";
 import { CampoNumerico } from "@/interface/widget/formulario/CampoNumerico";
 import { SeletorIcone } from "@/interface/widget/formulario/SeletorIcone";
 import { PickerExercicios } from "@/interface/widget/formulario/PickerExercicios";
+import { BigSwitcher } from "@/interface/widget/formulario/BigSwitcher";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
 import { ModalCriarExercicio } from "@/interface/widget/modal/ModalCriarExercicio";
@@ -21,36 +33,31 @@ interface PropriedadesEditorFichaPage {
   aoVoltar: () => void;
 }
 
-const TIPOS_CARDIO: TipoCardio[] = [
-  "Esteira",
-  "Bike",
-  "Elíptico",
-  "Remo",
-  "Escada",
-  "Pular Corda",
+type EtapaWizard = "info" | "exercicios" | "cardio";
+
+const OPCOES_MODALIDADE = [
+  { id: "ambos", label: "Ambos", icone: "alvo" },
+  { id: "musculacao", label: "Musculação", icone: "halter" },
+  { id: "cardio", label: "Cardio", icone: "corrida" },
 ];
 
-const EMOJI_CARDIO: Record<TipoCardio, string> = {
-  Esteira: "🏃",
-  Bike: "🚴",
-  Elíptico: "🌀",
-  Remo: "🚣",
-  Escada: "🪜",
-  "Pular Corda": "🤸",
-};
-
-type EtapaWizard = 0 | 1 | 2; // 0: Info básica, 1: Exercícios, 2: Cardio
-
-const ETAPAS = [
-  { numero: 1, titulo: "Info básica", descricao: "Nome, descrição e emoji" },
-  { numero: 2, titulo: "Exercícios", descricao: "Adicione os exercícios" },
-  { numero: 3, titulo: "Cardio", descricao: "Opcional" },
-] as const;
+function etapasDaModalidade(modalidade: ModalidadeTreino) {
+  return [
+    { id: "info" as const, titulo: "Info básica", descricao: "Nome, modalidade e programas" },
+    ...(modalidade !== "cardio"
+      ? [{ id: "exercicios" as const, titulo: "Exercícios", descricao: "Adicione os exercícios" }]
+      : []),
+    ...(modalidade !== "musculacao"
+      ? [{ id: "cardio" as const, titulo: "Cardio", descricao: modalidade === "cardio" ? "Obrigatório" : "Opcional" }]
+      : []),
+  ];
+}
 
 export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesEditorFichaPage) {
   const { showError } = useToast();
   const [ficha, setFicha] = useState<Ficha | null>(null);
   const [todosExercicios, setTodosExercicios] = useState<Exercicio[]>([]);
+  const [tiposCardio, setTiposCardio] = useState<TipoCardioDef[]>([]);
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [programasVinculados, setProgramasVinculados] = useState<Programa[]>([]);
   const vinculosProgramasAlteradosRef = useRef(false);
@@ -59,15 +66,14 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [icone, setIcone] = useState<string | null>(null);
+  const [modalidade, setModalidade] = useState<ModalidadeTreino>("ambos");
   const [exercicios, setExercicios] = useState<ExercicioFicha[]>([]);
-  const [cardio, setCardio] = useState<
-    { id: string; tipo: TipoCardio; duracaoMinutos: number; nota: string }[]
-  >([]);
+  const [cardio, setCardio] = useState<EntradaCardio[]>([]);
   const [mostraCardio, setMostraCardio] = useState(false);
   const [mostraPicker, setMostraPicker] = useState(false);
 
   // Estado do wizard
-  const [etapaAtual, setEtapaAtual] = useState<EtapaWizard>(0);
+  const [etapaAtual, setEtapaAtual] = useState<EtapaWizard>("info");
 
   // Estados dos modais
   const [modalCriarExercicioAberto, setModalCriarExercicioAberto] = useState(false);
@@ -76,6 +82,12 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
 
   const editando = Boolean(fichaId);
   const titulo = editando ? "Editar Ficha" : "Nova Ficha";
+  const incluiMusculacao = modalidade !== "cardio";
+  const incluiCardio = modalidade !== "musculacao";
+  const cardioObrigatorio = modalidade === "cardio";
+  const cardioVisivel = incluiCardio && (cardioObrigatorio || mostraCardio);
+  const etapas = etapasDaModalidade(modalidade);
+  const indiceEtapaAtual = Math.max(0, etapas.findIndex((etapa) => etapa.id === etapaAtual));
 
   // Carregar dados
   useEffect(() => {
@@ -83,8 +95,10 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
 
     const carregarDados = () => {
       const exercicios = stateManagerRepository.listarTodosExercicios();
+      const tiposCardio = stateManagerRepository.listarTiposCardio();
       const programas = stateManagerRepository.listarProgramas();
       setTodosExercicios(exercicios);
+      setTiposCardio(tiposCardio);
       setProgramas(programas);
 
       if (fichaId) {
@@ -93,6 +107,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
           setFicha(f);
           setNome(f.nome);
           setDescricao(f.descricao);
+          setModalidade(f.modalidade);
           setIcone(f.emoji || "💪");
           setExercicios(f.exercicios);
           setCardio(f.cardio);
@@ -107,6 +122,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       } else {
         const nomeGerado = stateManagerRepository.gerarNomeFicha();
         setNome(nomeGerado);
+        setModalidade("ambos");
         setIcone("💪");
 
         // Se foi fornecido um programaId, vincular automaticamente
@@ -126,30 +142,38 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
     return cancelarInscricao;
   }, [fichaId, programaId]);
 
-  // Validações por etapa
+  // Validacoes por etapa
   const podeAvancarEtapa0 = () => nome.trim().length > 0;
   const podeAvancarEtapa1 = () => exercicios.length > 0;
+  const podeAvancarEtapaCardio = () => !cardioObrigatorio || cardio.length > 0;
 
-  // Handlers de navegação do wizard
+  // Handlers de navegacao do wizard
   const handleProximoEtapa = () => {
-    if (etapaAtual === 0 && !podeAvancarEtapa0()) {
+    if (etapaAtual === "info" && !podeAvancarEtapa0()) {
       showError("Digite um nome para a ficha.");
       return;
     }
-    if (etapaAtual === 1 && !podeAvancarEtapa1()) {
+    if (etapaAtual === "exercicios" && !podeAvancarEtapa1()) {
       showError("Adicione pelo menos um exercício à ficha.");
       return;
     }
-    if (etapaAtual < 2) {
-      setEtapaAtual((etapaAtual + 1) as EtapaWizard);
+    if (etapaAtual === "cardio" && !podeAvancarEtapaCardio()) {
+      showError("Adicione pelo menos uma atividade de cardio.");
+      return;
+    }
+
+    const proximaEtapa = etapas[indiceEtapaAtual + 1];
+    if (proximaEtapa) {
+      setEtapaAtual(proximaEtapa.id);
     } else {
       handleSalvar();
     }
   };
 
   const handleEtapaAnterior = () => {
-    if (etapaAtual > 0) {
-      setEtapaAtual((etapaAtual - 1) as EtapaWizard);
+    const etapaAnterior = etapas[indiceEtapaAtual - 1];
+    if (etapaAnterior) {
+      setEtapaAtual(etapaAnterior.id);
     }
   };
 
@@ -160,8 +184,13 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       return;
     }
 
-    if (exercicios.length === 0) {
+    if (incluiMusculacao && exercicios.length === 0) {
       showError("Adicione pelo menos um exercício à ficha.");
+      return;
+    }
+
+    if (cardioObrigatorio && cardio.length === 0) {
+      showError("Adicione pelo menos uma atividade de cardio.");
       return;
     }
 
@@ -170,8 +199,9 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       descricao: descricao.trim(),
       icone: "halter" as const,
       emoji: icone || undefined,
+      modalidade,
       exercicios,
-      cardio: mostraCardio ? cardio : [],
+      cardio,
     };
 
     if (editando && ficha) {
@@ -286,11 +316,20 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
     setNome(ficha.nome.replace(/\s*\(cópia\)$/, ""));
     setDescricao(ficha.descricao);
     setIcone(ficha.emoji || "💪");
+    setModalidade(ficha.modalidade);
     setExercicios(ficha.exercicios);
     setCardio(ficha.cardio);
     setMostraCardio(ficha.cardio.length > 0);
 
     setModalCopiarFichaAberto(false);
+  };
+
+  const handleAlterarModalidade = (novaModalidade: ModalidadeTreino) => {
+    const novasEtapas = etapasDaModalidade(novaModalidade);
+    setModalidade(novaModalidade);
+    if (!novasEtapas.some((etapa) => etapa.id === etapaAtual)) {
+      setEtapaAtual(novasEtapas.at(-1)?.id ?? "info");
+    }
   };
 
   const getNomeExercicio = (exercicioId: string): string => {
@@ -303,7 +342,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       `${exercicios.length} ${exercicios.length === 1 ? "exercício" : "exercícios"}`,
     ];
 
-    if (mostraCardio && cardio.length > 0) {
+    if (incluiCardio && cardio.length > 0) {
       partes.push(`${cardio.length} ${cardio.length === 1 ? "cardio" : "cardios"}`);
     }
 
@@ -315,7 +354,15 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-superficie">
+    <>
+      {/* Backdrop do drawer — apenas tablet/desktop (md+); fecha ao clicar fora. */}
+      <div
+        className="hidden md:block fixed inset-0 z-[55] bg-black/30 backdrop-blur-sm animate-fade-in"
+        onClick={aoVoltar}
+        aria-hidden="true"
+      />
+      {/* Tela cheia no mobile; drawer lateral à direita no md+. */}
+      <div className="fixed inset-0 z-[60] flex flex-col bg-superficie md:left-auto md:right-0 md:w-full md:max-w-[560px] md:border-l md:border-borda md:shadow-2xl md-drawer-enter">
       {/* Header fixo */}
       <div className="px-5 pt-[max(var(--safe-top),16px)] pb-4 border-b border-borda shrink-0">
         <div className="flex items-center justify-between mb-4">
@@ -334,10 +381,10 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
 
         {/* Indicador de etapas - minimalista */}
         <div className="flex items-center justify-center gap-1.5 py-2">
-          {ETAPAS.map((etapa, index) => {
-            const passoNumero = etapa.numero;
-            const atual = passoNumero - 1 === etapaAtual;
-            const completo = passoNumero - 1 < etapaAtual;
+          {etapas.map((etapa, index) => {
+            const passoNumero = index + 1;
+            const atual = etapa.id === etapaAtual;
+            const completo = index < indiceEtapaAtual;
 
             return (
               <div key={index} className="flex items-center">
@@ -345,9 +392,8 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                 <button
                   type="button"
                   onClick={() => {
-                    // Só permite navegar para etapas anteriores ou a próxima
-                    if (passoNumero - 1 <= etapaAtual) {
-                      setEtapaAtual((passoNumero - 1) as EtapaWizard);
+                    if (index <= indiceEtapaAtual) {
+                      setEtapaAtual(etapa.id);
                     }
                   }}
                   className={`
@@ -360,15 +406,15 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                       : "bg-borda-suave text-texto-sutil"
                     }
                   `}
-                  disabled={passoNumero - 1 > etapaAtual}
+                  disabled={index > indiceEtapaAtual}
                 >
                   {completo ? "✓" : passoNumero}
                 </button>
 
                 {/* Conector */}
-                {index < ETAPAS.length - 1 && (
+                {index < etapas.length - 1 && (
                   <div className={`w-8 h-0.5 mx-0.5 transition-colors duration-200 ${
-                    passoNumero - 1 < etapaAtual ? "bg-texto-primario/30" : "bg-borda-suave"
+                    index < indiceEtapaAtual ? "bg-texto-primario/30" : "bg-borda-suave"
                   }`} />
                 )}
               </div>
@@ -381,7 +427,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="px-5 py-4 pb-6">
           {/* ETAPA 0: Info básica */}
-          {etapaAtual === 0 && (
+          {etapaAtual === "info" && (
             <div className="space-y-6">
               {/* Copiar de existente */}
               <Botao
@@ -411,12 +457,88 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                 linhas={2}
               />
 
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-texto-primario">
+                  Modalidade
+                </label>
+                <BigSwitcher
+                  opcoes={OPCOES_MODALIDADE}
+                  valorSelecionado={modalidade}
+                  aoAlterar={(valor) => handleAlterarModalidade(valor as ModalidadeTreino)}
+                />
+              </div>
+
               <SeletorIcone valor={icone} aoAlterar={setIcone} />
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-medium text-texto-primario">
+                    Programas
+                  </h2>
+                  {programas.length > programasVinculados.length && (
+                    <Botao
+                      variante="fantasma"
+                      tamanho="compacto"
+                      icone={<Icone nome="mais" tamanho={14} />}
+                      onClick={() => setModalVincularProgramaAberto(true)}
+                    >
+                      Vincular
+                    </Botao>
+                  )}
+                </div>
+
+                {programasVinculados.length === 0 ? (
+                  <div className="px-4 py-4 bg-superficie-suave rounded-xl border border-borda-suave text-center">
+                    <p className="text-sm text-texto-secundario">
+                      {programas.length === 0
+                        ? "Crie um programa primeiro para vincular a esta ficha."
+                        : "Esta ficha não está vinculada a nenhum programa."}
+                    </p>
+                    {programas.length > 0 && (
+                      <Botao
+                        variante="secundario"
+                        tamanho="compacto"
+                        className="mt-2"
+                        icone={<Icone nome="mais" tamanho={14} />}
+                        onClick={() => setModalVincularProgramaAberto(true)}
+                      >
+                        Vincular ao programa
+                      </Botao>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {programasVinculados.map((programa) => (
+                      <div
+                        key={programa.id}
+                        className="flex items-center gap-2 px-3 py-2 bg-superficie-suave rounded-lg border border-borda-suave"
+                      >
+                        <span className="text-sm font-medium text-texto-primario">
+                          {programa.nome}
+                        </span>
+                        {programa.ativo && (
+                          <span className="w-2 h-2 rounded-full bg-acento" title="Ativo" />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            vinculosProgramasAlteradosRef.current = true;
+                            setProgramasVinculados(programasVinculados.filter((p) => p.id !== programa.id));
+                          }}
+                          className="text-texto-secundario hover:text-perigo transition-colors"
+                        >
+                          <Icone nome="fechar" tamanho={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* ETAPA 1: Exercícios */}
-          {etapaAtual === 1 && (
+          {etapaAtual === "exercicios" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-medium text-texto-primario">
@@ -528,84 +650,21 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
           )}
 
           {/* ETAPA 2: Cardio */}
-          {etapaAtual === 2 && (
+          {etapaAtual === "cardio" && (
             <div className="space-y-4">
-              {/* Programas vinculados */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-medium text-texto-primario">
-                    Programas
-                  </h2>
-                  {programas.length > programasVinculados.length && (
-                    <Botao
-                      variante="fantasma"
-                      tamanho="compacto"
-                      icone={<Icone nome="mais" tamanho={14} />}
-                      onClick={() => setModalVincularProgramaAberto(true)}
-                    >
-                      Vincular
-                    </Botao>
-                  )}
-                </div>
-
-                {programasVinculados.length === 0 ? (
-                  <div className="px-4 py-4 bg-superficie-suave rounded-xl border border-borda-suave text-center">
-                    <p className="text-sm text-texto-secundario">
-                      {programas.length === 0
-                        ? "Crie um programa primeiro para vincular a esta ficha."
-                        : "Esta ficha não está vinculada a nenhum programa."}
-                    </p>
-                    {programas.length > 0 && (
-                      <Botao
-                        variante="secundario"
-                        tamanho="compacto"
-                        className="mt-2"
-                        icone={<Icone nome="mais" tamanho={14} />}
-                        onClick={() => setModalVincularProgramaAberto(true)}
-                      >
-                        Vincular ao programa
-                      </Botao>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {programasVinculados.map((programa) => (
-                      <div
-                        key={programa.id}
-                        className="flex items-center gap-2 px-3 py-2 bg-superficie-suave rounded-lg border border-borda-suave"
-                      >
-                        <span className="text-sm font-medium text-texto-primario">
-                          {programa.nome}
-                        </span>
-                        {programa.ativo && (
-                          <span className="w-2 h-2 rounded-full bg-acento" title="Ativo" />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            vinculosProgramasAlteradosRef.current = true;
-                            setProgramasVinculados(programasVinculados.filter((p) => p.id !== programa.id));
-                          }}
-                          className="text-texto-secundario hover:text-perigo transition-colors"
-                        >
-                          <Icone nome="fechar" tamanho={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* Cardio */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-medium text-texto-primario">
-                    Cardio (opcional)
+                    {cardioObrigatorio ? "Cardio" : "Cardio (opcional)"}
                   </h2>
-                  {mostraCardio && (
+                  {!cardioObrigatorio && mostraCardio && (
                     <button
                       type="button"
-                      onClick={() => setMostraCardio(false)}
+                      onClick={() => {
+                        setMostraCardio(false);
+                        setCardio([]);
+                      }}
                       className="text-xs text-texto-secundario hover:text-perigo transition-colors"
                     >
                       Remover seção
@@ -613,7 +672,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                   )}
                 </div>
 
-                {!mostraCardio ? (
+                {!cardioVisivel ? (
                   <Botao
                     variante="secundario"
                     onClick={() => setMostraCardio(true)}
@@ -628,11 +687,11 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                     </p>
 
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {TIPOS_CARDIO.map((tipo) => (
+                      {tiposCardio.map((tipo) => (
                         <button
-                          key={tipo}
+                          key={tipo.id}
                           type="button"
-                          onClick={() => handleAdicionarCardio(tipo)}
+                          onClick={() => handleAdicionarCardio(tipo.id)}
                           className="
                             group flex items-center gap-2.5 px-3 py-2.5 min-h-[52px]
                             rounded-xl border border-borda bg-superficie text-left
@@ -641,10 +700,10 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                           "
                         >
                           <span className="text-xl leading-none shrink-0">
-                            {EMOJI_CARDIO[tipo]}
+                            {tipo.emoji}
                           </span>
                           <span className="flex-1 min-w-0 text-[13px] font-medium leading-tight text-texto-primario">
-                            {tipo}
+                            {tipo.nome}
                           </span>
                           <span
                             className="
@@ -667,6 +726,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                           <CardCardioConfig
                             key={entrada.id}
                             config={entrada}
+                            tiposCardio={tiposCardio}
                             aoAtualizar={(atualizacoes) =>
                               handleAtualizarCardio(index, atualizacoes)
                             }
@@ -702,6 +762,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                     </div>
 
                     <div className="border-t border-borda-suave divide-y divide-borda-suave">
+                      {incluiMusculacao && (
                       <div className="px-4 py-3">
                         <p className="text-xs font-medium text-texto-primario mb-2">
                           Exercícios
@@ -727,8 +788,9 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                           )}
                         </div>
                       </div>
+                      )}
 
-                      {mostraCardio && cardio.length > 0 && (
+                      {incluiCardio && cardio.length > 0 && (
                         <div className="px-4 py-3">
                           <p className="text-xs font-medium text-texto-primario mb-2">
                             Cardio
@@ -768,7 +830,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       {/* Footer fixo com botões */}
       <div className="shrink-0 px-5 pt-4 pb-[max(var(--safe-bottom),16px)] border-t border-borda bg-superficie/95 backdrop-blur-sm">
         <div className="max-w-[480px] mx-auto flex gap-3">
-          {etapaAtual > 0 && (
+          {indiceEtapaAtual > 0 && (
             <Botao
               variante="secundario"
               onClick={handleEtapaAnterior}
@@ -778,7 +840,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
             </Botao>
           )}
 
-          {editando && etapaAtual === 0 && (
+          {editando && etapaAtual === "info" && (
             <Botao
               variante="secundario"
               onClick={handleCopiar}
@@ -793,9 +855,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
             onClick={handleProximoEtapa}
             className="flex-1"
           >
-            {etapaAtual === 0 && "Próximo"}
-            {etapaAtual === 1 && "Próximo"}
-            {etapaAtual === 2 && (editando ? "Salvar" : "Criar Ficha")}
+            {indiceEtapaAtual < etapas.length - 1 ? "Próximo" : editando ? "Salvar" : "Criar Ficha"}
           </Botao>
         </div>
       </div>
@@ -861,6 +921,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
         </div>
       )}
     </div>
+    </>
   );
 }
 
@@ -989,21 +1050,62 @@ function CardExercicioConfig({
 }
 
 interface CardCardioConfigProps {
-  config: { id: string; tipo: TipoCardio; duracaoMinutos: number; nota: string };
+  config: EntradaCardio;
+  tiposCardio: TipoCardioDef[];
   aoAtualizar: (atualizacoes: Partial<CardCardioConfigProps["config"]>) => void;
   aoRemover: () => void;
 }
 
-function CardCardioConfig({ config, aoAtualizar, aoRemover }: CardCardioConfigProps) {
+function CampoMetricaCardioConfig({
+  metrica,
+  valor,
+  aoAlterar,
+}: {
+  metrica: ChaveMetricaCardio;
+  valor: number | undefined;
+  aoAlterar: (valor: number | undefined) => void;
+}) {
+  const meta = META_METRICA_CARDIO[metrica];
+  const ehDecimal = meta.passo < 1;
+
+  return (
+    <label className="block">
+      <span className="text-xs text-texto-secundario mb-1 block">
+        {meta.rotulo}{meta.unidade ? ` (${meta.unidade})` : ""}
+      </span>
+      <input
+        type="number"
+        value={valor ?? ""}
+        min={0}
+        step={meta.passo}
+        inputMode={ehDecimal ? "decimal" : "numeric"}
+        onChange={(e) => {
+          const texto = e.target.value.replace(",", ".");
+          aoAlterar(texto === "" ? undefined : Number(texto));
+        }}
+        className="
+          w-full px-2 py-2
+          bg-superficie border border-borda
+          rounded-lg text-sm
+          focus:border-acento focus:outline-none
+        "
+      />
+    </label>
+  );
+}
+
+function CardCardioConfig({ config, tiposCardio, aoAtualizar, aoRemover }: CardCardioConfigProps) {
+  const tipo = resolverTipoCardio(config.tipo, tiposCardio);
+
   return (
     <div className="px-4 py-3 bg-superficie-suave rounded-xl border border-borda-suave">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-lg leading-none shrink-0">
-            {EMOJI_CARDIO[config.tipo]}
+            {tipo.emoji}
           </span>
           <span className="text-sm font-medium text-texto-primario">
-            {config.tipo}
+            {tipo.nome}
           </span>
           <button
             type="button"
@@ -1014,25 +1116,17 @@ function CardCardioConfig({ config, aoAtualizar, aoRemover }: CardCardioConfigPr
           </button>
         </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="text-xs text-texto-secundario mb-1 block">
-              Duração (min)
-            </label>
-            <CampoNumerico
-              valor={config.duracaoMinutos}
-              minimo={1}
-              maximo={180}
-              aoAlterar={(duracaoMinutos) => aoAtualizar({ duracaoMinutos })}
-              ariaLabel="Duracao em minutos"
-              className="
-                w-full px-2 py-2
-                bg-superficie border border-borda
-                rounded-lg text-sm
-                focus:border-acento focus:outline-none
-              "
+        <div className="grid grid-cols-2 gap-3">
+          {tipo.metricas.map((metrica) => (
+            <CampoMetricaCardioConfig
+              key={metrica}
+              metrica={metrica}
+              valor={config[metrica]}
+              aoAlterar={(valor) =>
+                aoAtualizar({ [metrica]: metrica === "duracaoMinutos" ? valor ?? 0 : valor })
+              }
             />
-          </div>
+          ))}
         </div>
 
         <div className="mt-2">

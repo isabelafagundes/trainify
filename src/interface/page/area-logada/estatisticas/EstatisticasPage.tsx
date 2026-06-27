@@ -5,6 +5,11 @@ import { Icone } from "@/interface/widget/svg/Icone";
 import { CardMetricaResumo } from "./CardMetricaResumo";
 import { ItemProgressaoExercicio } from "./ItemProgressaoExercicio";
 import {
+  agregarProgressaoPorCardio,
+  calcularResumoCardio,
+  type ProgressaoCardio,
+} from "./cardioUtils";
+import {
   agregarProgressaoPorExercicio,
   calcularRecordeStreak,
   calcularStreakAtual,
@@ -55,6 +60,14 @@ export function EstatisticasPage({
     () => agregarProgressaoPorExercicio(historico, exercicios),
     [historico, exercicios],
   );
+  const resumoCardio = useMemo(
+    () => calcularResumoCardio(historico),
+    [historico],
+  );
+  const progressaoCardio = useMemo(
+    () => agregarProgressaoPorCardio(historico),
+    [historico],
+  );
 
   const totalTreinos = historico.length;
 
@@ -84,7 +97,7 @@ export function EstatisticasPage({
   return (
     <div className="px-4 py-4 space-y-5">
       {/* Cards de resumo */}
-      <section className="flex gap-3 reveal-up">
+      <section className="grid grid-cols-2 gap-3 reveal-up md:grid-cols-4">
         <CardMetricaResumo
           rotulo={`Treinos em ${nomeMesAtual}`}
           valor={treinosNoMes}
@@ -100,8 +113,27 @@ export function EstatisticasPage({
             recordeStreak > 0
               ? `recorde: ${recordeStreak} ${recordeStreak === 1 ? "dia" : "dias"}`
               : undefined
-          }
+            }
         />
+        {resumoCardio.totalSessoes > 0 ? (
+          <>
+            <CardMetricaResumo
+              rotulo="Cardio total"
+              valor={Math.round(resumoCardio.totalMinutos)}
+              sufixo="min"
+              icone={<Icone nome="coracao" tamanho={14} />}
+              destaque={`${resumoCardio.totalSessoes} ${
+                resumoCardio.totalSessoes === 1 ? "registro" : "registros"
+              }`}
+            />
+            <CardMetricaResumo
+              rotulo="Distância"
+              valor={formatarNumero(resumoCardio.totalKm, 1)}
+              sufixo="km"
+              icone={<Icone nome="corrida" tamanho={14} />}
+            />
+          </>
+        ) : null}
       </section>
 
       {/* Progressão por exercício */}
@@ -119,7 +151,7 @@ export function EstatisticasPage({
         </div>
 
         {progressao.length > 0 ? (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {progressao.map((item, i) => (
               <div
                 key={item.exercicioId}
@@ -141,6 +173,70 @@ export function EstatisticasPage({
           </p>
         )}
       </section>
+
+      {progressaoCardio.length > 0 ? (
+        <section>
+          <div
+            className="mb-2.5 flex items-baseline justify-between px-1 reveal-up"
+            style={{ animationDelay: "120ms" }}
+          >
+            <h2 className="font-display text-sm font-semibold text-texto-primario">
+              Progressão de cardio
+            </h2>
+            <span className="text-xs text-texto-sutil tabular-nums">
+              {progressaoCardio.length} {progressaoCardio.length === 1 ? "métrica" : "métricas"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            {progressaoCardio.map((item, i) => (
+              <button
+                key={item.idGrafico}
+                type="button"
+                onClick={() => aoNavegar("graficoProgressao", { exercicioId: item.idGrafico })}
+                className="flex min-h-[72px] items-center gap-3 rounded-[12px] border border-borda bg-superficie px-4 py-3 text-left transition-colors hover:bg-superficie-hover reveal-up"
+                style={{ animationDelay: `${170 + i * 55}ms` }}
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-acento-suave text-lg">
+                  {item.emoji || <Icone nome="coracao" tamanho={16} />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-texto-primario">
+                    {item.nome}
+                  </span>
+                  <span className="mt-1 block truncate text-xs text-texto-sutil">
+                    {item.rotuloMetrica} · {item.totalSessoes}{" "}
+                    {item.totalSessoes === 1 ? "sessão" : "sessões"}
+                  </span>
+                </span>
+                <span className="text-right text-xs text-texto-sutil">
+                  <span className="block font-semibold text-texto-secundario">
+                    {formatarValorCardio(item)}
+                  </span>
+                  <span className="block">último</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
+}
+
+function formatarNumero(valor: number, casasDecimais = 1) {
+  return Number.isInteger(valor) ? String(valor) : valor.toFixed(casasDecimais);
+}
+
+function formatarRitmo(segundos: number) {
+  const total = Math.max(0, Math.round(segundos));
+  const minutos = Math.floor(total / 60);
+  const restoSegundos = String(total % 60).padStart(2, "0");
+  return `${minutos}:${restoSegundos}`;
+}
+
+function formatarValorCardio(item: ProgressaoCardio) {
+  if (item.metrica === "ritmo500m") return `${formatarRitmo(item.ultimoValor)}/500m`;
+  if (item.metrica === "distanciaKm") return `${formatarNumero(item.ultimoValor, 2)} km`;
+  return formatarNumero(item.ultimoValor);
 }

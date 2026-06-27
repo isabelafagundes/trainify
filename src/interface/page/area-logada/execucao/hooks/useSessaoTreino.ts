@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import type {
+  ChaveMetricaCardio,
+  EntradaCardio,
   Ficha,
   RegistroCardio,
   RegistroSerie,
@@ -18,6 +20,19 @@ import {
 /** Intervalo de espera antes de gravar alterações (ms). */
 const DEBOUNCE_SALVAR_MS = 400;
 
+const METRICAS_CARDIO: ChaveMetricaCardio[] = [
+  "duracaoMinutos",
+  "distanciaKm",
+  "passos",
+  "niveis",
+  "pulos",
+  "inclinacaoPct",
+  "resistencia",
+  "rpm",
+  "ritmo500m",
+  "spm",
+];
+
 export interface SessaoExercicio {
   exercicioId: string;
   series: RegistroSerie[];
@@ -30,6 +45,8 @@ interface AtualizacaoSerie {
   repeticoes?: number;
   carga?: number;
 }
+
+type AtualizacaoCardio = Partial<Pick<RegistroCardio, ChaveMetricaCardio | "nota">>;
 
 function criarSeriesPreenchidas(total: number, repeticoes: number): RegistroSerie[] {
   return Array.from({ length: total }, (_, indice) => ({
@@ -47,9 +64,57 @@ function clonarExercicios(exercicios: SessaoExercicio[]): SessaoExercicio[] {
   }));
 }
 
-export function useSessaoTreino(ficha: Ficha) {
+function modoInicialDaFicha(ficha: Ficha): ModoExecucao {
+  if (ficha.modalidade === "cardio") return "cardio";
+  return "musculacao";
+}
+
+function modoPermitido(ficha: Ficha, modo: ModoExecucao): ModoExecucao {
+  if (ficha.modalidade === "cardio") return "cardio";
+  if (ficha.modalidade === "musculacao") return "musculacao";
+  if (modo === "cardio" && ficha.cardio.length === 0) return "musculacao";
+  if (modo === "musculacao" && ficha.exercicios.length === 0 && ficha.cardio.length > 0) return "cardio";
+  return modo;
+}
+
+function ultimoCardioDoTipo(
+  historico: RegistroTreino[],
+  fichaId: string,
+  tipo: string
+): RegistroCardio | undefined {
+  return [...historico]
+    .filter((registro) => registro.fichaId === fichaId)
+    .sort((a, b) => new Date(b.finalizadoEm).getTime() - new Date(a.finalizadoEm).getTime())
+    .flatMap((registro) => registro.cardio)
+    .find((cardio) => cardio.tipo === tipo);
+}
+
+function criarRegistroCardioInicial(
+  item: EntradaCardio,
+  historico: RegistroTreino[],
+  fichaId: string
+): RegistroCardio {
+  const ultimo = ultimoCardioDoTipo(historico, fichaId, item.tipo);
+  const registro: RegistroCardio = {
+    cardioId: item.id,
+    tipo: item.tipo,
+    duracaoMinutos: item.duracaoMinutos,
+    nota: item.nota,
+  };
+
+  for (const metrica of METRICAS_CARDIO) {
+    const valor = item[metrica] ?? ultimo?.[metrica];
+    if (valor !== undefined) {
+      registro[metrica] = valor;
+    }
+  }
+
+  return registro;
+}
+
+export function useSessaoTreino(ficha: Ficha, historico: RegistroTreino[] = []) {
   const [iniciadoEm, setIniciadoEm] = useState(() => new Date().toISOString());
-  const [modo, setModo] = useState<ModoExecucao>("musculacao");
+  const [modo, setModo] = useState<ModoExecucao>(() => modoInicialDaFicha(ficha));
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [exercicios, setExercicios] = useState<SessaoExercicio[]>(() =>
     ficha.exercicios.map((exercicio, indice) => ({
@@ -61,12 +126,7 @@ export function useSessaoTreino(ficha: Ficha) {
     }))
   );
   const [cardio, setCardio] = useState<RegistroCardio[]>(() =>
-    ficha.cardio.map((item) => ({
-      cardioId: item.id,
-      tipo: item.tipo,
-      duracaoMinutos: item.duracaoMinutos,
-      nota: item.nota,
-    }))
+    ficha.cardio.map((item) => criarRegistroCardioInicial(item, historico, ficha.id))
   );
   const [cardioConcluido, setCardioConcluido] = useState<Set<string>>(() => new Set());
 
@@ -82,9 +142,11 @@ export function useSessaoTreino(ficha: Ficha) {
       if (!ativo) return;
       if (salva && salva.fichaId === ficha.id && !encerradaRef.current) {
         setIniciadoEm(salva.iniciadoEm);
-        setModo(salva.modo);
+        setModo(modoPermitido(ficha, salva.modo));
         setIndiceAtual(
-          Math.max(0, Math.min(salva.indiceAtual, ficha.exercicios.length - 1))
+          ficha.exercicios.length === 0
+            ? 0
+            : Math.max(0, Math.min(salva.indiceAtual, ficha.exercicios.length - 1))
         );
         setExercicios(
           salva.exercicios.map((exercicio) => ({
@@ -103,7 +165,7 @@ export function useSessaoTreino(ficha: Ficha) {
     return () => {
       ativo = false;
     };
-  }, [ficha.id, ficha.exercicios.length]);
+  }, [ficha]);
 
   // Snapshot serializável do estado atual.
   const sessaoSerializada = useMemo<SessaoTreinoSalva>(
@@ -127,7 +189,10 @@ export function useSessaoTreino(ficha: Ficha) {
   );
 
   const serializadaRef = useRef(sessaoSerializada);
-  serializadaRef.current = sessaoSerializada;
+
+  useEffect(() => {
+    serializadaRef.current = sessaoSerializada;
+  }, [sessaoSerializada]);
 
   // Gravação imediata do último estado conhecido (usada no flush de ciclo de vida).
   const gravarAgora = useCallback(() => {
@@ -170,6 +235,8 @@ export function useSessaoTreino(ficha: Ficha) {
   }, [gravarAgora]);
 
   const temCardio = cardio.length > 0;
+  const temMusculacao = exercicios.length > 0;
+  const podeAlternarModo = ficha.modalidade === "ambos" && temMusculacao && temCardio;
 
   const marcarVisitado = useCallback((indice: number) => {
     setExercicios((atuais) => {
@@ -184,9 +251,9 @@ export function useSessaoTreino(ficha: Ficha) {
       const indiceSeguro = Math.max(0, Math.min(indice, ficha.exercicios.length - 1));
       setIndiceAtual(indiceSeguro);
       marcarVisitado(indiceSeguro);
-      setModo("musculacao");
+      if (ficha.modalidade !== "cardio") setModo("musculacao");
     },
-    [ficha.exercicios.length, marcarVisitado]
+    [ficha.exercicios.length, ficha.modalidade, marcarVisitado]
   );
 
   const anterior = useCallback(() => {
@@ -195,8 +262,8 @@ export function useSessaoTreino(ficha: Ficha) {
       marcarVisitado(proximo);
       return proximo;
     });
-    setModo("musculacao");
-  }, [marcarVisitado]);
+    if (ficha.modalidade !== "cardio") setModo("musculacao");
+  }, [ficha.modalidade, marcarVisitado]);
 
   const proximo = useCallback(() => {
     setIndiceAtual((atual) => {
@@ -204,8 +271,8 @@ export function useSessaoTreino(ficha: Ficha) {
       marcarVisitado(proximoIndice);
       return proximoIndice;
     });
-    setModo("musculacao");
-  }, [ficha.exercicios.length, marcarVisitado]);
+    if (ficha.modalidade !== "cardio") setModo("musculacao");
+  }, [ficha.exercicios.length, ficha.modalidade, marcarVisitado]);
 
   const atualizarSerie = useCallback(
     (indiceExercicio: number, indiceSerie: number, atualizacao: AtualizacaoSerie) => {
@@ -293,12 +360,12 @@ export function useSessaoTreino(ficha: Ficha) {
   );
 
   const alternarModo = useCallback(() => {
-    if (!temCardio) return;
+    if (!podeAlternarModo) return;
     setModo((atual) => (atual === "musculacao" ? "cardio" : "musculacao"));
-  }, [temCardio]);
+  }, [podeAlternarModo]);
 
   const atualizarCardio = useCallback(
-    (id: string, atualizacao: Partial<Pick<RegistroCardio, "duracaoMinutos" | "nota">>) => {
+    (id: string, atualizacao: AtualizacaoCardio) => {
       setCardio((atuais) =>
         atuais.map((item) => (item.cardioId === id ? { ...item, ...atualizacao } : item))
       );
@@ -377,6 +444,8 @@ export function useSessaoTreino(ficha: Ficha) {
       cardio,
       cardioConcluido,
       temCardio,
+      temMusculacao,
+      podeAlternarModo,
       ultimoExercicio,
       atualizarSerie,
       adicionarSerie,
@@ -406,6 +475,8 @@ export function useSessaoTreino(ficha: Ficha) {
       cardio,
       cardioConcluido,
       temCardio,
+      temMusculacao,
+      podeAlternarModo,
       ultimoExercicio,
       atualizarSerie,
       adicionarSerie,

@@ -15,7 +15,7 @@ function extrairGruposMusculares(
   catalogo: Exercicio[]
 ): string[] {
   const grupos = new Set<string>();
-  for (const ef of exerciciosFicha) {
+  for (const ef of Array.isArray(exerciciosFicha) ? exerciciosFicha : []) {
     const exercicio = catalogo.find((e) => e.id === ef.exercicioId);
     if (exercicio) grupos.add(exercicio.grupoMuscular);
   }
@@ -29,12 +29,13 @@ function resumoExercicios(
   maximo: number = 3
 ): string {
   const nomes = exerciciosFicha
+    .filter(Boolean)
     .slice(0, maximo)
     .map((ef) => {
       const ex = catalogo.find((e) => e.id === ef.exercicioId);
       return ex?.nome ?? "—";
     });
-  const restante = exerciciosFicha.length - maximo;
+  const restante = Math.max(0, exerciciosFicha.length - maximo);
   if (restante > 0) nomes.push(`+${restante}`);
   return nomes.join(", ");
 }
@@ -57,8 +58,9 @@ export function CartaoFicha({
   ultimoTreino,
   aoIniciarTreino,
 }: PropriedadesCartaoFicha) {
-  const gruposMusculares = extrairGruposMusculares(ficha.exercicios, exerciciosCatalogo);
-  const resumo = resumoExercicios(ficha.exercicios, exerciciosCatalogo);
+  const exerciciosFicha = Array.isArray(ficha.exercicios) ? ficha.exercicios : [];
+  const gruposMusculares = extrairGruposMusculares(exerciciosFicha, exerciciosCatalogo);
+  const resumo = resumoExercicios(exerciciosFicha, exerciciosCatalogo);
 
   return (
     <div className="bg-superficie rounded-2xl border border-borda overflow-hidden transition-shadow duration-200 ease-out hover:shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
@@ -84,7 +86,7 @@ export function CartaoFicha({
 
           {/* Contador de exercícios */}
           <span className="flex-shrink-0 text-xs text-texto-sutil font-medium tabular-nums">
-            {ficha.exercicios.length} exerc.
+            {exerciciosFicha.length} exerc.
           </span>
         </div>
 

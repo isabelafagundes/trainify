@@ -7,12 +7,10 @@ interface PropriedadesNavegacaoInferior {
   aoMudarAba: (aba: AbaNavegacao) => void;
 }
 
-const abasEsquerda: { id: AbaNavegacao; rotulo: string; icone: string }[] = [
+/** Config única das abas — compartilhada com a navegação lateral (desktop). */
+export const ABAS: { id: AbaNavegacao; rotulo: string; icone: string }[] = [
   { id: "treinos", rotulo: "Treinos", icone: "halter" },
   { id: "historico", rotulo: "Histórico", icone: "grafico" },
-];
-
-const abasDireita: { id: AbaNavegacao; rotulo: string; icone: string }[] = [
   { id: "estatisticas", rotulo: "Estatísticas", icone: "tendencia" },
   { id: "gerenciar", rotulo: "Gerenciar", icone: "listaVerificacao" },
 ];
@@ -58,7 +56,7 @@ export function NavegacaoInferior({ abaAtiva, aoMudarAba }: PropriedadesNavegaca
           atrás de um blur/gradiente no rodapé, cobrindo a área da navigation bar. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed bottom-0 left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2"
+        className="pointer-events-none fixed bottom-0 left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2 lg:hidden"
         style={{
           height: "calc(var(--safe-bottom) + 96px)",
           backdropFilter: "blur(12px)",
@@ -70,19 +68,19 @@ export function NavegacaoInferior({ abaAtiva, aoMudarAba }: PropriedadesNavegaca
       />
       <nav
       className="
-        fixed bottom-0 left-5 right-5 z-50
+        fixed bottom-0 left-1/2 z-50 w-[calc(100%-2.5rem)] max-w-[480px] -translate-x-1/2
         bg-superficie/70 backdrop-blur-xl backdrop-saturate-150
         border border-borda-suave/60
         mb-[max(var(--safe-bottom),16px)]
         rounded-2xl
         shadow-md shadow-black/[0.04]
+        lg:hidden
       "
       role="tablist"
       aria-label="Navegação principal"
     >
-      <div className="max-w-[480px] mx-auto flex items-stretch">
-        {abasEsquerda.map(renderizarAba)}
-        {abasDireita.map(renderizarAba)}
+      <div className="flex items-stretch">
+        {ABAS.map(renderizarAba)}
       </div>
       </nav>
     </>

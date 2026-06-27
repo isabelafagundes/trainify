@@ -7,7 +7,7 @@ interface HeaderExecucaoProps {
   iconeFicha: NomeIcone;
   emojiFicha?: string;
   modo: "musculacao" | "cardio";
-  temCardio: boolean;
+  podeAlternarModo: boolean;
   aoAlternarModo: () => void;
   aoCancelar: () => void;
 }
@@ -17,13 +17,13 @@ export function HeaderExecucao({
   iconeFicha,
   emojiFicha,
   modo,
-  temCardio,
+  podeAlternarModo,
   aoAlternarModo,
   aoCancelar,
 }: HeaderExecucaoProps) {
   return (
     <header className="sticky top-0 z-20 bg-fundo pt-[var(--safe-top)]">
-      <div className="flex items-center gap-2 px-4 py-3">
+      <div className="mx-auto flex w-full max-w-[768px] items-center gap-2 px-4 py-3">
         <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-[8px] bg-acento-suave text-texto-primario">
           <IconeFicha nome={iconeFicha} emoji={emojiFicha} tamanho={22} />
         </div>
@@ -32,7 +32,7 @@ export function HeaderExecucao({
           <p className="truncate text-sm font-semibold text-texto-primario">{nomeFicha}</p>
         </div>
 
-        {temCardio ? (
+        {podeAlternarModo ? (
           <button
             type="button"
             onClick={aoAlternarModo}

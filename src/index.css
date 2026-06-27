@@ -118,8 +118,6 @@ textarea,
 
 #root {
   width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
   min-height: 100dvh;
   background:
     radial-gradient(ellipse 80% 45% at 20% 0%, var(--background-app-a), transparent 70%),
@@ -349,6 +347,14 @@ html {
 
 .animate-slide-in-right {
   animation: slide-in-right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Entrada do editor como drawer lateral — apenas em telas largas (md+).
+   No mobile a classe não faz nada: o editor segue em tela cheia, sem animação. */
+@media (min-width: 768px) {
+  .md-drawer-enter {
+    animation: slide-in-right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 }
 
 .slide-in-from-top-2 {

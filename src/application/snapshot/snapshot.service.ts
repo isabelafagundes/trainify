@@ -63,6 +63,9 @@ function validarSnapshotV1(valor: unknown): SnapshotTrainify {
   }
 
   const { programas, fichas, historico, exerciciosCustom } = valor.dados;
+  const cardioCustom = Array.isArray(valor.dados.cardioCustom)
+    ? valor.dados.cardioCustom
+    : [];
   if (
     !Array.isArray(programas) ||
     !Array.isArray(fichas) ||
@@ -82,6 +85,7 @@ function validarSnapshotV1(valor: unknown): SnapshotTrainify {
       fichas,
       historico,
       exerciciosCustom,
+      cardioCustom,
     },
   };
 }

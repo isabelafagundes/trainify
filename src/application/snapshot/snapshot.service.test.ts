@@ -10,6 +10,7 @@ const dadosVazios = {
   fichas: [],
   historico: [],
   exerciciosCustom: [],
+  cardioCustom: [],
 };
 
 function criarSnapshot(atualizadoEm = "2024-01-02T03:04:05.000Z"): SnapshotTrainify {
@@ -38,6 +39,7 @@ function criarSnapshot(atualizadoEm = "2024-01-02T03:04:05.000Z"): SnapshotTrain
           nome: "Treino A",
           descricao: "",
           icone: "halter",
+          modalidade: "ambos",
           exercicios: [],
           cardio: [],
         },
@@ -48,6 +50,15 @@ function criarSnapshot(atualizadoEm = "2024-01-02T03:04:05.000Z"): SnapshotTrain
           id: "custom-1",
           nome: "Remada inventada",
           grupoMuscular: "Costas",
+        },
+      ],
+      cardioCustom: [
+        {
+          id: "cardio-custom-1",
+          nome: "Caminhada",
+          emoji: "🚶",
+          metricas: ["duracaoMinutos", "distanciaKm"],
+          builtin: false,
         },
       ],
     },
@@ -97,6 +108,7 @@ describe("snapshotService", () => {
     expect(trainifyState.getExerciciosCustom()).toEqual(
       snapshot.dados.exerciciosCustom
     );
+    expect(trainifyState.getCardioCustom()).toEqual(snapshot.dados.cardioCustom);
     expect(trainifyState.getAtualizadoEm()).toBe(snapshot.atualizadoEm);
   });
 

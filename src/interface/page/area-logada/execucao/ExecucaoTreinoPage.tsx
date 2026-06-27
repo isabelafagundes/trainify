@@ -30,9 +30,10 @@ export function ExecucaoTreinoPage({
   historico,
   aoVoltar,
 }: ExecucaoTreinoPageProps) {
-  const sessao = useSessaoTreino(ficha);
+  const sessao = useSessaoTreino(ficha, historico);
   const segundosDescanso = sessao.configuracaoAtual?.descansoSegundos ?? 0;
   const timer = useTimerDescanso(segundosDescanso);
+  const { resetar: resetarTimer, rodando: timerRodando, segundosRestantes: timerSegundosRestantes } = timer;
   const [confirmarFinalizarAberto, setConfirmarFinalizarAberto] = useState(false);
   const [confirmarCancelarAberto, setConfirmarCancelarAberto] = useState(false);
   const [serieHistoricoAlvo, setSerieHistoricoAlvo] = useState<number | null>(null);
@@ -43,18 +44,19 @@ export function ExecucaoTreinoPage({
   const rodandoAnterior = useRef(false);
 
   useEffect(() => {
-    if (rodandoAnterior.current && !timer.rodando && timer.segundosRestantes === 0) {
+    if (rodandoAnterior.current && !timerRodando && timerSegundosRestantes === 0) {
       const id = window.setTimeout(() => setTimerAberto(false), 0);
       void appModule.feedbackTatil.sucesso();
       // Descanso terminou: volta para o tempo programado em vez de travar em 0:00.
-      timer.resetar();
-      rodandoAnterior.current = timer.rodando;
+      resetarTimer();
+      rodandoAnterior.current = timerRodando;
       return () => window.clearTimeout(id);
     }
-    rodandoAnterior.current = timer.rodando;
-  }, [timer.rodando, timer.segundosRestantes]);
+    rodandoAnterior.current = timerRodando;
+  }, [resetarTimer, timerRodando, timerSegundosRestantes]);
 
   const catalogo = stateManagerRepository.listarTodosExercicios();
+  const tiposCardio = stateManagerRepository.listarTiposCardio();
   const exercicioCatalogo = catalogo.find(
     (exercicio) => exercicio.id === sessao.exercicioAtual?.exercicioId
   );
@@ -98,10 +100,10 @@ export function ExecucaoTreinoPage({
     setConfirmarFinalizarAberto(true);
   };
 
-  if (!sessao.exercicioAtual || !sessao.configuracaoAtual) {
+  if (!sessao.exercicioAtual && !sessao.temCardio) {
     return (
       <div className="min-h-[100dvh] bg-fundo px-4 py-8 text-center text-sm text-texto-secundario">
-        Esta ficha ainda não tem exercícios.
+        Esta ficha ainda não tem exercícios ou cardio.
       </div>
     );
   }
@@ -113,7 +115,7 @@ export function ExecucaoTreinoPage({
         iconeFicha={ficha.icone}
         emojiFicha={ficha.emoji}
         modo={sessao.modo}
-        temCardio={sessao.temCardio}
+        podeAlternarModo={sessao.podeAlternarModo}
         aoAlternarModo={sessao.alternarModo}
         aoCancelar={() => setConfirmarCancelarAberto(true)}
       />
@@ -121,8 +123,10 @@ export function ExecucaoTreinoPage({
       {sessao.modo === "cardio" ? (
         <PainelCardio
           cardio={sessao.cardio}
+          tiposCardio={tiposCardio}
           cardioConcluido={sessao.cardioConcluido}
           aoAtualizarCardio={sessao.atualizarCardio}
+          exibirVoltarMusculacao={sessao.podeAlternarModo}
           aoConcluirCardio={(id) => {
             if (!sessao.cardioConcluido.has(id)) {
               void appModule.feedbackTatil.impactoMedio();
@@ -132,7 +136,7 @@ export function ExecucaoTreinoPage({
           aoVoltarMusculacao={sessao.alternarModo}
           aoFinalizar={solicitarFinalizacao}
         />
-      ) : (
+      ) : sessao.exercicioAtual && sessao.configuracaoAtual ? (
         <>
           <BarraProgressoExercicios
             total={sessao.exercicios.length}
@@ -141,10 +145,10 @@ export function ExecucaoTreinoPage({
             aoIrPara={sessao.irPara}
           />
 
-          <main className="px-4 pb-[calc(var(--safe-bottom)+180px)] pt-3">
+          <main className="mx-auto w-full max-w-[768px] px-4 pb-[calc(var(--safe-bottom)+180px)] pt-3">
             <section className="mb-8 transition-transform duration-300">
               <div className="flex items-start justify-between gap-3">
-                <h1 className="min-w-0 flex-1 font-display text-[clamp(22px,6.5vw,32px)] font-semibold leading-[1.1] text-texto-primario break-words">
+                <h1 className="min-w-0 flex-1 break-words font-display text-[clamp(22px,6.5vw,32px)] font-semibold leading-[1.1] text-texto-primario md:text-[32px]">
                   {exercicioCatalogo?.nome ?? "Exercício"}
                 </h1>
                 <div className="flex-shrink-0">
@@ -161,7 +165,7 @@ export function ExecucaoTreinoPage({
               </p>
             </section>
 
-            <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] md:items-start">
               <CardSeries
                 exercicio={sessao.exercicioAtual}
                 usaCarga={sessao.configuracaoAtual.usaCarga}
@@ -186,16 +190,18 @@ export function ExecucaoTreinoPage({
                 aoAbrirHistorico={setSerieHistoricoAlvo}
               />
 
-              <NotaExercicio
-                nota={sessao.exercicioAtual.nota}
-                aoAtualizar={(nota) => sessao.atualizarNota(sessao.indiceAtual, nota)}
-              />
+              <div className="grid gap-5">
+                <NotaExercicio
+                  nota={sessao.exercicioAtual.nota}
+                  aoAtualizar={(nota) => sessao.atualizarNota(sessao.indiceAtual, nota)}
+                />
 
-              <AccordionProgressao
-                exercicioId={sessao.exercicioAtual.exercicioId}
-                historico={historicoDaFicha}
-                aoAbrirGrafico={() => setGraficoAberto(true)}
-              />
+                <AccordionProgressao
+                  exercicioId={sessao.exercicioAtual.exercicioId}
+                  historico={historicoDaFicha}
+                  aoAbrirGrafico={() => setGraficoAberto(true)}
+                />
+              </div>
             </div>
           </main>
 
@@ -218,7 +224,7 @@ export function ExecucaoTreinoPage({
             aoFinalizar={solicitarFinalizacao}
           />
         </>
-      )}
+      ) : null}
 
       <OverlayConfirmarFinalizar
         aberto={confirmarFinalizarAberto}
@@ -231,23 +237,27 @@ export function ExecucaoTreinoPage({
         aoContinuar={() => setConfirmarCancelarAberto(false)}
         aoDescartar={descartarTreino}
       />
-      <OverlayHistoricoSerie
-        aberto={serieHistoricoAlvo !== null}
-        exercicioId={sessao.exercicioAtual.exercicioId}
-        historico={historicoDaFicha}
-        aoFechar={() => setSerieHistoricoAlvo(null)}
-        aoSelecionar={(serie) => {
-          if (serieHistoricoAlvo !== null) sessao.preencherDoHistorico(serieHistoricoAlvo, serie);
-          setSerieHistoricoAlvo(null);
-        }}
-      />
-      <OverlayGraficoProgressao
-        aberto={graficoAberto}
-        aoFechar={() => setGraficoAberto(false)}
-        exercicioId={sessao.exercicioAtual.exercicioId}
-        exercicios={catalogo}
-        historico={historicoDaFicha}
-      />
+      {sessao.exercicioAtual && (
+        <OverlayHistoricoSerie
+          aberto={serieHistoricoAlvo !== null}
+          exercicioId={sessao.exercicioAtual.exercicioId}
+          historico={historicoDaFicha}
+          aoFechar={() => setSerieHistoricoAlvo(null)}
+          aoSelecionar={(serie) => {
+            if (serieHistoricoAlvo !== null) sessao.preencherDoHistorico(serieHistoricoAlvo, serie);
+            setSerieHistoricoAlvo(null);
+          }}
+        />
+      )}
+      {sessao.exercicioAtual && (
+        <OverlayGraficoProgressao
+          aberto={graficoAberto}
+          aoFechar={() => setGraficoAberto(false)}
+          exercicioId={sessao.exercicioAtual.exercicioId}
+          exercicios={catalogo}
+          historico={historicoDaFicha}
+        />
+      )}
       <OverlayFinalizado aberto={finalizadoAberto} aoConcluir={aoVoltar} />
       <ToastDesfazer
         mensagem={desfazerAlvo?.texto ?? null}

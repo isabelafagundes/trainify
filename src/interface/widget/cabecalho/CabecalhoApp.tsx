@@ -17,11 +17,21 @@ interface PropriedadesCabecalhoApp {
   onBack?: () => void;
   nomeUsuario?: string;
   avatarEmoji?: string;
+  /** Drawer de preferências — opcionalmente controlado de fora para também ser
+      acionável pela barra lateral do desktop. Sem essas props, o cabeçalho
+      gerencia o próprio estado (modo autônomo). */
+  menuAberto?: boolean;
+  aoAbrirMenu?: () => void;
+  aoFecharMenu?: () => void;
 }
 
-export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, avatarEmoji }: PropriedadesCabecalhoApp) {
-  const [menuAberto, setMenuAberto] = useState(false);
+export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, avatarEmoji, menuAberto, aoAbrirMenu, aoFecharMenu }: PropriedadesCabecalhoApp) {
   const [editandoPerfil, setEditandoPerfil] = useState(false);
+  const [menuInternoAberto, setMenuInternoAberto] = useState(false);
+
+  // Controlado (props) tem prioridade; senão, estado interno.
+  const menuAbertoEfetivo = menuAberto ?? menuInternoAberto;
+  const abrirMenu = aoAbrirMenu ?? (() => setMenuInternoAberto(true));
   const [temaAtualId, setTemaAtualId] = useState(() => temaManager.obterTema().id);
   const [exportandoDados, setExportandoDados] = useState(false);
   const [selecionandoArquivo, setSelecionandoArquivo] = useState(false);
@@ -37,7 +47,8 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
   }
 
   function fecharMenu() {
-    setMenuAberto(false);
+    if (aoFecharMenu) aoFecharMenu();
+    else setMenuInternoAberto(false);
     setEditandoPerfil(false);
   }
 
@@ -129,7 +140,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
           atrás de um blur/gradiente no topo, cobrindo a área da status bar. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed left-1/2 top-0 z-30 w-full max-w-[480px] -translate-x-1/2"
+        className="pointer-events-none fixed left-0 right-0 top-0 z-30 mx-auto w-full max-w-[480px] md:max-w-[768px] lg:hidden"
         style={{
           height: "calc(var(--safe-top) + 72px)",
           backdropFilter: "blur(12px)",
@@ -139,7 +150,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
           maskImage: "linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%)",
         }}
       />
-      <div className="fixed left-0 right-0 top-0 z-40 mx-auto w-full max-w-[480px] px-5 pt-[max(var(--safe-top),8px)] pb-1">
+      <div className="fixed left-0 right-0 top-0 z-40 mx-auto w-full max-w-[480px] md:max-w-[768px] lg:hidden px-5 pt-[max(var(--safe-top),8px)] pb-1">
         <header className="
           flex items-center justify-between gap-3
           px-4 py-3
@@ -158,10 +169,10 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
             </button>
           )}
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[13px] font-bold text-texto-sutil uppercase tracking-[0.08em] font-display flex-shrink-0">
+            <span className="text-[13px] font-bold text-texto-sutil uppercase tracking-[0.08em] font-display flex-shrink-0 lg:hidden">
               Trainify
             </span>
-            <span className="text-texto-sutil/30 text-[10px] flex-shrink-0">/</span>
+            <span className="text-texto-sutil/30 text-[10px] flex-shrink-0 lg:hidden">/</span>
             <h1 className="text-sm font-semibold text-texto-primario tracking-tight font-display truncate">
               {tituloTela}
             </h1>
@@ -170,7 +181,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
         {nomeUsuario ? (
           <button
             type="button"
-            onClick={() => setMenuAberto(true)}
+            onClick={abrirMenu}
             className="
               flex-shrink-0 relative group cursor-pointer
               p-1 -m-1
@@ -190,10 +201,13 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
           acaoDireita
         )}
         </header>
+      </div>
 
-      {menuAberto && nomeUsuario && (
+      {/* Drawer de preferências — irmão da barra (não some no desktop, onde a
+          barra fica oculta): pode ser aberto pelo perfil da barra lateral. */}
+      {menuAbertoEfetivo && nomeUsuario && (
         <div
-          className="fixed inset-y-0 left-1/2 z-50 w-full max-w-[480px] -translate-x-1/2"
+          className="fixed inset-0 z-50"
           role="dialog"
           aria-modal="true"
           aria-label="Preferências do usuário"
@@ -354,7 +368,6 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
           </aside>
         </div>
       )}
-      </div>
       <ModalConfirmacao
         aberto={snapshotPendente !== null}
         titulo="Importar dados"

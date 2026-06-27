@@ -16,7 +16,7 @@ function extrairGruposMusculares(
   catalogo: Exercicio[],
 ): string[] {
   const grupos = new Set<string>();
-  for (const ef of exerciciosFicha) {
+  for (const ef of Array.isArray(exerciciosFicha) ? exerciciosFicha : []) {
     const exercicio = catalogo.find((e) => e.id === ef.exercicioId);
     if (exercicio) grupos.add(exercicio.grupoMuscular);
   }
@@ -30,7 +30,8 @@ export function LinhaFicha({
   aoIniciarTreino,
   proximoTreino = false,
 }: PropriedadesLinhaFicha) {
-  const gruposMusculares = extrairGruposMusculares(ficha.exercicios, exerciciosCatalogo);
+  const exerciciosFicha = Array.isArray(ficha.exercicios) ? ficha.exercicios : [];
+  const gruposMusculares = extrairGruposMusculares(exerciciosFicha, exerciciosCatalogo);
 
   return (
     <div className={`flex items-center gap-4 py-3 px-4 transition-all duration-200 group ${proximoTreino ? "bg-acento-suave/50 animate-highlight-pulse" : "hover:bg-superficie-suave"}`}>
@@ -49,7 +50,7 @@ export function LinhaFicha({
             {ficha.nome}
           </h3>
           <span className="flex-shrink-0 text-xs text-texto-secundario tabular-nums">
-            {ficha.exercicios.length} exerc.
+            {exerciciosFicha.length} exerc.
           </span>
         </div>
         <div className="flex items-center gap-1.5 mt-1 min-w-0">

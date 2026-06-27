@@ -4,6 +4,7 @@ import type {
   Ficha,
   Programa,
   RegistroTreino,
+  TipoCardioDef,
 } from "@/domain/tipos";
 
 export interface DadosSnapshotTrainify {
@@ -11,6 +12,7 @@ export interface DadosSnapshotTrainify {
   fichas: Ficha[];
   historico: RegistroTreino[];
   exerciciosCustom: Exercicio[];
+  cardioCustom: TipoCardioDef[];
 }
 
 export interface SnapshotTrainify {

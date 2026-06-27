@@ -38,7 +38,7 @@ export function TimerDescanso({
     : 0;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center" role="dialog" aria-label="Timer de descanso">
+    <div className="fixed inset-0 z-40 flex items-end justify-center md:items-center" role="dialog" aria-label="Timer de descanso">
       <button
         type="button"
         aria-label="Fechar timer"
@@ -46,8 +46,8 @@ export function TimerDescanso({
         className="absolute inset-0 bg-texto-primario/30 backdrop-blur-sm animate-fade-in"
       />
 
-      <div className="relative w-full max-w-[480px] rounded-t-[16px] border-t border-borda-suave bg-fundo px-6 pb-[calc(var(--safe-bottom)+32px)] pt-5 shadow-xl animate-slide-up">
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-borda-suave" />
+      <div className="relative w-full max-w-[480px] rounded-t-[16px] border-t border-borda-suave bg-fundo px-6 pb-[calc(var(--safe-bottom)+32px)] pt-5 shadow-xl animate-slide-up md:rounded-2xl md:border md:pb-6 md:animate-none">
+        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-borda-suave md:hidden" />
 
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-texto-secundario">

@@ -12,6 +12,7 @@ const dadosVazios = {
   fichas: [],
   historico: [],
   exerciciosCustom: [],
+  cardioCustom: [],
 };
 
 /* ── Factories de teste ───────────────────────────────── */
@@ -45,6 +46,7 @@ function dadosFicha(parcial: Partial<Omit<Ficha, "id">> = {}): Omit<Ficha, "id">
     nome: "Treino A",
     descricao: "",
     icone: "halter",
+    modalidade: "musculacao",
     exercicios: [novoExercicioFicha()],
     cardio: [],
     ...parcial,
@@ -88,12 +90,107 @@ describe("trainifyState", () => {
         fichas: [],
         historico: [],
         exerciciosCustom: [],
+        cardioCustom: [],
       },
       atualizadoEm
     );
 
     expect(trainifyState.getProgramas()).toHaveLength(1);
     expect(trainifyState.getAtualizadoEm()).toBe(atualizadoEm);
+  });
+
+  it("normaliza modalidade de ficha antiga ao substituir dados", () => {
+    trainifyState.substituirDados(
+      {
+        programas: [],
+        fichas: [
+          {
+            id: "ficha-cardio",
+            nome: "Cardio",
+            descricao: "",
+            icone: "halter",
+            exercicios: [],
+            cardio: [novaEntradaCardio()],
+          },
+          {
+            id: "ficha-musculacao",
+            nome: "Musculacao",
+            descricao: "",
+            icone: "halter",
+            exercicios: [novoExercicioFicha()],
+            cardio: [],
+          },
+        ] as unknown as Ficha[],
+        historico: [],
+        exerciciosCustom: [],
+        cardioCustom: [],
+      },
+      "2024-03-04T05:06:07.000Z"
+    );
+
+    expect(trainifyState.getFichaPorId("ficha-cardio")?.modalidade).toBe("cardio");
+    expect(trainifyState.getFichaPorId("ficha-musculacao")?.modalidade).toBe("musculacao");
+  });
+
+  it("normaliza arrays ausentes em dados antigos ao substituir dados", () => {
+    trainifyState.substituirDados(
+      {
+        programas: [
+          {
+            id: "programa-legado",
+            nome: "Legado",
+            descricao: "",
+            ativo: true,
+          },
+        ] as unknown as Programa[],
+        fichas: [
+          {
+            id: "ficha-legada",
+            nome: "Ficha legada",
+            descricao: "",
+          },
+        ] as unknown as Ficha[],
+        historico: [],
+        exerciciosCustom: [],
+        cardioCustom: [],
+      },
+      "2024-03-04T05:06:07.000Z"
+    );
+
+    expect(trainifyState.getProgramas()[0]).toMatchObject({
+      id: "programa-legado",
+      fichaIds: [],
+      ativo: true,
+    });
+    expect(trainifyState.getFichaPorId("ficha-legada")).toMatchObject({
+      icone: "halter",
+      modalidade: "ambos",
+      exercicios: [],
+      cardio: [],
+    });
+  });
+
+  it("gerencia tipos de cardio customizados e customizacao de built-in", () => {
+    const custom = trainifyState.adicionarCardioCustom({
+      nome: "Caminhada na praia",
+      emoji: "🏖️",
+      metricas: ["duracaoMinutos", "distanciaKm", "passos"],
+    });
+
+    expect(custom.id).toMatch(/^cardio-/);
+    expect(trainifyState.getTiposCardio().some((tipo) => tipo.id === custom.id)).toBe(true);
+
+    trainifyState.atualizarCardioCustom("Esteira", {
+      metricas: ["duracaoMinutos", "distanciaKm", "inclinacaoPct"],
+    });
+
+    expect(trainifyState.getTiposCardio().find((tipo) => tipo.id === "Esteira")?.metricas).toEqual([
+      "duracaoMinutos",
+      "distanciaKm",
+      "inclinacaoPct",
+    ]);
+    expect(trainifyState.removerCardioCustom("Esteira")).toBe(false);
+    expect(trainifyState.removerCardioCustom(custom.id)).toBe(true);
   });
 
   it("mutacoes locais atualizam atualizadoEm", () => {

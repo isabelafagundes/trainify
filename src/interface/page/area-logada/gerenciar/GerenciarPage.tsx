@@ -3,18 +3,26 @@
    ═══════════════════════════════════════════ */
 
 import { useEffect, useMemo, useState } from "react";
-import type { Programa, Exercicio, Ficha } from "@/domain/tipos";
+import type {
+  ChaveMetricaCardio,
+  Exercicio,
+  Ficha,
+  Programa,
+  TipoCardioDef,
+} from "@/domain/tipos";
+import { META_METRICA_CARDIO } from "@/domain/tipos";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
 import { EstadoVazio } from "@/interface/widget/EstadoVazio";
 import { BigSwitcher } from "@/interface/widget/formulario/BigSwitcher";
+import { Input } from "@/interface/widget/formulario/Input";
 import { ModalConfirmacao } from "@/interface/widget/modal/ModalConfirmacao";
 import { ModalCriarExercicio } from "@/interface/widget/modal/ModalCriarExercicio";
 import { useToast } from "@/interface/widget/toast";
 
 type VisualizacaoGerenciar = "programas" | "fichas" | "exercicios";
-type TipoExclusaoGerenciar = "programa" | "exercicio" | "ficha";
+type TipoExclusaoGerenciar = "programa" | "exercicio" | "ficha" | "cardio";
 
 interface ModalExclusaoGerenciar {
   aberto: boolean;
@@ -34,6 +42,31 @@ const OPCOES_VISUALIZACAO = [
   { id: "fichas", label: "Fichas", icone: "halter" },
   { id: "exercicios", label: "Exercícios", icone: "alvo" },
 ];
+
+const CHAVES_METRICAS_CARDIO: ChaveMetricaCardio[] = [
+  "duracaoMinutos",
+  "distanciaKm",
+  "passos",
+  "niveis",
+  "pulos",
+  "inclinacaoPct",
+  "resistencia",
+  "rpm",
+  "ritmo500m",
+  "spm",
+];
+
+interface FormTipoCardio {
+  nome: string;
+  emoji: string;
+  metricas: ChaveMetricaCardio[];
+}
+
+const FORM_CARDIO_INICIAL: FormTipoCardio = {
+  nome: "",
+  emoji: "",
+  metricas: ["duracaoMinutos"],
+};
 
 const MODAL_EXCLUSAO_FECHADO: ModalExclusaoGerenciar = {
   aberto: false,
@@ -65,6 +98,11 @@ const CONFIG_EXCLUSAO_GERENCIAR: Record<
     descricao: (nome) => `Tem certeza que deseja excluir "${nome}"? Esta ação não pode ser desfeita.`,
     remover: (id) => stateManagerRepository.removerFicha(id),
   },
+  cardio: {
+    titulo: "Excluir cardio",
+    descricao: (nome) => `Tem certeza que deseja excluir "${nome}"? O histórico antigo será mantido.`,
+    remover: (id) => stateManagerRepository.removerCardioCustom(id),
+  },
 };
 
 function criarItensExcluindo(): ItensExcluindoGerenciar {
@@ -72,6 +110,7 @@ function criarItensExcluindo(): ItensExcluindoGerenciar {
     programa: new Set(),
     exercicio: new Set(),
     ficha: new Set(),
+    cardio: new Set(),
   };
 }
 
@@ -81,8 +120,12 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [fichas, _setFichas] = useState<Ficha[]>([]);
   const [exerciciosCustom, setExerciciosCustom] = useState<Exercicio[]>([]);
+  const [tiposCardio, setTiposCardio] = useState<TipoCardioDef[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalCriarExercicioAberto, setModalCriarExercicioAberto] = useState(false);
+  const [formCardioAberto, setFormCardioAberto] = useState(false);
+  const [tipoCardioEditando, setTipoCardioEditando] = useState<TipoCardioDef | null>(null);
+  const [formCardio, setFormCardio] = useState<FormTipoCardio>(FORM_CARDIO_INICIAL);
 
   // IDs de itens sendo excluídos (para animação de fade-out)
   const [itensExcluindo, setItensExcluindo] = useState<ItensExcluindoGerenciar>(criarItensExcluindo);
@@ -96,6 +139,7 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
       setProgramas(stateManagerRepository.listarProgramas());
       _setFichas(stateManagerRepository.listarFichas());
       setExerciciosCustom(stateManagerRepository.listarExerciciosCustom());
+      setTiposCardio(stateManagerRepository.listarTiposCardio());
       setCarregando(false);
     };
 
@@ -137,6 +181,62 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
     stateManagerRepository.adicionarExercicioCustom(dados);
     setModalCriarExercicioAberto(false);
     showSuccess(`"${dados.nome}" adicionado aos seus exercícios.`);
+  }
+
+  function abrirFormularioCardio(tipo?: TipoCardioDef) {
+    setTipoCardioEditando(tipo ?? null);
+    setFormCardio(
+      tipo
+        ? {
+            nome: tipo.nome,
+            emoji: tipo.emoji ?? "",
+            metricas: tipo.metricas.length > 0 ? tipo.metricas : ["duracaoMinutos"],
+          }
+        : FORM_CARDIO_INICIAL
+    );
+    setFormCardioAberto(true);
+  }
+
+  function fecharFormularioCardio() {
+    setTipoCardioEditando(null);
+    setFormCardio(FORM_CARDIO_INICIAL);
+    setFormCardioAberto(false);
+  }
+
+  function alternarMetricaCardio(chave: ChaveMetricaCardio) {
+    setFormCardio((atual) => {
+      const jaSelecionada = atual.metricas.includes(chave);
+      const metricas = jaSelecionada
+        ? atual.metricas.filter((item) => item !== chave)
+        : [...atual.metricas, chave];
+
+      return {
+        ...atual,
+        metricas: metricas.length > 0 ? metricas : ["duracaoMinutos"],
+      };
+    });
+  }
+
+  function salvarTipoCardio() {
+    const nome = formCardio.nome.trim();
+    if (!nome) return;
+
+    const dados = {
+      nome,
+      emoji: formCardio.emoji.trim() || undefined,
+      metricas: formCardio.metricas,
+      builtin: tipoCardioEditando?.builtin ?? false,
+    };
+
+    if (tipoCardioEditando) {
+      stateManagerRepository.atualizarCardioCustom(tipoCardioEditando.id, dados);
+      showSuccess(`"${nome}" atualizado.`);
+    } else {
+      stateManagerRepository.adicionarCardioCustom(dados);
+      showSuccess(`"${nome}" adicionado aos cardios.`);
+    }
+
+    fecharFormularioCardio();
   }
 
   const configModalExclusao = modalExclusao.tipo ? CONFIG_EXCLUSAO_GERENCIAR[modalExclusao.tipo] : null;
@@ -214,7 +314,7 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                   }
                 />
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 items-start">
                   {programas.map((programa, i) => (
                     <div
                       key={programa.id}
@@ -292,7 +392,7 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                   }
                 />
               ) : (
-                <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-start">
                   {gruposDeExercicios.map(({ grupo, lista }, i) => (
                     <section
                       key={grupo}
@@ -324,6 +424,102 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
               )}
             </>
           )}
+        </section>
+        <section className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-texto-primario font-display">
+                Cardio
+              </h2>
+              <p className="mt-0.5 text-xs text-texto-sutil">
+                Tipos e métricas usados nas fichas.
+              </p>
+            </div>
+            <Botao
+              variante="fantasma"
+              tamanho="compacto"
+              icone={<Icone nome="mais" tamanho={16} />}
+              onClick={() => abrirFormularioCardio()}
+            >
+              Novo Cardio
+            </Botao>
+          </div>
+
+          {formCardioAberto && (
+            <div className="rounded-2xl border border-borda bg-superficie p-4 space-y-3">
+              <div className="grid grid-cols-[72px_1fr] gap-3">
+                <Input
+                  label="Emoji"
+                  tipo="text"
+                  value={formCardio.emoji}
+                  onChange={(e) => setFormCardio((atual) => ({ ...atual, emoji: e.target.value }))}
+                  placeholder="🏃"
+                />
+                <Input
+                  label="Nome"
+                  tipo="text"
+                  value={formCardio.nome}
+                  onChange={(e) => setFormCardio((atual) => ({ ...atual, nome: e.target.value }))}
+                  placeholder="Ex: Caminhada"
+                />
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-medium text-texto-secundario">
+                  Métricas
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {CHAVES_METRICAS_CARDIO.map((chave) => {
+                    const meta = META_METRICA_CARDIO[chave];
+                    const selecionada = formCardio.metricas.includes(chave);
+                    return (
+                      <label
+                        key={chave}
+                        className={`flex min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                          selecionada
+                            ? "border-acento bg-acento/10 text-texto-primario"
+                            : "border-borda-suave bg-fundo text-texto-secundario"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selecionada}
+                          onChange={() => alternarMetricaCardio(chave)}
+                          className="h-4 w-4"
+                        />
+                        <span className="min-w-0 truncate">
+                          {meta.rotulo}
+                          {meta.unidade ? ` (${meta.unidade})` : ""}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <Botao variante="fantasma" tamanho="compacto" onClick={fecharFormularioCardio}>
+                  Cancelar
+                </Botao>
+                <Botao variante="primario" tamanho="compacto" onClick={salvarTipoCardio}>
+                  {tipoCardioEditando ? "Salvar" : "Criar"}
+                </Botao>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
+            {tiposCardio.map((tipo, index) => (
+              <LinhaTipoCardio
+                key={tipo.id}
+                tipo={tipo}
+                estaSendoExcluido={itensExcluindo.cardio.has(tipo.id)}
+                aoEditar={() => abrirFormularioCardio(tipo)}
+                aoExcluir={() => abrirModalExclusao("cardio", tipo.id, tipo.nome)}
+                semBorda={index === tiposCardio.length - 1}
+              />
+            ))}
+          </div>
         </section>
       </div>
 
@@ -389,7 +585,7 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                   }
                 />
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 items-start">
                   {fichas.map((ficha, i) => (
                     <div
                       key={ficha.id}
@@ -570,7 +766,7 @@ function CartaoPrograma({ programa, estaSendoExcluido = false, aoEditar, aoExclu
   );
 }
 
-// Exercicios customizados nao exibem editar: hoje so possuem nome e grupo.
+// Exercícios customizados não exibem editar: hoje só possuem nome e grupo.
 interface LinhaExercicioCustomProps {
   exercicio: Exercicio;
   estaSendoExcluido?: boolean;
@@ -602,6 +798,64 @@ function LinhaExercicioCustom({
 
       {/* Ação */}
       <BotaoExcluirItem nome={exercicio.nome} aoExcluir={aoExcluir} />
+    </div>
+  );
+}
+
+interface LinhaTipoCardioProps {
+  tipo: TipoCardioDef;
+  estaSendoExcluido?: boolean;
+  aoEditar: () => void;
+  aoExcluir: () => void;
+  semBorda?: boolean;
+}
+
+function LinhaTipoCardio({
+  tipo,
+  estaSendoExcluido = false,
+  aoEditar,
+  aoExcluir,
+  semBorda,
+}: LinhaTipoCardioProps) {
+  const textoMetricas = tipo.metricas
+    .map((metrica) => META_METRICA_CARDIO[metrica].rotulo)
+    .join(", ");
+
+  return (
+    <div
+      className={`
+        flex items-center gap-3 px-5 py-4 hover:bg-superficie-suave
+        transition-all duration-200
+        ${estaSendoExcluido ? "opacity-0 scale-95" : "opacity-100 scale-100"}
+        ${semBorda ? "" : "border-b border-borda-suave"}
+      `}
+    >
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-acento-suave text-xl">
+        {tipo.emoji || "🏃"}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-medium text-texto-primario">
+            {tipo.nome}
+          </p>
+          {tipo.builtin && (
+            <span className="rounded-full bg-superficie-suave px-2 py-0.5 text-[10px] font-medium text-texto-sutil">
+              padrão
+            </span>
+          )}
+        </div>
+        <p className="mt-1 truncate text-xs text-texto-sutil">
+          {textoMetricas}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={aoEditar}
+        className="px-3 py-2 text-sm font-medium text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
+      >
+        {tipo.builtin ? "Customizar" : "Editar"}
+      </button>
+      {!tipo.builtin && <BotaoExcluirItem nome={tipo.nome} aoExcluir={aoExcluir} />}
     </div>
   );
 }

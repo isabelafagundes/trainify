@@ -30,12 +30,12 @@ export function OverlayConfirmarFinalizar({
   ].filter(Boolean);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/25" onClick={aoContinuar}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/25 md:items-center" onClick={aoContinuar}>
       <div
-        className="w-full max-w-[480px] rounded-t-[16px] border border-borda bg-superficie px-5 pb-[calc(var(--safe-bottom)+20px)] pt-4 shadow-xl"
+        className="w-full max-w-[480px] rounded-t-[16px] border border-borda bg-superficie px-5 pb-[calc(var(--safe-bottom)+20px)] pt-4 shadow-xl md:rounded-2xl md:pb-5"
         onClick={(evento) => evento.stopPropagation()}
       >
-        <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-borda" />
+        <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-borda md:hidden" />
         <h2 className="font-display text-xl font-semibold text-texto-primario">Finalizar mesmo assim?</h2>
         <p className="mt-2 text-sm leading-relaxed text-texto-secundario">
           {pendencias.length > 0

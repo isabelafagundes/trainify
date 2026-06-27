@@ -8,6 +8,7 @@ import type {
   Ficha,
   RegistroTreino,
   Exercicio,
+  TipoCardioDef,
 } from "@/domain/tipos";
 import { trainifyState } from "@/application/state/trainify.state";
 
@@ -58,6 +59,18 @@ export interface StateManagerRepository {
   ): Exercicio;
   removerExercicioCustom(id: string): boolean;
   obterGruposMusculares(): string[];
+
+  // Cardio
+  listarTiposCardio(): TipoCardioDef[];
+  listarCardioCustom(): TipoCardioDef[];
+  adicionarCardioCustom(
+    tipo: Omit<TipoCardioDef, "id" | "builtin">
+  ): TipoCardioDef;
+  atualizarCardioCustom(
+    id: string,
+    atualizacoes: Partial<Omit<TipoCardioDef, "id">>
+  ): TipoCardioDef | null;
+  removerCardioCustom(id: string): boolean;
 
   // Histórico
   listarTreinos(): RegistroTreino[];
@@ -111,6 +124,14 @@ export const stateManagerRepository: StateManagerRepository = {
     trainifyState.adicionarExercicioCustom(exercicio),
   removerExercicioCustom: (id) => trainifyState.removerExercicioCustom(id),
   obterGruposMusculares: () => trainifyState.getGruposMusculares(),
+
+  // Cardio
+  listarTiposCardio: () => trainifyState.getTiposCardio(),
+  listarCardioCustom: () => trainifyState.getCardioCustom(),
+  adicionarCardioCustom: (tipo) => trainifyState.adicionarCardioCustom(tipo),
+  atualizarCardioCustom: (id, atualizacoes) =>
+    trainifyState.atualizarCardioCustom(id, atualizacoes),
+  removerCardioCustom: (id) => trainifyState.removerCardioCustom(id),
 
   // Histórico
   listarTreinos: () => trainifyState.getHistorico(),

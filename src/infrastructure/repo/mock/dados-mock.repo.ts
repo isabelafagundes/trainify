@@ -7,6 +7,7 @@ export const fichasFicticias: Ficha[] = [
     descricao: "Peito, tríceps e ombros",
     icone: "braco",
     emoji: "💪",
+    modalidade: "ambos",
     exercicios: [
       { exercicioId: "ex-01", series: 4, repeticoes: 12, usaCarga: true, descansoSegundos: 60 },
       { exercicioId: "ex-02", series: 3, repeticoes: 12, usaCarga: true, descansoSegundos: 60 },
@@ -25,6 +26,7 @@ export const fichasFicticias: Ficha[] = [
     descricao: "Pernas e glúteos",
     icone: "raio",
     emoji: "🦵",
+    modalidade: "musculacao",
     exercicios: [
       { exercicioId: "ex-24", series: 4, repeticoes: 10, usaCarga: true, descansoSegundos: 90 },
       { exercicioId: "ex-25", series: 4, repeticoes: 12, usaCarga: true, descansoSegundos: 90 },
@@ -40,6 +42,7 @@ export const fichasFicticias: Ficha[] = [
     descricao: "Costas e bíceps",
     icone: "montanha",
     emoji: "🏋️",
+    modalidade: "musculacao",
     exercicios: [
       { exercicioId: "ex-06", series: 4, repeticoes: 12, usaCarga: true, descansoSegundos: 60 },
       { exercicioId: "ex-07", series: 4, repeticoes: 10, usaCarga: true, descansoSegundos: 60 },
@@ -55,6 +58,7 @@ export const fichasFicticias: Ficha[] = [
     descricao: "Ombros e trapézio",
     icone: "fogo",
     emoji: "🎯",
+    modalidade: "ambos",
     exercicios: [
       { exercicioId: "ex-11", series: 4, repeticoes: 10, usaCarga: true, descansoSegundos: 60 },
       { exercicioId: "ex-12", series: 4, repeticoes: 15, usaCarga: true, descansoSegundos: 45 },

@@ -7,7 +7,10 @@ import type {
   Ficha,
   RegistroTreino,
   Exercicio,
+  ModalidadeTreino,
+  TipoCardioDef,
 } from "@/domain/tipos";
+import { CATALOGO_CARDIO_BUILTIN } from "@/domain/tipos";
 import { STORAGE_KEYS } from "@/constants";
 import { exerciciosPadrao } from "@/infrastructure/repo/mock/exercicio-mock.repo";
 import { appModule } from "@/interface/configuration/module/app.module";
@@ -18,6 +21,7 @@ export interface DadosTreinoPortateis {
   fichas: Ficha[];
   historico: RegistroTreino[];
   exerciciosCustom: Exercicio[];
+  cardioCustom: TipoCardioDef[];
 }
 
 /** Interface dos dados persistidos */
@@ -27,6 +31,45 @@ interface DadosTreino extends DadosTreinoPortateis {
 
 /** Estado gerenciado pelo Trainify */
 type TrainifyState = DadosTreino;
+
+type FichaPersistida = Omit<Ficha, "modalidade"> & {
+  modalidade?: ModalidadeTreino;
+};
+
+type ProgramaPersistido = Omit<Programa, "fichaIds" | "ativo"> & {
+  fichaIds?: string[];
+  ativo?: boolean;
+};
+
+function inferirModalidadeFicha(ficha: Pick<FichaPersistida, "exercicios" | "cardio">): ModalidadeTreino {
+  const temExercicios = ficha.exercicios.length > 0;
+  const temCardio = ficha.cardio.length > 0;
+
+  if (temCardio && !temExercicios) return "cardio";
+  if (temExercicios && !temCardio) return "musculacao";
+  return "ambos";
+}
+
+function normalizarFicha(ficha: FichaPersistida): Ficha {
+  const exercicios = Array.isArray(ficha.exercicios) ? ficha.exercicios : [];
+  const cardio = Array.isArray(ficha.cardio) ? ficha.cardio : [];
+
+  return {
+    ...ficha,
+    icone: ficha.icone ?? "halter",
+    exercicios,
+    cardio,
+    modalidade: ficha.modalidade ?? inferirModalidadeFicha({ exercicios, cardio }),
+  };
+}
+
+function normalizarPrograma(programa: ProgramaPersistido): Programa {
+  return {
+    ...programa,
+    fichaIds: Array.isArray(programa.fichaIds) ? programa.fichaIds : [],
+    ativo: Boolean(programa.ativo),
+  };
+}
 
 /** Gerenciador de estado global para dados de treino */
 export class TrainifyStateManager {
@@ -103,15 +146,17 @@ export class TrainifyStateManager {
       fichas: [...this.estado.fichas],
       historico: [...this.estado.historico],
       exerciciosCustom: [...this.estado.exerciciosCustom],
+      cardioCustom: [...this.estado.cardioCustom],
     };
   }
 
   substituirDados(dados: DadosTreinoPortateis, atualizadoEm: string): void {
     this.estado = {
-      programas: [...dados.programas],
-      fichas: [...dados.fichas],
-      historico: [...dados.historico],
-      exerciciosCustom: [...dados.exerciciosCustom],
+      programas: (dados.programas || []).map((programa) => normalizarPrograma(programa)),
+      fichas: (dados.fichas || []).map((ficha) => normalizarFicha(ficha)),
+      historico: [...(dados.historico || [])],
+      exerciciosCustom: [...(dados.exerciciosCustom || [])],
+      cardioCustom: [...(dados.cardioCustom || [])],
       atualizadoEm,
     };
     void this.persistirDados();
@@ -120,6 +165,20 @@ export class TrainifyStateManager {
 
   getTodosExercicios(): Exercicio[] {
     return [...exerciciosPadrao, ...this.estado.exerciciosCustom];
+  }
+
+  getCardioCustom(): TipoCardioDef[] {
+    return [...this.estado.cardioCustom];
+  }
+
+  getTiposCardio(): TipoCardioDef[] {
+    const customPorId = new Map(this.estado.cardioCustom.map((tipo) => [tipo.id, tipo]));
+    const builtins = CATALOGO_CARDIO_BUILTIN.map((tipo) => customPorId.get(tipo.id) ?? tipo);
+    const customNovos = this.estado.cardioCustom.filter(
+      (tipo) => !CATALOGO_CARDIO_BUILTIN.some((builtin) => builtin.id === tipo.id)
+    );
+
+    return [...builtins, ...customNovos];
   }
 
   /** Obter programa ativo */
@@ -359,6 +418,63 @@ export class TrainifyStateManager {
     return true;
   }
 
+  adicionarCardioCustom(
+    tipo: Omit<TipoCardioDef, "id" | "builtin">
+  ): TipoCardioDef {
+    const novo: TipoCardioDef = {
+      ...tipo,
+      id: `cardio-${crypto.randomUUID()}`,
+      builtin: false,
+    };
+
+    this.estado.cardioCustom.push(novo);
+    void this.salvarDados();
+    this.notificar();
+    return novo;
+  }
+
+  atualizarCardioCustom(
+    id: string,
+    atualizacoes: Partial<Omit<TipoCardioDef, "id">>
+  ): TipoCardioDef | null {
+    const existente = this.estado.cardioCustom.findIndex((tipo) => tipo.id === id);
+    const builtin = CATALOGO_CARDIO_BUILTIN.find((tipo) => tipo.id === id);
+
+    if (existente === -1 && !builtin) return null;
+
+    if (existente === -1 && builtin) {
+      const customizado: TipoCardioDef = {
+        ...builtin,
+        ...atualizacoes,
+        id: builtin.id,
+        builtin: true,
+      };
+      this.estado.cardioCustom.push(customizado);
+      void this.salvarDados();
+      this.notificar();
+      return customizado;
+    }
+
+    this.estado.cardioCustom[existente] = {
+      ...this.estado.cardioCustom[existente],
+      ...atualizacoes,
+      id,
+    };
+    void this.salvarDados();
+    this.notificar();
+    return this.estado.cardioCustom[existente];
+  }
+
+  removerCardioCustom(id: string): boolean {
+    const index = this.estado.cardioCustom.findIndex((tipo) => tipo.id === id);
+    if (index === -1 || this.estado.cardioCustom[index].builtin) return false;
+
+    this.estado.cardioCustom.splice(index, 1);
+    void this.salvarDados();
+    this.notificar();
+    return true;
+  }
+
   /** Adicionar registro de treino */
   adicionarTreino(
     registro: Omit<RegistroTreino, "id">
@@ -385,6 +501,7 @@ export class TrainifyStateManager {
       descricao: ficha.descricao,
       icone: ficha.icone,
       emoji: ficha.emoji,
+      modalidade: ficha.modalidade,
       exercicios: [...ficha.exercicios],
       cardio: ficha.cardio.map((c) => ({ ...c, id: crypto.randomUUID() })),
     });
@@ -418,6 +535,7 @@ export class TrainifyStateManager {
             descricao: fichaOriginal.descricao,
             icone: fichaOriginal.icone,
             emoji: fichaOriginal.emoji,
+            modalidade: fichaOriginal.modalidade,
             exercicios: [...fichaOriginal.exercicios],
             cardio: fichaOriginal.cardio.map((c) => ({
               ...c,
@@ -489,10 +607,15 @@ export class TrainifyStateManager {
 
         // Não removemos mais fichas órfãs - elas podem existir independentemente
         return {
-          programas: dados.programas || [],
-          fichas: dados.fichas || [],
+          programas: (dados.programas || []).map((programa) =>
+            normalizarPrograma(programa as ProgramaPersistido)
+          ),
+          fichas: (dados.fichas || []).map((ficha) =>
+            normalizarFicha(ficha as FichaPersistida)
+          ),
           historico: dados.historico || [],
           exerciciosCustom: dados.exerciciosCustom || [],
+          cardioCustom: dados.cardioCustom || [],
           atualizadoEm:
             typeof dados.atualizadoEm === "string"
               ? dados.atualizadoEm
@@ -512,6 +635,7 @@ export class TrainifyStateManager {
       fichas: [],
       historico: [],
       exerciciosCustom: [],
+      cardioCustom: [],
       atualizadoEm: new Date().toISOString(),
     };
   }
@@ -529,6 +653,7 @@ export class TrainifyStateManager {
         fichas: this.estado.fichas,
         historico: this.estado.historico,
         exerciciosCustom: this.estado.exerciciosCustom,
+        cardioCustom: this.estado.cardioCustom,
         atualizadoEm: this.estado.atualizadoEm,
       };
       await appModule.armazenamento.definir(STORAGE_KEYS.DADOS_TREINO, JSON.stringify(dados));

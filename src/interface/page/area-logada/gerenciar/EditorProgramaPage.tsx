@@ -105,7 +105,15 @@ export function EditorProgramaPage({
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-superficie">
+    <>
+      {/* Backdrop do drawer — apenas tablet/desktop (md+); fecha ao clicar fora. */}
+      <div
+        className="hidden md:block fixed inset-0 z-[55] bg-black/30 backdrop-blur-sm animate-fade-in"
+        onClick={aoVoltar}
+        aria-hidden="true"
+      />
+      {/* Tela cheia no mobile; drawer lateral à direita no md+. */}
+      <div className="fixed inset-0 z-[60] flex flex-col bg-superficie md:left-auto md:right-0 md:w-full md:max-w-[560px] md:border-l md:border-borda md:shadow-2xl md-drawer-enter">
       {/* Header fixo */}
       <div className="px-5 pt-[max(var(--safe-top),16px)] pb-4 border-b border-borda shrink-0">
         <div className="flex items-center justify-between">
@@ -454,5 +462,6 @@ export function EditorProgramaPage({
         </div>
       )}
     </div>
+    </>
   );
 }

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Exercicio, RegistroTreino } from "@/domain/tipos";
 import {
+  agregarProgressaoPorCardio,
+  calcularResumoCardio,
+} from "./cardioUtils";
+import {
   agregarProgressaoPorExercicio,
   calcularRecordeStreak,
   calcularStreakAtual,
@@ -135,6 +139,81 @@ describe("estatisticas utils", () => {
         cargaMaxima: 0,
         ultimaCarga: 0,
         usaCarga: false,
+      },
+    ]);
+  });
+
+  it("calcula resumo de cardio somando sessões, duração e distância", () => {
+    const historico = [
+      treino({
+        cardio: [
+          {
+            cardioId: "c1",
+            tipo: "Esteira",
+            duracaoMinutos: 30,
+            distanciaKm: 4.2,
+            nota: "",
+          },
+        ],
+      }),
+      treino({
+        cardio: [
+          {
+            cardioId: "c2",
+            tipo: "Bike",
+            duracaoMinutos: 45,
+            distanciaKm: 15,
+            nota: "",
+          },
+        ],
+      }),
+    ];
+
+    expect(calcularResumoCardio(historico)).toEqual({
+      totalSessoes: 2,
+      totalMinutos: 75,
+      totalKm: 19.2,
+    });
+  });
+
+  it("agrega progressão de cardio pela métrica principal mais recente", () => {
+    const historico = [
+      treino({
+        iniciadoEm: "2026-05-10T10:00:00",
+        cardio: [
+          {
+            cardioId: "c1",
+            tipo: "Esteira",
+            duracaoMinutos: 30,
+            distanciaKm: 4,
+            nota: "",
+          },
+        ],
+      }),
+      treino({
+        iniciadoEm: "2026-05-20T10:00:00",
+        cardio: [
+          {
+            cardioId: "c2",
+            tipo: "Esteira",
+            duracaoMinutos: 35,
+            distanciaKm: 5,
+            nota: "",
+          },
+        ],
+      }),
+    ];
+
+    expect(agregarProgressaoPorCardio(historico)).toMatchObject([
+      {
+        tipo: "Esteira",
+        nome: "Esteira",
+        metrica: "distanciaKm",
+        rotuloMetrica: "Distância",
+        totalSessoes: 2,
+        ultimaData: "2026-05-20T10:00:00",
+        ultimoValor: 5,
+        melhorValor: 5,
       },
     ]);
   });

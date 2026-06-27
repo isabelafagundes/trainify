@@ -16,6 +16,7 @@ import {
   useNavigate,
   useParams,
   useSearchParams,
+  type Location,
 } from "react-router-dom";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
@@ -212,14 +213,20 @@ function TelaCarregando() {
 
 export function RotasApp() {
   const { usuario, carregando } = useDados();
+  const location = useLocation();
   useBackButtonNativo();
 
   if (carregando) return <TelaCarregando />;
   if (!usuario) return <OnboardingUsuarioPage aoConcluir={() => {}} />;
 
+  // "Rota de fundo": quando presente, os editores são apresentados como drawer
+  // por cima da tela anterior (que continua renderizada). Sem ela (ex.: link
+  // direto), os editores renderizam normalmente (tela cheia) pela rota principal.
+  const background = (location.state as { background?: Location } | null)?.background;
+
   return (
     <ToastProvider>
-      <Routes>
+      <Routes location={background ?? location}>
         {/* Tela cheia, fora do shell */}
         <Route path={ROTAS.execucao} element={<ExecucaoRota />} />
 
@@ -242,6 +249,16 @@ export function RotasApp() {
 
         <Route path="*" element={<Navigate to={ROTAS.treinos} replace />} />
       </Routes>
+
+      {/* Camada de overlay: os editores como drawer sobre a tela de fundo. */}
+      {background && (
+        <Routes>
+          <Route path={ROTAS.criarPrograma} element={<EditorProgramaRota />} />
+          <Route path={ROTAS.editarPrograma} element={<EditorProgramaRota />} />
+          <Route path={ROTAS.criarFicha} element={<EditorFichaRota />} />
+          <Route path={ROTAS.editarFicha} element={<EditorFichaRota />} />
+        </Routes>
+      )}
     </ToastProvider>
   );
 }
