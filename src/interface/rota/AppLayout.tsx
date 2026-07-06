@@ -74,7 +74,7 @@ export function AppLayout() {
                   type="button"
                   onClick={() => navigate(-1)}
                   aria-label="Voltar"
-                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-superficie-suave text-texto-secundario transition-colors duration-150 hover:bg-superficie-hover hover:text-texto-primario focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-borda-forte bg-superficie-suave shadow-sm shadow-black/[0.04] text-texto-secundario transition-all duration-150 hover:bg-superficie-hover hover:text-texto-primario hover:border-acento focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
                 >
                   <Icone nome="setaEsquerda" tamanho={16} />
                 </button>

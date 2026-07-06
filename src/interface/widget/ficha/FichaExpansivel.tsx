@@ -9,6 +9,9 @@ interface PropriedadesFichaExpansivel {
   expandida: boolean;
   aoAlternar: () => void;
   aoIniciarTreino: (fichaId: string) => void;
+  /** Opcional: quando presente, revela "Editar ficha" no preview expandido e
+      navega para a edição individual. Ausente (ex.: home) = sem ação de editar. */
+  aoEditar?: (fichaId: string) => void;
 }
 
 /**
@@ -22,6 +25,7 @@ export function FichaExpansivel({
   expandida,
   aoAlternar,
   aoIniciarTreino,
+  aoEditar,
 }: PropriedadesFichaExpansivel) {
   const gruposMusculares = extrairGruposMusculares(ficha.exercicios, exerciciosCatalogo);
   const semConteudo = ficha.exercicios.length === 0 && ficha.cardio.length === 0;
@@ -126,6 +130,20 @@ export function FichaExpansivel({
                   </li>
                 ))}
               </ul>
+            )}
+
+            {expandida && aoEditar && (
+              <div className="mt-3 flex justify-end">
+                <Botao
+                  variante="fantasma"
+                  tamanho="compacto"
+                  icone={<Icone nome="editar" tamanho={13} />}
+                  onClick={() => aoEditar(ficha.id)}
+                  className="transition-transform duration-200 active:scale-95"
+                >
+                  Editar ficha
+                </Botao>
+              </div>
             )}
           </div>
         </div>

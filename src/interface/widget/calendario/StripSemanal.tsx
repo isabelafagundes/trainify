@@ -86,7 +86,7 @@ export function StripSemanal({ dados, aoAbrirDetalhe }: PropriedadesStripSemanal
   );
 
   const classeBase =
-    "w-full bg-superficie rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3";
+    "w-full bg-superficie rounded-2xl border border-borda px-4 py-3 flex items-center gap-3";
 
   return aoAbrirDetalhe ? (
     <button

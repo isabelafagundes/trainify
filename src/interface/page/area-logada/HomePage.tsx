@@ -81,7 +81,7 @@ export function HomePage({
           <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-texto-sutil font-display">
             Seu próximo treino
           </h2>
-          <div className="rounded-2xl overflow-hidden bg-superficie shadow-sm">
+          <div className="rounded-2xl overflow-hidden bg-superficie border border-borda">
             <LinhaFicha
               ficha={proximaFicha}
               exerciciosCatalogo={exerciciosPadrao}
@@ -103,7 +103,7 @@ export function HomePage({
 
       {/* ── Programa: banner + demais fichas ── */}
       <section
-        className="rounded-2xl overflow-hidden bg-superficie shadow-sm reveal-up"
+        className="rounded-2xl overflow-hidden bg-superficie border border-borda reveal-up"
         style={{ animationDelay: "150ms" }}
       >
         {/* Banner header — abre o resumo do programa em tela cheia */}

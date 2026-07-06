@@ -225,6 +225,35 @@ export function Icone({ nome, tamanho = 24, className = "" }: PropriedadesIcone)
   );
 }
 
+/**
+ * Ícone de alça de arrastar (grip de 6 pontos).
+ * Renderiza círculos preenchidos — por isso não usa o mapa de paths do `Icone`.
+ */
+export function IconeArrastar({
+  tamanho = 20,
+  className = "",
+}: {
+  tamanho?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={tamanho}
+      height={tamanho}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      {[9, 15].flatMap((cx) =>
+        [6, 12, 18].map((cy) => (
+          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.6" />
+        ))
+      )}
+    </svg>
+  );
+}
+
 /** Retorna o ícone da ficha pelo NomeIcone */
 export function IconeFicha({ nome, tamanho = 20, className = "", emoji }: { nome: NomeIcone; tamanho?: number; className?: string; emoji?: string }) {
   // Se emoji fornecido, renderiza emoji; caso contrário, usa ícone SVG

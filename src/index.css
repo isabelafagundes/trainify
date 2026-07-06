@@ -23,6 +23,8 @@
   /* Bordas */
   --color-borda: oklch(0.895 0.010 65);
   --color-borda-suave: oklch(0.930 0.008 65);
+  /* Contorno de controles sobre superfícies claras (≥3:1, WCAG 1.4.11) */
+  --color-borda-forte: oklch(0.620 0.020 60);
 
   /* Acento (preto quente como ação primária) */
   --color-acento: oklch(0.220 0.015 55);

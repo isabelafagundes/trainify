@@ -163,7 +163,8 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
           {onBack && (
             <button
               onClick={onBack}
-              className="flex-shrink-0 w-9 h-9 rounded-lg bg-superficie-suave flex items-center justify-center text-texto-secundario hover:bg-superficie-hover active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento transition-all duration-150"
+              aria-label="Voltar"
+              className="flex-shrink-0 w-10 h-10 rounded-lg border border-borda-forte bg-superficie-suave shadow-sm shadow-black/[0.04] flex items-center justify-center text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario hover:border-acento active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento transition-all duration-150"
             >
               <Icone nome="setaEsquerda" tamanho={16} />
             </button>

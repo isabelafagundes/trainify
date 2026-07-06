@@ -159,7 +159,7 @@ export function ResumoProgramaPage({
       {/* ── Progresso semanal ── */}
       {fichasDoPrograma.length > 0 && (
         <section
-          className="rounded-2xl bg-superficie shadow-sm px-4 py-4 reveal-up"
+          className="rounded-2xl bg-superficie border border-borda px-4 py-4 reveal-up"
           style={{ animationDelay: "180ms" }}
         >
           <BarraProgressoSemanal
@@ -180,7 +180,7 @@ export function ResumoProgramaPage({
         </h3>
 
         {fichasOrdenadas.length > 0 ? (
-          <div className="rounded-2xl overflow-hidden bg-superficie shadow-sm divide-y divide-borda-suave">
+          <div className="rounded-2xl overflow-hidden bg-superficie border border-borda divide-y divide-borda-suave">
             {fichasOrdenadas.map((ficha) => (
               <FichaExpansivel
                 key={ficha.id}
@@ -191,11 +191,14 @@ export function ResumoProgramaPage({
                   setFichaExpandidaId((atual) => (atual === ficha.id ? null : ficha.id))
                 }
                 aoIniciarTreino={(fichaId) => aoNavegar("execucao", { fichaId })}
+                aoEditar={(fichaId) =>
+                  aoNavegar("editarFicha", { id: fichaId, programaId: programa.id })
+                }
               />
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl bg-superficie shadow-sm px-4 py-8 text-center">
+          <div className="rounded-2xl bg-superficie border border-borda px-4 py-8 text-center">
             <p className="text-sm text-texto-sutil">
               Nenhuma ficha adicionada ao programa ainda.
             </p>

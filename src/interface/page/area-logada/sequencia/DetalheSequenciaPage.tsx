@@ -57,7 +57,7 @@ export function DetalheSequenciaPage({ historico, aoNavegar }: PropriedadesDetal
 
   return (
     <div className="px-4 py-4 space-y-5">
-      <section className="rounded-2xl bg-superficie shadow-sm px-5 py-6 text-center reveal-up">
+      <section className="rounded-2xl bg-superficie border border-borda px-5 py-6 text-center reveal-up">
         <div className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full ${dados.streak > 0 ? "bg-[oklch(0.88_0.05_45)] text-[oklch(0.45_0.16_40)]" : "bg-superficie-suave text-texto-secundario"}`}>
           <Icone nome="fogo" tamanho={25} />
         </div>
@@ -73,7 +73,7 @@ export function DetalheSequenciaPage({ historico, aoNavegar }: PropriedadesDetal
         )}
       </section>
 
-      <section className="rounded-2xl bg-superficie shadow-sm px-5 py-5 reveal-up" style={{ animationDelay: "60ms" }}>
+      <section className="rounded-2xl bg-superficie border border-borda px-5 py-5 reveal-up" style={{ animationDelay: "60ms" }}>
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-display text-sm font-semibold text-texto-primario">Próximo marco</h2>
           <span className="text-xs font-medium text-texto-secundario">{dados.marco.proximoMarco} dias</span>
@@ -88,7 +88,7 @@ export function DetalheSequenciaPage({ historico, aoNavegar }: PropriedadesDetal
 
       <section className="reveal-up" style={{ animationDelay: "120ms" }}>
         <h2 className="mb-2.5 px-1 font-display text-sm font-semibold text-texto-primario">Últimos 7 dias</h2>
-        <div className="flex rounded-2xl bg-superficie px-3 py-5 shadow-sm">
+        <div className="flex rounded-2xl bg-superficie border border-borda px-3 py-5">
           {dados.ultimosSete.map((dia) => (
             <div key={dia.iso} className="flex flex-1 flex-col items-center gap-2">
               <span className={`text-xs font-semibold ${dia.ehHoje ? "text-texto-primario" : "text-texto-secundario"}`}>{dia.diaSemana}</span>
@@ -101,7 +101,7 @@ export function DetalheSequenciaPage({ historico, aoNavegar }: PropriedadesDetal
 
       <section className="grid grid-cols-2 gap-3 reveal-up" style={{ animationDelay: "180ms" }}>
         {metricas.map(([rotulo, valor]) => (
-          <div key={rotulo} className="rounded-2xl bg-superficie px-4 py-4 shadow-sm">
+          <div key={rotulo} className="rounded-2xl bg-superficie border border-borda px-4 py-4">
             <strong className="font-display text-2xl tabular-nums text-texto-primario">{valor}</strong>
             <p className="mt-1 text-xs text-texto-secundario">{rotulo}</p>
           </div>
@@ -110,7 +110,7 @@ export function DetalheSequenciaPage({ historico, aoNavegar }: PropriedadesDetal
 
       <section className="reveal-up" style={{ animationDelay: "240ms" }}>
         <h2 className="mb-2.5 px-1 font-display text-sm font-semibold text-texto-primario">Histórico recente</h2>
-        <div className="overflow-hidden rounded-2xl bg-superficie shadow-sm divide-y divide-borda-suave">
+        <div className="overflow-hidden rounded-2xl bg-superficie border border-borda divide-y divide-borda-suave">
           {[...dados.dias].reverse().map((dia, indice) => (
             <div key={dia.iso} className="flex min-h-[48px] items-center justify-between gap-4 px-4 py-3">
               <span className="text-sm font-medium text-texto-primario">{rotuloData(dia.iso, dia.ehHoje, 13 - indice)}</span>

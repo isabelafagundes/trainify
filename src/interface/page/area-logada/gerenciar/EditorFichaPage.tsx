@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Editor de Ficha — Criar/Editar Fichas (Wizard 3 etapas)
+   Editor de Ficha — Criar/Editar Fichas (Wizard 4 etapas)
    ═══════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
@@ -20,9 +20,25 @@ import { Input } from "@/interface/widget/formulario/Input";
 import { CampoNumerico } from "@/interface/widget/formulario/CampoNumerico";
 import { SeletorIcone } from "@/interface/widget/formulario/SeletorIcone";
 import { PickerExercicios } from "@/interface/widget/formulario/PickerExercicios";
-import { BigSwitcher } from "@/interface/widget/formulario/BigSwitcher";
 import { Botao } from "@/interface/widget/botao/Botao";
-import { Icone } from "@/interface/widget/svg/Icone";
+import { Icone, IconeArrastar } from "@/interface/widget/svg/Icone";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { ModalCriarExercicio } from "@/interface/widget/modal/ModalCriarExercicio";
 import { ModalCopiarFicha } from "@/interface/widget/modal/ModalCopiarFicha";
 import { useToast } from "@/interface/widget/toast";
@@ -33,17 +49,39 @@ interface PropriedadesEditorFichaPage {
   aoVoltar: () => void;
 }
 
-type EtapaWizard = "info" | "exercicios" | "cardio";
+type EtapaWizard = "modalidade" | "info" | "exercicios" | "cardio";
 
-const OPCOES_MODALIDADE = [
-  { id: "ambos", label: "Ambos", icone: "alvo" },
-  { id: "musculacao", label: "Musculação", icone: "halter" },
-  { id: "cardio", label: "Cardio", icone: "corrida" },
+// Cards explicativos da primeira etapa: cada modalidade descreve o que o usuário monta a seguir.
+const CARDS_MODALIDADE: {
+  id: ModalidadeTreino;
+  label: string;
+  icone: string;
+  descricao: string;
+}[] = [
+  {
+    id: "musculacao",
+    label: "Musculação",
+    icone: "halter",
+    descricao: "Treino de força com exercícios, séries, repetições e cargas.",
+  },
+  {
+    id: "cardio",
+    label: "Cardio",
+    icone: "corrida",
+    descricao: "Atividades aeróbicas como corrida, bike e natação, com duração e métricas.",
+  },
+  {
+    id: "ambos",
+    label: "Ambos",
+    icone: "alvo",
+    descricao: "Combine musculação e cardio na mesma ficha — força e condicionamento juntos.",
+  },
 ];
 
 function etapasDaModalidade(modalidade: ModalidadeTreino) {
   return [
-    { id: "info" as const, titulo: "Info básica", descricao: "Nome, modalidade e programas" },
+    { id: "modalidade" as const, titulo: "Modalidade", descricao: "Escolha o tipo de treino" },
+    { id: "info" as const, titulo: "Info básica", descricao: "Nome, ícone e programas" },
     ...(modalidade !== "cardio"
       ? [{ id: "exercicios" as const, titulo: "Exercícios", descricao: "Adicione os exercícios" }]
       : []),
@@ -73,7 +111,14 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   const [mostraPicker, setMostraPicker] = useState(false);
 
   // Estado do wizard
-  const [etapaAtual, setEtapaAtual] = useState<EtapaWizard>("info");
+  const [etapaAtual, setEtapaAtual] = useState<EtapaWizard>("modalidade");
+
+  // Sensores de drag-and-drop para reordenar exercícios.
+  // PointerSensor cobre mouse e toque; o pequeno limiar evita disparar ao tocar nos campos.
+  const sensoresDrag = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   // Estados dos modais
   const [modalCriarExercicioAberto, setModalCriarExercicioAberto] = useState(false);
@@ -92,6 +137,9 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   // Carregar dados
   useEffect(() => {
     vinculosProgramasAlteradosRef.current = false;
+    // Etapa inicial: na criação começamos pela escolha de modalidade;
+    // ao editar, a modalidade já existe, então pulamos direto para a info.
+    setEtapaAtual(fichaId ? "info" : "modalidade");
 
     const carregarDados = () => {
       const exercicios = stateManagerRepository.listarTodosExercicios();
@@ -267,6 +315,17 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
     setExercicios(novosExercicios);
   };
 
+  const handleReordenarExercicios = (evento: DragEndEvent) => {
+    const { active, over } = evento;
+    if (!over || active.id === over.id) return;
+    setExercicios((itens) => {
+      const de = itens.findIndex((e) => e.exercicioId === active.id);
+      const para = itens.findIndex((e) => e.exercicioId === over.id);
+      if (de === -1 || para === -1) return itens;
+      return arrayMove(itens, de, para);
+    });
+  };
+
   const handleAdicionarCardio = (tipo: TipoCardio) => {
     setCardio([
       ...cardio,
@@ -324,12 +383,10 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
     setModalCopiarFichaAberto(false);
   };
 
-  const handleAlterarModalidade = (novaModalidade: ModalidadeTreino) => {
-    const novasEtapas = etapasDaModalidade(novaModalidade);
+  // Etapa 1: escolher a modalidade nos cards seleciona e avança direto para a info.
+  const handleSelecionarModalidade = (novaModalidade: ModalidadeTreino) => {
     setModalidade(novaModalidade);
-    if (!novasEtapas.some((etapa) => etapa.id === etapaAtual)) {
-      setEtapaAtual(novasEtapas.at(-1)?.id ?? "info");
-    }
+    setEtapaAtual("info");
   };
 
   const getNomeExercicio = (exercicioId: string): string => {
@@ -426,7 +483,79 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       {/* Conteúdo scrollável */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="px-5 py-4 pb-6">
-          {/* ETAPA 0: Info básica */}
+          {/* ETAPA 0: Modalidade */}
+          {etapaAtual === "modalidade" && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-lg font-semibold font-display text-texto-primario">
+                  Qual o tipo de treino?
+                </h2>
+                <p className="text-sm text-texto-secundario mt-1">
+                  Escolha a modalidade desta ficha. Isso define os próximos passos — você pode alterar depois.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {CARDS_MODALIDADE.map((card) => {
+                  const selecionado = modalidade === card.id;
+                  return (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => handleSelecionarModalidade(card.id)}
+                      aria-pressed={selecionado}
+                      className={`
+                        group relative flex w-full items-start gap-4 rounded-2xl border p-4 text-left
+                        transition-all duration-150 active:scale-[0.99]
+                        ${selecionado
+                          ? "border-acento bg-acento/5 ring-1 ring-acento shadow-sm"
+                          : "border-borda bg-superficie hover:border-acento/50 hover:bg-superficie-hover"
+                        }
+                      `}
+                    >
+                      <span
+                        className={`
+                          flex h-12 w-12 shrink-0 items-center justify-center rounded-xl
+                          transition-colors duration-150
+                          ${selecionado
+                            ? "bg-acento text-texto-invertido"
+                            : "bg-superficie-suave text-texto-secundario group-hover:text-texto-primario"
+                          }
+                        `}
+                      >
+                        <Icone nome={card.icone} tamanho={24} />
+                      </span>
+
+                      <span className="min-w-0 flex-1 pr-6">
+                        <span className="block text-sm font-semibold text-texto-primario">
+                          {card.label}
+                        </span>
+                        <span className="mt-1 block text-xs leading-relaxed text-texto-secundario">
+                          {card.descricao}
+                        </span>
+                      </span>
+
+                      <span
+                        className={`
+                          absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border
+                          transition-all duration-150
+                          ${selecionado
+                            ? "border-acento bg-acento text-texto-invertido"
+                            : "border-borda text-transparent"
+                          }
+                        `}
+                        aria-hidden="true"
+                      >
+                        <Icone nome="check" tamanho={12} />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ETAPA 1: Info básica */}
           {etapaAtual === "info" && (
             <div className="space-y-6">
               {/* Copiar de existente */}
@@ -456,17 +585,6 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                 placeholder="Ex: Foco em peito e tríceps"
                 linhas={2}
               />
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-texto-primario">
-                  Modalidade
-                </label>
-                <BigSwitcher
-                  opcoes={OPCOES_MODALIDADE}
-                  valorSelecionado={modalidade}
-                  aoAlterar={(valor) => handleAlterarModalidade(valor as ModalidadeTreino)}
-                />
-              </div>
 
               <SeletorIcone valor={icone} aoAlterar={setIcone} />
 
@@ -537,7 +655,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
             </div>
           )}
 
-          {/* ETAPA 1: Exercícios */}
+          {/* ETAPA 2: Exercícios */}
           {etapaAtual === "exercicios" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-3">
@@ -581,23 +699,43 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                       </p>
                     </div>
                   ) : (
-                    <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
-                      {exercicios.map((exercicio, index) => {
-                        const nomeExercicio = getNomeExercicio(exercicio.exercicioId);
-                        return (
-                          <CardExercicioConfig
-                            key={`${exercicio.exercicioId}-${index}`}
-                            numero={index + 1}
-                            nome={nomeExercicio}
-                            config={exercicio}
-                            aoAtualizar={(atualizacoes) =>
-                              handleAtualizarExercicio(index, atualizacoes)
-                            }
-                            aoRemover={() => handleRemoverExercicio(index)}
-                            semBorda={index === exercicios.length - 1}
-                          />
-                        );
-                      })}
+                    <div className="space-y-2">
+                      {exercicios.length > 1 && (
+                        <p className="flex items-center gap-1.5 text-xs text-texto-sutil">
+                          <IconeArrastar tamanho={14} className="text-texto-sutil" />
+                          Arraste pela alça para reordenar
+                        </p>
+                      )}
+                      <DndContext
+                        sensors={sensoresDrag}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleReordenarExercicios}
+                      >
+                        <SortableContext
+                          items={exercicios.map((e) => e.exercicioId)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
+                            {exercicios.map((exercicio, index) => {
+                              const nomeExercicio = getNomeExercicio(exercicio.exercicioId);
+                              return (
+                                <CardExercicioConfig
+                                  key={exercicio.exercicioId}
+                                  id={exercicio.exercicioId}
+                                  numero={index + 1}
+                                  nome={nomeExercicio}
+                                  config={exercicio}
+                                  aoAtualizar={(atualizacoes) =>
+                                    handleAtualizarExercicio(index, atualizacoes)
+                                  }
+                                  aoRemover={() => handleRemoverExercicio(index)}
+                                  semBorda={index === exercicios.length - 1}
+                                />
+                              );
+                            })}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
                     </div>
                   )}
 
@@ -649,7 +787,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
             </div>
           )}
 
-          {/* ETAPA 2: Cardio */}
+          {/* ETAPA 3: Cardio */}
           {etapaAtual === "cardio" && (
             <div className="space-y-4">
               {/* Cardio */}
@@ -928,6 +1066,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
 /* ── Componentes Internos ── */
 
 interface CardExercicioConfigProps {
+  id: string;
   numero: number;
   nome: string;
   config: ExercicioFicha;
@@ -937,6 +1076,7 @@ interface CardExercicioConfigProps {
 }
 
 function CardExercicioConfig({
+  id,
   numero,
   nome,
   config,
@@ -944,18 +1084,49 @@ function CardExercicioConfig({
   aoRemover,
   semBorda,
 }: CardExercicioConfigProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
     <div
-      className={`px-4 py-3 ${semBorda ? "" : "border-b border-borda-suave"}`}
+      ref={setNodeRef}
+      style={style}
+      className={`relative bg-superficie px-4 py-3 ${
+        semBorda ? "" : "border-b border-borda-suave"
+      } ${isDragging ? "z-10 opacity-90 shadow-lg" : ""}`}
     >
-      <div className="flex items-start justify-between mb-3">
-        <h4 className="text-sm font-medium text-texto-primario">
-          {numero}. {nome}
-        </h4>
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            aria-label={`Reordenar ${nome}`}
+            className="-ml-1.5 shrink-0 touch-none cursor-grab rounded-md p-1 text-texto-sutil hover:text-texto-secundario active:cursor-grabbing"
+          >
+            <IconeArrastar tamanho={18} />
+          </button>
+          <h4 className="truncate text-sm font-medium text-texto-primario">
+            {numero}. {nome}
+          </h4>
+        </div>
         <button
           type="button"
           onClick={aoRemover}
-          className="text-xs text-texto-secundario hover:text-perigo"
+          className="shrink-0 text-xs text-texto-secundario hover:text-perigo"
         >
           Remover
         </button>

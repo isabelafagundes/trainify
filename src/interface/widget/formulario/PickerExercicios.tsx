@@ -2,7 +2,7 @@
    Picker de Exercícios — Fichas
    ═══════════════════════════════════════════ */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import type { Exercicio } from "@/domain/tipos";
 import { Chip } from "@/interface/widget/chip/Chip";
 import { Icone } from "@/interface/widget/svg/Icone";
@@ -76,6 +76,31 @@ export function PickerExercicios({
     return Array.from(grupos).sort();
   }, [exercicios]);
 
+  // Setas de rolagem do filtro de grupos (apenas web — no mobile usa-se swipe)
+  const refFiltros = useRef<HTMLDivElement>(null);
+  const [podeRolarEsquerda, setPodeRolarEsquerda] = useState(false);
+  const [podeRolarDireita, setPodeRolarDireita] = useState(false);
+
+  const atualizarSetas = useCallback(() => {
+    const el = refFiltros.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setPodeRolarEsquerda(scrollLeft > 1);
+    setPodeRolarDireita(scrollLeft + clientWidth < scrollWidth - 1);
+  }, []);
+
+  const rolarFiltros = (direcao: 1 | -1) => {
+    const el = refFiltros.current;
+    if (!el) return;
+    el.scrollBy({ left: direcao * el.clientWidth * 0.75, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    atualizarSetas();
+    window.addEventListener("resize", atualizarSetas);
+    return () => window.removeEventListener("resize", atualizarSetas);
+  }, [atualizarSetas, gruposUnicos]);
+
   // Limpar seleção de grupo se não existir mais nos filtros
   if (grupoSelecionado && !gruposUnicos.includes(grupoSelecionado)) {
     setGrupoSelecionado(null);
@@ -119,26 +144,60 @@ export function PickerExercicios({
           </svg>
         </div>
 
-        {/* Filtro de grupo muscular — rolagem horizontal */}
+        {/* Filtro de grupo muscular — rolagem horizontal (swipe no mobile, setas na web) */}
         {gruposUnicos.length > 0 && (
-          <div className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <Chip
-              rotulo="Todos"
-              tamanho="pequeno"
-              ativo={grupoSelecionado === null}
-              aoClicar={() => setGrupoSelecionado(null)}
-              className="shrink-0 min-h-[36px] px-3.5 text-[13px]"
-            />
-            {gruposUnicos.map((grupo) => (
+          <div className="relative -mx-1">
+            <div
+              ref={refFiltros}
+              onScroll={atualizarSetas}
+              className="flex flex-nowrap gap-2 overflow-x-auto scroll-smooth px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               <Chip
-                key={grupo}
-                rotulo={grupo}
+                rotulo="Todos"
                 tamanho="pequeno"
-                ativo={grupoSelecionado === grupo}
-                aoClicar={() => setGrupoSelecionado(grupo)}
+                ativo={grupoSelecionado === null}
+                aoClicar={() => setGrupoSelecionado(null)}
                 className="shrink-0 min-h-[36px] px-3.5 text-[13px]"
               />
-            ))}
+              {gruposUnicos.map((grupo) => (
+                <Chip
+                  key={grupo}
+                  rotulo={grupo}
+                  tamanho="pequeno"
+                  ativo={grupoSelecionado === grupo}
+                  aoClicar={() => setGrupoSelecionado(grupo)}
+                  className="shrink-0 min-h-[36px] px-3.5 text-[13px]"
+                />
+              ))}
+            </div>
+
+            {/* Seta esquerda — apenas web, quando há conteúdo escondido à esquerda */}
+            {podeRolarEsquerda && (
+              <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-16 items-center justify-start bg-gradient-to-r from-superficie to-transparent pl-0.5 lg:flex">
+                <button
+                  type="button"
+                  onClick={() => rolarFiltros(-1)}
+                  aria-label="Ver grupos anteriores"
+                  className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full border border-borda bg-superficie text-texto-secundario shadow-sm transition-all duration-150 hover:bg-superficie-suave hover:text-texto-primario active:scale-95"
+                >
+                  <Icone nome="setaEsquerda" tamanho={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Seta direita */}
+            {podeRolarDireita && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-16 items-center justify-end bg-gradient-to-l from-superficie to-transparent pr-0.5 lg:flex">
+                <button
+                  type="button"
+                  onClick={() => rolarFiltros(1)}
+                  aria-label="Ver mais grupos"
+                  className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full border border-borda bg-superficie text-texto-secundario shadow-sm transition-all duration-150 hover:bg-superficie-suave hover:text-texto-primario active:scale-95"
+                >
+                  <Icone nome="setaDireita" tamanho={16} />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
