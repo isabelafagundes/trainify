@@ -1,5 +1,7 @@
 /* ═══════════════════════════════════════════
-   Editor de Ficha — Criar/Editar Fichas (Wizard 4 etapas)
+   Editor de Ficha — Criar/Editar Fichas (Wizard 2 etapas)
+   A ficha é uma sequência única e ordenada de itens:
+   exercícios de força e atividades de cardio intercalados.
    ═══════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from "react";
@@ -9,7 +11,7 @@ import type {
   Exercicio,
   ExercicioFicha,
   Ficha,
-  ModalidadeTreino,
+  ItemFicha,
   Programa,
   TipoCardioDef,
   TipoCardio,
@@ -17,7 +19,8 @@ import type {
 import { META_METRICA_CARDIO, resolverTipoCardio } from "@/domain/tipos";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Input } from "@/interface/widget/formulario/Input";
-import { CampoNumerico } from "@/interface/widget/formulario/CampoNumerico";
+import { CampoNumerico, CLASSES_CAMPO_CAIXA } from "@/interface/widget/formulario/CampoNumerico";
+import { CampoCheck } from "@/interface/widget/formulario/CampoCheck";
 import { SeletorIcone } from "@/interface/widget/formulario/SeletorIcone";
 import { PickerExercicios } from "@/interface/widget/formulario/PickerExercicios";
 import { Botao } from "@/interface/widget/botao/Botao";
@@ -49,46 +52,21 @@ interface PropriedadesEditorFichaPage {
   aoVoltar: () => void;
 }
 
-type EtapaWizard = "modalidade" | "info" | "exercicios" | "cardio";
+type EtapaWizard = "info" | "itens";
 
-// Cards explicativos da primeira etapa: cada modalidade descreve o que o usuário monta a seguir.
-const CARDS_MODALIDADE: {
-  id: ModalidadeTreino;
-  label: string;
-  icone: string;
-  descricao: string;
-}[] = [
-  {
-    id: "musculacao",
-    label: "Musculação",
-    icone: "halter",
-    descricao: "Treino de força com exercícios, séries, repetições e cargas.",
-  },
-  {
-    id: "cardio",
-    label: "Cardio",
-    icone: "corrida",
-    descricao: "Atividades aeróbicas como corrida, bike e natação, com duração e métricas.",
-  },
-  {
-    id: "ambos",
-    label: "Ambos",
-    icone: "alvo",
-    descricao: "Combine musculação e cardio na mesma ficha — força e condicionamento juntos.",
-  },
+type PainelAdicionar = "exercicio" | "cardio" | null;
+
+const ETAPAS = [
+  { id: "info" as const, titulo: "Info básica", descricao: "Nome, ícone e programas" },
+  { id: "itens" as const, titulo: "Itens", descricao: "Monte a sequência do treino" },
 ];
 
-function etapasDaModalidade(modalidade: ModalidadeTreino) {
-  return [
-    { id: "modalidade" as const, titulo: "Modalidade", descricao: "Escolha o tipo de treino" },
-    { id: "info" as const, titulo: "Info básica", descricao: "Nome, ícone e programas" },
-    ...(modalidade !== "cardio"
-      ? [{ id: "exercicios" as const, titulo: "Exercícios", descricao: "Adicione os exercícios" }]
-      : []),
-    ...(modalidade !== "musculacao"
-      ? [{ id: "cardio" as const, titulo: "Cardio", descricao: modalidade === "cardio" ? "Obrigatório" : "Opcional" }]
-      : []),
-  ];
+/** Id estável do item para o dnd-kit (exercícios não se repetem na ficha;
+    entradas de cardio têm UUID próprio). */
+function idDoItem(item: ItemFicha): string {
+  return item.tipo === "exercicio"
+    ? `exercicio-${item.exercicio.exercicioId}`
+    : `cardio-${item.cardio.id}`;
 }
 
 export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesEditorFichaPage) {
@@ -104,16 +82,13 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [icone, setIcone] = useState<string | null>(null);
-  const [modalidade, setModalidade] = useState<ModalidadeTreino>("ambos");
-  const [exercicios, setExercicios] = useState<ExercicioFicha[]>([]);
-  const [cardio, setCardio] = useState<EntradaCardio[]>([]);
-  const [mostraCardio, setMostraCardio] = useState(false);
-  const [mostraPicker, setMostraPicker] = useState(false);
+  const [itens, setItens] = useState<ItemFicha[]>([]);
+  const [painelAdicionar, setPainelAdicionar] = useState<PainelAdicionar>(null);
 
   // Estado do wizard
-  const [etapaAtual, setEtapaAtual] = useState<EtapaWizard>("modalidade");
+  const [etapaAtual, setEtapaAtual] = useState<EtapaWizard>("info");
 
-  // Sensores de drag-and-drop para reordenar exercícios.
+  // Sensores de drag-and-drop para reordenar itens.
   // PointerSensor cobre mouse e toque; o pequeno limiar evita disparar ao tocar nos campos.
   const sensoresDrag = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -127,19 +102,15 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
 
   const editando = Boolean(fichaId);
   const titulo = editando ? "Editar Ficha" : "Nova Ficha";
-  const incluiMusculacao = modalidade !== "cardio";
-  const incluiCardio = modalidade !== "musculacao";
-  const cardioObrigatorio = modalidade === "cardio";
-  const cardioVisivel = incluiCardio && (cardioObrigatorio || mostraCardio);
-  const etapas = etapasDaModalidade(modalidade);
-  const indiceEtapaAtual = Math.max(0, etapas.findIndex((etapa) => etapa.id === etapaAtual));
+  const indiceEtapaAtual = Math.max(0, ETAPAS.findIndex((etapa) => etapa.id === etapaAtual));
+
+  const totalExercicios = itens.filter((item) => item.tipo === "exercicio").length;
+  const totalCardio = itens.filter((item) => item.tipo === "cardio").length;
 
   // Carregar dados
   useEffect(() => {
     vinculosProgramasAlteradosRef.current = false;
-    // Etapa inicial: na criação começamos pela escolha de modalidade;
-    // ao editar, a modalidade já existe, então pulamos direto para a info.
-    setEtapaAtual(fichaId ? "info" : "modalidade");
+    setEtapaAtual("info");
 
     const carregarDados = () => {
       const exercicios = stateManagerRepository.listarTodosExercicios();
@@ -155,11 +126,8 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
           setFicha(f);
           setNome(f.nome);
           setDescricao(f.descricao);
-          setModalidade(f.modalidade);
           setIcone(f.emoji || "💪");
-          setExercicios(f.exercicios);
-          setCardio(f.cardio);
-          setMostraCardio(f.cardio.length > 0);
+          setItens(f.itens);
 
           // Carregar programas vinculados
           if (!vinculosProgramasAlteradosRef.current) {
@@ -170,7 +138,6 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       } else {
         const nomeGerado = stateManagerRepository.gerarNomeFicha();
         setNome(nomeGerado);
-        setModalidade("ambos");
         setIcone("💪");
 
         // Se foi fornecido um programaId, vincular automaticamente
@@ -191,26 +158,21 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   }, [fichaId, programaId]);
 
   // Validacoes por etapa
-  const podeAvancarEtapa0 = () => nome.trim().length > 0;
-  const podeAvancarEtapa1 = () => exercicios.length > 0;
-  const podeAvancarEtapaCardio = () => !cardioObrigatorio || cardio.length > 0;
+  const podeAvancarInfo = () => nome.trim().length > 0;
+  const podeAvancarItens = () => itens.length > 0;
 
   // Handlers de navegacao do wizard
   const handleProximoEtapa = () => {
-    if (etapaAtual === "info" && !podeAvancarEtapa0()) {
+    if (etapaAtual === "info" && !podeAvancarInfo()) {
       showError("Digite um nome para a ficha.");
       return;
     }
-    if (etapaAtual === "exercicios" && !podeAvancarEtapa1()) {
-      showError("Adicione pelo menos um exercício à ficha.");
-      return;
-    }
-    if (etapaAtual === "cardio" && !podeAvancarEtapaCardio()) {
-      showError("Adicione pelo menos uma atividade de cardio.");
+    if (etapaAtual === "itens" && !podeAvancarItens()) {
+      showError("Adicione pelo menos um exercício ou cardio à ficha.");
       return;
     }
 
-    const proximaEtapa = etapas[indiceEtapaAtual + 1];
+    const proximaEtapa = ETAPAS[indiceEtapaAtual + 1];
     if (proximaEtapa) {
       setEtapaAtual(proximaEtapa.id);
     } else {
@@ -219,7 +181,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   };
 
   const handleEtapaAnterior = () => {
-    const etapaAnterior = etapas[indiceEtapaAtual - 1];
+    const etapaAnterior = ETAPAS[indiceEtapaAtual - 1];
     if (etapaAnterior) {
       setEtapaAtual(etapaAnterior.id);
     }
@@ -232,13 +194,8 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       return;
     }
 
-    if (incluiMusculacao && exercicios.length === 0) {
-      showError("Adicione pelo menos um exercício à ficha.");
-      return;
-    }
-
-    if (cardioObrigatorio && cardio.length === 0) {
-      showError("Adicione pelo menos uma atividade de cardio.");
+    if (itens.length === 0) {
+      showError("Adicione pelo menos um exercício ou cardio à ficha.");
       return;
     }
 
@@ -247,9 +204,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       descricao: descricao.trim(),
       icone: "halter" as const,
       emoji: icone || undefined,
-      modalidade,
-      exercicios,
-      cardio,
+      itens,
     };
 
     if (editando && ficha) {
@@ -298,56 +253,60 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       usaCarga: true,
       descansoSegundos: 60,
     };
-    setExercicios((exerciciosAtuais) => [...exerciciosAtuais, novoExercicio]);
-    setMostraPicker(false);
+    setItens((itensAtuais) => [...itensAtuais, { tipo: "exercicio", exercicio: novoExercicio }]);
+    setPainelAdicionar(null);
   };
 
-  const handleRemoverExercicio = (index: number) => {
-    setExercicios(exercicios.filter((_, i) => i !== index));
+  const handleAdicionarCardio = (tipo: TipoCardio) => {
+    setItens((itensAtuais) => [
+      ...itensAtuais,
+      {
+        tipo: "cardio",
+        cardio: { id: crypto.randomUUID(), tipo, duracaoMinutos: 20, nota: "" },
+      },
+    ]);
+    setPainelAdicionar(null);
+  };
+
+  const handleRemoverItem = (index: number) => {
+    setItens(itens.filter((_, i) => i !== index));
   };
 
   const handleAtualizarExercicio = (
     index: number,
     atualizacoes: Partial<ExercicioFicha>
   ) => {
-    const novosExercicios = [...exercicios];
-    novosExercicios[index] = { ...novosExercicios[index], ...atualizacoes };
-    setExercicios(novosExercicios);
-  };
-
-  const handleReordenarExercicios = (evento: DragEndEvent) => {
-    const { active, over } = evento;
-    if (!over || active.id === over.id) return;
-    setExercicios((itens) => {
-      const de = itens.findIndex((e) => e.exercicioId === active.id);
-      const para = itens.findIndex((e) => e.exercicioId === over.id);
-      if (de === -1 || para === -1) return itens;
-      return arrayMove(itens, de, para);
-    });
-  };
-
-  const handleAdicionarCardio = (tipo: TipoCardio) => {
-    setCardio([
-      ...cardio,
-      { id: crypto.randomUUID(), tipo, duracaoMinutos: 20, nota: "" },
-    ]);
-  };
-
-  const handleRemoverCardio = (index: number) => {
-    const novosCardio = cardio.filter((_, i) => i !== index);
-    setCardio(novosCardio);
-    if (novosCardio.length === 0) {
-      setMostraCardio(false);
-    }
+    setItens((itensAtuais) =>
+      itensAtuais.map((item, i) =>
+        i === index && item.tipo === "exercicio"
+          ? { tipo: "exercicio", exercicio: { ...item.exercicio, ...atualizacoes } }
+          : item
+      )
+    );
   };
 
   const handleAtualizarCardio = (
     index: number,
-    atualizacoes: Partial<(typeof cardio)[0]>
+    atualizacoes: Partial<EntradaCardio>
   ) => {
-    const novosCardio = [...cardio];
-    novosCardio[index] = { ...novosCardio[index], ...atualizacoes };
-    setCardio(novosCardio);
+    setItens((itensAtuais) =>
+      itensAtuais.map((item, i) =>
+        i === index && item.tipo === "cardio"
+          ? { tipo: "cardio", cardio: { ...item.cardio, ...atualizacoes } }
+          : item
+      )
+    );
+  };
+
+  const handleReordenarItens = (evento: DragEndEvent) => {
+    const { active, over } = evento;
+    if (!over || active.id === over.id) return;
+    setItens((atuais) => {
+      const de = atuais.findIndex((item) => idDoItem(item) === active.id);
+      const para = atuais.findIndex((item) => idDoItem(item) === over.id);
+      if (de === -1 || para === -1) return atuais;
+      return arrayMove(atuais, de, para);
+    });
   };
 
   const handleCopiar = () => {
@@ -375,18 +334,9 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
     setNome(ficha.nome.replace(/\s*\(cópia\)$/, ""));
     setDescricao(ficha.descricao);
     setIcone(ficha.emoji || "💪");
-    setModalidade(ficha.modalidade);
-    setExercicios(ficha.exercicios);
-    setCardio(ficha.cardio);
-    setMostraCardio(ficha.cardio.length > 0);
+    setItens(ficha.itens);
 
     setModalCopiarFichaAberto(false);
-  };
-
-  // Etapa 1: escolher a modalidade nos cards seleciona e avança direto para a info.
-  const handleSelecionarModalidade = (novaModalidade: ModalidadeTreino) => {
-    setModalidade(novaModalidade);
-    setEtapaAtual("info");
   };
 
   const getNomeExercicio = (exercicioId: string): string => {
@@ -394,20 +344,36 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
     return exercicio?.nome || "Exercício não encontrado";
   };
 
-  const textoResumoFicha = () => {
-    const partes = [
-      `${exercicios.length} ${exercicios.length === 1 ? "exercício" : "exercícios"}`,
-    ];
+  const rotuloDoItem = (item: ItemFicha): string => {
+    if (item.tipo === "exercicio") {
+      return getNomeExercicio(item.exercicio.exercicioId);
+    }
+    const tipo = resolverTipoCardio(item.cardio.tipo, tiposCardio);
+    return tipo.nome;
+  };
 
-    if (incluiCardio && cardio.length > 0) {
-      partes.push(`${cardio.length} ${cardio.length === 1 ? "cardio" : "cardios"}`);
+  const detalheDoItem = (item: ItemFicha): string => {
+    return item.tipo === "exercicio"
+      ? `${item.exercicio.series}x${item.exercicio.repeticoes}`
+      : `${item.cardio.duracaoMinutos}min`;
+  };
+
+  const textoResumoFicha = () => {
+    const partes: string[] = [];
+
+    if (totalExercicios > 0) {
+      partes.push(`${totalExercicios} ${totalExercicios === 1 ? "exercício" : "exercícios"}`);
+    }
+
+    if (totalCardio > 0) {
+      partes.push(`${totalCardio} ${totalCardio === 1 ? "cardio" : "cardios"}`);
     }
 
     if (programasVinculados.length > 0) {
       partes.push(`${programasVinculados.length} ${programasVinculados.length === 1 ? "programa" : "programas"}`);
     }
 
-    return partes.join(" · ");
+    return partes.length > 0 ? partes.join(" · ") : "Ficha vazia";
   };
 
   return (
@@ -438,7 +404,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
 
         {/* Indicador de etapas - minimalista */}
         <div className="flex items-center justify-center gap-1.5 py-2">
-          {etapas.map((etapa, index) => {
+          {ETAPAS.map((etapa, index) => {
             const passoNumero = index + 1;
             const atual = etapa.id === etapaAtual;
             const completo = index < indiceEtapaAtual;
@@ -469,7 +435,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                 </button>
 
                 {/* Conector */}
-                {index < etapas.length - 1 && (
+                {index < ETAPAS.length - 1 && (
                   <div className={`w-8 h-0.5 mx-0.5 transition-colors duration-200 ${
                     index < indiceEtapaAtual ? "bg-texto-primario/30" : "bg-borda-suave"
                   }`} />
@@ -483,78 +449,6 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       {/* Conteúdo scrollável */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="px-5 py-4 pb-6">
-          {/* ETAPA 0: Modalidade */}
-          {etapaAtual === "modalidade" && (
-            <div className="space-y-5">
-              <div>
-                <h2 className="text-lg font-semibold font-display text-texto-primario">
-                  Qual o tipo de treino?
-                </h2>
-                <p className="text-sm text-texto-secundario mt-1">
-                  Escolha a modalidade desta ficha. Isso define os próximos passos — você pode alterar depois.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {CARDS_MODALIDADE.map((card) => {
-                  const selecionado = modalidade === card.id;
-                  return (
-                    <button
-                      key={card.id}
-                      type="button"
-                      onClick={() => handleSelecionarModalidade(card.id)}
-                      aria-pressed={selecionado}
-                      className={`
-                        group relative flex w-full items-start gap-4 rounded-2xl border p-4 text-left
-                        transition-all duration-150 active:scale-[0.99]
-                        ${selecionado
-                          ? "border-acento bg-acento/5 ring-1 ring-acento shadow-sm"
-                          : "border-borda bg-superficie hover:border-acento/50 hover:bg-superficie-hover"
-                        }
-                      `}
-                    >
-                      <span
-                        className={`
-                          flex h-12 w-12 shrink-0 items-center justify-center rounded-xl
-                          transition-colors duration-150
-                          ${selecionado
-                            ? "bg-acento text-texto-invertido"
-                            : "bg-superficie-suave text-texto-secundario group-hover:text-texto-primario"
-                          }
-                        `}
-                      >
-                        <Icone nome={card.icone} tamanho={24} />
-                      </span>
-
-                      <span className="min-w-0 flex-1 pr-6">
-                        <span className="block text-sm font-semibold text-texto-primario">
-                          {card.label}
-                        </span>
-                        <span className="mt-1 block text-xs leading-relaxed text-texto-secundario">
-                          {card.descricao}
-                        </span>
-                      </span>
-
-                      <span
-                        className={`
-                          absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border
-                          transition-all duration-150
-                          ${selecionado
-                            ? "border-acento bg-acento text-texto-invertido"
-                            : "border-borda text-transparent"
-                          }
-                        `}
-                        aria-hidden="true"
-                      >
-                        <Icone nome="check" tamanho={12} />
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {/* ETAPA 1: Info básica */}
           {etapaAtual === "info" && (
             <div className="space-y-6">
@@ -655,52 +549,106 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
             </div>
           )}
 
-          {/* ETAPA 2: Exercícios */}
-          {etapaAtual === "exercicios" && (
+          {/* ETAPA 2: Itens do treino (exercícios e cardio numa lista única ordenada) */}
+          {etapaAtual === "itens" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-medium text-texto-primario">
-                  Exercícios
+                  Itens do treino
                 </h2>
-                {mostraPicker ? (
+                {painelAdicionar !== null && (
                   <Botao
                     variante="fantasma"
                     tamanho="compacto"
                     icone={<Icone nome="fechar" tamanho={16} />}
-                    onClick={() => setMostraPicker(false)}
+                    onClick={() => setPainelAdicionar(null)}
                   >
                     Cancelar
-                  </Botao>
-                ) : (
-                  <Botao
-                    variante="fantasma"
-                    tamanho="compacto"
-                    icone={<Icone nome="mais" tamanho={16} />}
-                    onClick={() => setMostraPicker(true)}
-                  >
-                    Adicionar
                   </Botao>
                 )}
               </div>
 
-              {mostraPicker ? (
+              {painelAdicionar === "exercicio" ? (
                 <PickerExercicios
                   exercicios={todosExercicios}
-                  exercicioIdsSelecionados={exercicios.map((e) => e.exercicioId)}
+                  exercicioIdsSelecionados={itens
+                    .filter((item) => item.tipo === "exercicio")
+                    .map((item) => (item.tipo === "exercicio" ? item.exercicio.exercicioId : ""))}
                   aoAdicionar={handleAdicionarExercicio}
                   aoCriarExercicioCustom={() => setModalCriarExercicioAberto(true)}
                 />
+              ) : painelAdicionar === "cardio" ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-texto-sutil">
+                    Toque para adicionar uma atividade
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {tiposCardio.map((tipo) => (
+                      <button
+                        key={tipo.id}
+                        type="button"
+                        onClick={() => handleAdicionarCardio(tipo.id)}
+                        className="
+                          group flex items-center gap-2.5 px-3 py-2.5 min-h-[52px]
+                          rounded-xl border border-borda bg-superficie text-left
+                          hover:border-acento hover:bg-acento/5
+                          active:scale-[0.98] transition-all duration-150
+                        "
+                      >
+                        <span className="text-xl leading-none shrink-0">
+                          {tipo.emoji}
+                        </span>
+                        <span className="flex-1 min-w-0 text-[13px] font-medium leading-tight text-texto-primario">
+                          {tipo.nome}
+                        </span>
+                        <span
+                          className="
+                            flex h-6 w-6 shrink-0 items-center justify-center
+                            rounded-full bg-superficie-suave text-texto-sutil
+                            transition-colors duration-150
+                            group-hover:bg-acento group-hover:text-texto-invertido
+                          "
+                          aria-hidden="true"
+                        >
+                          <Icone nome="mais" tamanho={14} />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-3">
-                  {exercicios.length === 0 ? (
+                  {/* Ações de adicionar */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Botao
+                      variante="secundario"
+                      className="border-dashed"
+                      icone={<Icone nome="mais" tamanho={14} />}
+                      onClick={() => setPainelAdicionar("exercicio")}
+                    >
+                      Exercício
+                    </Botao>
+                    <Botao
+                      variante="secundario"
+                      className="border-dashed"
+                      icone={<Icone nome="mais" tamanho={14} />}
+                      onClick={() => setPainelAdicionar("cardio")}
+                    >
+                      Cardio
+                    </Botao>
+                  </div>
+
+                  {itens.length === 0 ? (
                     <div className="px-4 py-6 bg-superficie rounded-xl border border-borda text-center">
                       <p className="text-sm text-texto-secundario">
-                        Nenhum exercício adicionado.
+                        Nenhum item adicionado. Monte a sequência do treino com
+                        exercícios e cardio na ordem que quiser.
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {exercicios.length > 1 && (
+                      {itens.length > 1 && (
                         <p className="flex items-center gap-1.5 text-xs text-texto-sutil">
                           <IconeArrastar tamanho={14} className="text-texto-sutil" />
                           Arraste pela alça para reordenar
@@ -709,255 +657,108 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                       <DndContext
                         sensors={sensoresDrag}
                         collisionDetection={closestCenter}
-                        onDragEnd={handleReordenarExercicios}
+                        onDragEnd={handleReordenarItens}
                       >
                         <SortableContext
-                          items={exercicios.map((e) => e.exercicioId)}
+                          items={itens.map(idDoItem)}
                           strategy={verticalListSortingStrategy}
                         >
                           <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
-                            {exercicios.map((exercicio, index) => {
-                              const nomeExercicio = getNomeExercicio(exercicio.exercicioId);
-                              return (
+                            {itens.map((item, index) =>
+                              item.tipo === "exercicio" ? (
                                 <CardExercicioConfig
-                                  key={exercicio.exercicioId}
-                                  id={exercicio.exercicioId}
+                                  key={idDoItem(item)}
+                                  id={idDoItem(item)}
                                   numero={index + 1}
-                                  nome={nomeExercicio}
-                                  config={exercicio}
+                                  nome={getNomeExercicio(item.exercicio.exercicioId)}
+                                  config={item.exercicio}
                                   aoAtualizar={(atualizacoes) =>
                                     handleAtualizarExercicio(index, atualizacoes)
                                   }
-                                  aoRemover={() => handleRemoverExercicio(index)}
-                                  semBorda={index === exercicios.length - 1}
+                                  aoRemover={() => handleRemoverItem(index)}
+                                  semBorda={index === itens.length - 1}
                                 />
-                              );
-                            })}
+                              ) : (
+                                <CardCardioConfig
+                                  key={idDoItem(item)}
+                                  id={idDoItem(item)}
+                                  numero={index + 1}
+                                  config={item.cardio}
+                                  tiposCardio={tiposCardio}
+                                  aoAtualizar={(atualizacoes) =>
+                                    handleAtualizarCardio(index, atualizacoes)
+                                  }
+                                  aoRemover={() => handleRemoverItem(index)}
+                                  semBorda={index === itens.length - 1}
+                                />
+                              )
+                            )}
                           </div>
                         </SortableContext>
                       </DndContext>
                     </div>
                   )}
 
-                  <div className="pt-2">
-                    <h3 className="text-sm font-medium text-texto-primario mb-3">
-                      Prévia da ficha
-                    </h3>
-                    <div className="bg-superficie-suave rounded-xl border border-borda-suave overflow-hidden">
-                      <div className="flex items-center gap-3 px-4 py-3">
-                        <span className="text-2xl shrink-0">{icone || "💪"}</span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-texto-primario truncate">
-                            {nome || "Nome da ficha"}
-                          </p>
-                          <p className="text-xs text-texto-secundario">
-                            {exercicios.length === 0
-                              ? "Adicione exercícios para montar a ficha"
-                              : `${exercicios.length} ${exercicios.length === 1 ? "exercício configurado" : "exercícios configurados"}`}
-                          </p>
-                        </div>
-                      </div>
-
-                      {exercicios.length > 0 && (
-                        <div className="border-t border-borda-suave">
-                          {exercicios.slice(0, 3).map((exercicio, index) => (
-                            <div
-                              key={`preview-${exercicio.exercicioId}-${index}`}
-                              className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-borda-suave last:border-b-0"
-                            >
-                              <span className="text-xs text-texto-secundario truncate">
-                                {index + 1}. {getNomeExercicio(exercicio.exercicioId)}
-                              </span>
-                              <span className="text-xs font-medium text-texto-primario whitespace-nowrap">
-                                {exercicio.series}x{exercicio.repeticoes}
-                              </span>
-                            </div>
-                          ))}
-                          {exercicios.length > 3 && (
-                            <p className="px-4 py-2.5 text-xs text-texto-sutil">
-                              +{exercicios.length - 3} {exercicios.length - 3 === 1 ? "exercício" : "exercícios"}
+                  {/* Resumo final */}
+                  {(nome || icone) && (
+                    <div className="pt-2">
+                      <h3 className="text-sm font-medium text-texto-primario mb-3">
+                        Resumo da ficha
+                      </h3>
+                      <div className="bg-superficie-suave rounded-xl border border-borda-suave overflow-hidden">
+                        <div className="flex items-start gap-3 px-4 py-3">
+                          <span className="text-3xl shrink-0">{icone || "💪"}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-texto-primario truncate">
+                              {nome || "Nome da ficha"}
                             </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ETAPA 3: Cardio */}
-          {etapaAtual === "cardio" && (
-            <div className="space-y-4">
-              {/* Cardio */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-medium text-texto-primario">
-                    {cardioObrigatorio ? "Cardio" : "Cardio (opcional)"}
-                  </h2>
-                  {!cardioObrigatorio && mostraCardio && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMostraCardio(false);
-                        setCardio([]);
-                      }}
-                      className="text-xs text-texto-secundario hover:text-perigo transition-colors"
-                    >
-                      Remover seção
-                    </button>
-                  )}
-                </div>
-
-                {!cardioVisivel ? (
-                  <Botao
-                    variante="secundario"
-                    onClick={() => setMostraCardio(true)}
-                    className="w-full border-dashed"
-                  >
-                    + Adicionar seção de cardio
-                  </Botao>
-                ) : (
-                  <div className="space-y-3">
-                    <p className="text-xs text-texto-sutil">
-                      Toque para adicionar uma atividade
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {tiposCardio.map((tipo) => (
-                        <button
-                          key={tipo.id}
-                          type="button"
-                          onClick={() => handleAdicionarCardio(tipo.id)}
-                          className="
-                            group flex items-center gap-2.5 px-3 py-2.5 min-h-[52px]
-                            rounded-xl border border-borda bg-superficie text-left
-                            hover:border-acento hover:bg-acento/5
-                            active:scale-[0.98] transition-all duration-150
-                          "
-                        >
-                          <span className="text-xl leading-none shrink-0">
-                            {tipo.emoji}
-                          </span>
-                          <span className="flex-1 min-w-0 text-[13px] font-medium leading-tight text-texto-primario">
-                            {tipo.nome}
-                          </span>
-                          <span
-                            className="
-                              flex h-6 w-6 shrink-0 items-center justify-center
-                              rounded-full bg-superficie-suave text-texto-sutil
-                              transition-colors duration-150
-                              group-hover:bg-acento group-hover:text-texto-invertido
-                            "
-                            aria-hidden="true"
-                          >
-                            <Icone nome="mais" tamanho={14} />
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {cardio.length > 0 && (
-                      <div className="space-y-2 pt-1">
-                        {cardio.map((entrada, index) => (
-                          <CardCardioConfig
-                            key={entrada.id}
-                            config={entrada}
-                            tiposCardio={tiposCardio}
-                            aoAtualizar={(atualizacoes) =>
-                              handleAtualizarCardio(index, atualizacoes)
-                            }
-                            aoRemover={() => handleRemoverCardio(index)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Resumo final */}
-              {(nome || icone) && (
-                <div className="pt-4 border-t border-borda-suave">
-                  <h3 className="text-sm font-medium text-texto-primario mb-3">Resumo final</h3>
-                  <div className="bg-superficie-suave rounded-xl border border-borda-suave overflow-hidden">
-                    <div className="flex items-start gap-3 px-4 py-3">
-                      <span className="text-3xl shrink-0">{icone || "💪"}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-texto-primario truncate">
-                          {nome || "Nome da ficha"}
-                        </p>
-                        {descricao && (
-                          <p className="text-xs text-texto-secundario line-clamp-2">
-                            {descricao}
-                          </p>
-                        )}
-                        <p className="text-xs text-texto-sutil mt-1">
-                          {textoResumoFicha()}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-borda-suave divide-y divide-borda-suave">
-                      {incluiMusculacao && (
-                      <div className="px-4 py-3">
-                        <p className="text-xs font-medium text-texto-primario mb-2">
-                          Exercícios
-                        </p>
-                        <div className="space-y-1.5">
-                          {exercicios.slice(0, 4).map((exercicio, index) => (
-                            <div
-                              key={`resumo-${exercicio.exercicioId}-${index}`}
-                              className="flex items-center justify-between gap-3"
-                            >
-                              <span className="text-xs text-texto-secundario truncate">
-                                {index + 1}. {getNomeExercicio(exercicio.exercicioId)}
-                              </span>
-                              <span className="text-xs font-medium text-texto-primario whitespace-nowrap">
-                                {exercicio.series}x{exercicio.repeticoes}
-                              </span>
-                            </div>
-                          ))}
-                          {exercicios.length > 4 && (
-                            <p className="text-xs text-texto-sutil">
-                              +{exercicios.length - 4} {exercicios.length - 4 === 1 ? "exercício" : "exercícios"}
+                            {descricao && (
+                              <p className="text-xs text-texto-secundario line-clamp-2">
+                                {descricao}
+                              </p>
+                            )}
+                            <p className="text-xs text-texto-sutil mt-1">
+                              {textoResumoFicha()}
                             </p>
-                          )}
-                        </div>
-                      </div>
-                      )}
-
-                      {incluiCardio && cardio.length > 0 && (
-                        <div className="px-4 py-3">
-                          <p className="text-xs font-medium text-texto-primario mb-2">
-                            Cardio
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {cardio.map((entrada) => (
-                              <span
-                                key={entrada.id}
-                                className="px-2 py-1 rounded-md bg-superficie border border-borda-suave text-xs text-texto-secundario"
-                              >
-                                {entrada.tipo} · {entrada.duracaoMinutos}min
-                              </span>
-                            ))}
                           </div>
                         </div>
-                      )}
 
-                      {programasVinculados.length > 0 && (
-                        <div className="px-4 py-3">
-                          <p className="text-xs font-medium text-texto-primario mb-2">
-                            Programas vinculados
-                          </p>
-                          <p className="text-xs text-texto-secundario">
-                            {programasVinculados.map((programa) => programa.nome).join(", ")}
-                          </p>
-                        </div>
-                      )}
+                        {itens.length > 0 && (
+                          <div className="border-t border-borda-suave">
+                            {itens.slice(0, 4).map((item, index) => (
+                              <div
+                                key={`resumo-${idDoItem(item)}`}
+                                className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-borda-suave last:border-b-0"
+                              >
+                                <span className="text-xs text-texto-secundario truncate">
+                                  {index + 1}. {rotuloDoItem(item)}
+                                </span>
+                                <span className="text-xs font-medium text-texto-primario whitespace-nowrap">
+                                  {detalheDoItem(item)}
+                                </span>
+                              </div>
+                            ))}
+                            {itens.length > 4 && (
+                              <p className="px-4 py-2.5 text-xs text-texto-sutil">
+                                +{itens.length - 4} {itens.length - 4 === 1 ? "item" : "itens"}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {programasVinculados.length > 0 && (
+                          <div className="px-4 py-3 border-t border-borda-suave">
+                            <p className="text-xs font-medium text-texto-primario mb-1">
+                              Programas vinculados
+                            </p>
+                            <p className="text-xs text-texto-secundario">
+                              {programasVinculados.map((programa) => programa.nome).join(", ")}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -993,7 +794,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
             onClick={handleProximoEtapa}
             className="flex-1"
           >
-            {indiceEtapaAtual < etapas.length - 1 ? "Próximo" : editando ? "Salvar" : "Criar Ficha"}
+            {indiceEtapaAtual < ETAPAS.length - 1 ? "Próximo" : editando ? "Salvar" : "Criar Ficha"}
           </Botao>
         </div>
       </div>
@@ -1139,17 +940,12 @@ function CardExercicioConfig({
             Séries
           </label>
           <CampoNumerico
+            variante="caixa"
             valor={config.series}
             minimo={1}
             maximo={20}
             aoAlterar={(series) => aoAtualizar({ series })}
             ariaLabel="Series"
-            className="
-              w-full px-2 py-2
-              bg-superficie-suave border border-borda
-              rounded-lg text-sm text-center
-              focus:border-acento focus:outline-none
-            "
           />
         </div>
 
@@ -1159,17 +955,12 @@ function CardExercicioConfig({
             Reps
           </label>
           <CampoNumerico
+            variante="caixa"
             valor={config.repeticoes}
             minimo={1}
             maximo={100}
             aoAlterar={(repeticoes) => aoAtualizar({ repeticoes })}
             ariaLabel="Repeticoes"
-            className="
-              w-full px-2 py-2
-              bg-superficie-suave border border-borda
-              rounded-lg text-sm text-center
-              focus:border-acento focus:outline-none
-            "
           />
         </div>
 
@@ -1178,16 +969,11 @@ function CardExercicioConfig({
           <label className="text-xs text-texto-secundario mb-1 block">
             Usa carga
           </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={config.usaCarga}
-              onChange={(e) => aoAtualizar({ usaCarga: e.target.checked })}
-              className="
-                w-5 h-5 rounded-md border-2 border-borda
-                checked:bg-acento checked:border-acento
-                focus:ring-2 focus:ring-acento/20
-              "
+          <div className="flex h-10 items-center">
+            <CampoCheck
+              marcado={config.usaCarga}
+              aoAlterar={(usaCarga) => aoAtualizar({ usaCarga })}
+              ariaLabel="Usa carga"
             />
           </div>
         </div>
@@ -1199,18 +985,13 @@ function CardExercicioConfig({
           </label>
           <div className="flex items-center gap-1">
             <CampoNumerico
+              variante="caixa"
               valor={config.descansoSegundos}
               minimo={10}
               maximo={600}
               passo={10}
               aoAlterar={(descansoSegundos) => aoAtualizar({ descansoSegundos })}
               ariaLabel="Descanso em segundos"
-              className="
-                w-full px-2 py-2
-                bg-superficie-suave border border-borda
-                rounded-lg text-sm text-center
-                focus:border-acento focus:outline-none
-              "
             />
             <span className="text-xs text-texto-sutil">s</span>
           </div>
@@ -1221,10 +1002,13 @@ function CardExercicioConfig({
 }
 
 interface CardCardioConfigProps {
+  id: string;
+  numero: number;
   config: EntradaCardio;
   tiposCardio: TipoCardioDef[];
-  aoAtualizar: (atualizacoes: Partial<CardCardioConfigProps["config"]>) => void;
+  aoAtualizar: (atualizacoes: Partial<EntradaCardio>) => void;
   aoRemover: () => void;
+  semBorda?: boolean;
 }
 
 function CampoMetricaCardioConfig({
@@ -1254,61 +1038,91 @@ function CampoMetricaCardioConfig({
           const texto = e.target.value.replace(",", ".");
           aoAlterar(texto === "" ? undefined : Number(texto));
         }}
-        className="
-          w-full px-2 py-2
-          bg-superficie border border-borda
-          rounded-lg text-sm
-          focus:border-acento focus:outline-none
-        "
+        className={CLASSES_CAMPO_CAIXA}
       />
     </label>
   );
 }
 
-function CardCardioConfig({ config, tiposCardio, aoAtualizar, aoRemover }: CardCardioConfigProps) {
+function CardCardioConfig({
+  id,
+  numero,
+  config,
+  tiposCardio,
+  aoAtualizar,
+  aoRemover,
+  semBorda,
+}: CardCardioConfigProps) {
   const tipo = resolverTipoCardio(config.tipo, tiposCardio);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   return (
-    <div className="px-4 py-3 bg-superficie-suave rounded-xl border border-borda-suave">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg leading-none shrink-0">
-            {tipo.emoji}
-          </span>
-          <span className="text-sm font-medium text-texto-primario">
-            {tipo.nome}
-          </span>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative bg-superficie px-4 py-3 ${
+        semBorda ? "" : "border-b border-borda-suave"
+      } ${isDragging ? "z-10 opacity-90 shadow-lg" : ""}`}
+    >
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
           <button
             type="button"
-            onClick={aoRemover}
-            className="text-xs text-texto-secundario hover:text-perigo ml-auto transition-colors"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            aria-label={`Reordenar ${tipo.nome}`}
+            className="-ml-1.5 shrink-0 touch-none cursor-grab rounded-md p-1 text-texto-sutil hover:text-texto-secundario active:cursor-grabbing"
           >
-            Remover
+            <IconeArrastar tamanho={18} />
           </button>
+          <h4 className="truncate text-sm font-medium text-texto-primario">
+            {numero}. {tipo.emoji ? `${tipo.emoji} ` : ""}{tipo.nome}
+          </h4>
         </div>
+        <button
+          type="button"
+          onClick={aoRemover}
+          className="shrink-0 text-xs text-texto-secundario hover:text-perigo"
+        >
+          Remover
+        </button>
+      </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {tipo.metricas.map((metrica) => (
-            <CampoMetricaCardioConfig
-              key={metrica}
-              metrica={metrica}
-              valor={config[metrica]}
-              aoAlterar={(valor) =>
-                aoAtualizar({ [metrica]: metrica === "duracaoMinutos" ? valor ?? 0 : valor })
-              }
-            />
-          ))}
-        </div>
-
-        <div className="mt-2">
-          <Input
-            tipo="text"
-            value={config.nota}
-            onChange={(e) => aoAtualizar({ nota: e.target.value })}
-            placeholder="Nota opcional (ex: zona 2)"
-            className="text-sm"
+      <div className="grid grid-cols-2 gap-3">
+        {tipo.metricas.map((metrica) => (
+          <CampoMetricaCardioConfig
+            key={metrica}
+            metrica={metrica}
+            valor={config[metrica]}
+            aoAlterar={(valor) =>
+              aoAtualizar({ [metrica]: metrica === "duracaoMinutos" ? valor ?? 0 : valor })
+            }
           />
-        </div>
+        ))}
+      </div>
+
+      <div className="mt-2">
+        <Input
+          tipo="text"
+          value={config.nota}
+          onChange={(e) => aoAtualizar({ nota: e.target.value })}
+          placeholder="Nota opcional (ex: zona 2)"
+          className="text-sm"
+        />
       </div>
     </div>
   );

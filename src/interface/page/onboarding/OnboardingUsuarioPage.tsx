@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Onboarding — Primeiro acesso ao Trainify
+   Onboarding — Primeiro acesso ao Pezzo
    ═══════════════════════════════════════════ */
 
 import { FormularioPerfil } from "@/interface/widget/formulario/FormularioPerfil";
@@ -20,7 +20,7 @@ export function OnboardingUsuarioPage({ aoConcluir }: OnboardingUsuarioPageProps
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col px-6 pb-[max(var(--safe-bottom),24px)] pt-[max(var(--safe-top),40px)]">
         <header className="animate-slide-up">
           <span className="font-display text-[13px] font-bold uppercase tracking-[0.18em] text-texto-sutil">
-            Trainify
+            Pezzo
           </span>
         </header>
 

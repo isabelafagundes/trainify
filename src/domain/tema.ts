@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Modelo de Tema — Trainify
+   Modelo de Tema — Pezzo
    ═══════════════════════════════════════════ */
 
 export type TemaId = "claro" | "escuro" | (string & {});

@@ -1,4 +1,5 @@
 import type { Exercicio, ExercicioFicha, Ficha } from "@/domain/tipos";
+import { exerciciosDaFicha } from "@/domain/ficha";
 import { Chip } from "@/interface/widget/chip/Chip";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
 
@@ -58,7 +59,7 @@ export function CartaoFicha({
   ultimoTreino,
   aoIniciarTreino,
 }: PropriedadesCartaoFicha) {
-  const exerciciosFicha = Array.isArray(ficha.exercicios) ? ficha.exercicios : [];
+  const exerciciosFicha = exerciciosDaFicha(ficha);
   const gruposMusculares = extrairGruposMusculares(exerciciosFicha, exerciciosCatalogo);
   const resumo = resumoExercicios(exerciciosFicha, exerciciosCatalogo);
 

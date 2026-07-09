@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Ficha, RegistroTreino } from "@/domain/tipos";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
+import { Icone } from "@/interface/widget/svg/Icone";
+import { Botao } from "@/interface/widget/botao/Botao";
+import { appModule } from "@/interface/configuration/module/app.module";
 import { HeaderExecucao } from "./HeaderExecucao";
-import { BarraProgressoExercicios } from "./BarraProgressoExercicios";
+import { ChipsItens } from "./ChipsItens";
+import { RailItens } from "./RailItens";
 import { CardSeries } from "./CardSeries";
+import { CardRegistroCardio } from "./CardRegistroCardio";
+import { HistoricoCardio } from "./HistoricoCardio";
 import { NotaExercicio } from "./NotaExercicio";
 import { AccordionProgressao } from "./AccordionProgressao";
-import { TimerDescanso, BotaoTimerDescanso } from "./TimerDescanso";
+import { TimerDescansoInline } from "./TimerDescansoInline";
 import { ToastDesfazer } from "./ToastDesfazer";
-import { NavegacaoExercicios } from "./NavegacaoExercicios";
-import { PainelCardio } from "./PainelCardio";
 import { OverlayConfirmarFinalizar } from "./OverlayConfirmarFinalizar";
 import { OverlayFinalizado } from "./OverlayFinalizado";
 import { OverlayConfirmarCancelar } from "./OverlayConfirmarCancelar";
@@ -17,7 +21,7 @@ import { OverlayHistoricoSerie } from "./OverlayHistoricoSerie";
 import { OverlayGraficoProgressao } from "./OverlayGraficoProgressao";
 import { useSessaoTreino } from "./hooks/useSessaoTreino";
 import { useTimerDescanso } from "./hooks/useTimerDescanso";
-import { appModule } from "@/interface/configuration/module/app.module";
+import { nomeDoItem } from "./nomeItem";
 
 interface ExecucaoTreinoPageProps {
   ficha: Ficha;
@@ -25,50 +29,82 @@ interface ExecucaoTreinoPageProps {
   aoVoltar: () => void;
 }
 
-export function ExecucaoTreinoPage({
-  ficha,
-  historico,
-  aoVoltar,
-}: ExecucaoTreinoPageProps) {
+/** Execução de treino paginada por item da ficha (exercício ou cardio, na
+    ordem definida na criação). Mobile navega por chips + footer; no md+ os
+    chips viram rail lateral; no lg+ entra o painel de contexto à direita. */
+export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTreinoPageProps) {
   const sessao = useSessaoTreino(ficha, historico);
   const segundosDescanso = sessao.configuracaoAtual?.descansoSegundos ?? 0;
   const timer = useTimerDescanso(segundosDescanso);
   const { resetar: resetarTimer, rodando: timerRodando, segundosRestantes: timerSegundosRestantes } = timer;
+
   const [confirmarFinalizarAberto, setConfirmarFinalizarAberto] = useState(false);
   const [confirmarCancelarAberto, setConfirmarCancelarAberto] = useState(false);
   const [serieHistoricoAlvo, setSerieHistoricoAlvo] = useState<number | null>(null);
   const [graficoAberto, setGraficoAberto] = useState(false);
-  const [timerAberto, setTimerAberto] = useState(false);
   const [desfazerAlvo, setDesfazerAlvo] = useState<{ indiceSerie: number; texto: string } | null>(null);
   const [finalizadoAberto, setFinalizadoAberto] = useState(false);
   const rodandoAnterior = useRef(false);
 
+  // Descanso terminou: feedback tátil e volta ao tempo programado (o card
+  // inline some sozinho — só aparece com descanso em andamento).
   useEffect(() => {
     if (rodandoAnterior.current && !timerRodando && timerSegundosRestantes === 0) {
-      const id = window.setTimeout(() => setTimerAberto(false), 0);
       void appModule.feedbackTatil.sucesso();
-      // Descanso terminou: volta para o tempo programado em vez de travar em 0:00.
       resetarTimer();
-      rodandoAnterior.current = timerRodando;
-      return () => window.clearTimeout(id);
     }
     rodandoAnterior.current = timerRodando;
   }, [resetarTimer, timerRodando, timerSegundosRestantes]);
 
   const catalogo = stateManagerRepository.listarTodosExercicios();
   const tiposCardio = stateManagerRepository.listarTiposCardio();
-  const exercicioCatalogo = catalogo.find(
-    (exercicio) => exercicio.id === sessao.exercicioAtual?.exercicioId
-  );
 
   const historicoDaFicha = useMemo(
     () => historico.filter((registro) => registro.fichaId === ficha.id),
     [ficha.id, historico]
   );
 
-  const concluidos = sessao.exercicios.map(
-    (exercicio) => exercicio.concluidas.size === exercicio.series.length
+  const itemAtual = sessao.itemAtual;
+  const exercicioAtual = itemAtual?.tipo === "exercicio" ? itemAtual.exercicio : undefined;
+  const cardioAtual = itemAtual?.tipo === "cardio" ? itemAtual : undefined;
+
+  const statusAtual = sessao.statusItens[sessao.indiceAtual];
+  const nomeAtual = statusAtual ? nomeDoItem(statusAtual, catalogo, tiposCardio).nome : "";
+  const grupoMuscular = catalogo.find(
+    (exercicio) => exercicio.id === exercicioAtual?.exercicioId
+  )?.grupoMuscular;
+
+  const statusAnterior = sessao.indiceAtual > 0 ? sessao.statusItens[sessao.indiceAtual - 1] : undefined;
+  const statusProximo = sessao.ultimoItem ? undefined : sessao.statusItens[sessao.indiceAtual + 1];
+  const nomeAnterior = statusAnterior && nomeDoItem(statusAnterior, catalogo, tiposCardio).nome;
+  const nomeProximo = statusProximo && nomeDoItem(statusProximo, catalogo, tiposCardio).nome;
+
+  // Séries da última sessão deste exercício — rótulos da coluna "anterior".
+  const seriesAnteriores = useMemo(() => {
+    const id = exercicioAtual?.exercicioId;
+    if (!id) return [];
+    const registro = [...historicoDaFicha]
+      .sort((a, b) => new Date(b.finalizadoEm).getTime() - new Date(a.finalizadoEm).getTime())
+      .find((item) =>
+        item.exercicios.some((exercicio) => exercicio.exercicioId === id && exercicio.series.length > 0)
+      );
+    return registro?.exercicios.find((exercicio) => exercicio.exercicioId === id)?.series ?? [];
+  }, [historicoDaFicha, exercicioAtual?.exercicioId]);
+
+  const cardioPrePreenchido = useMemo(
+    () =>
+      cardioAtual !== undefined &&
+      historicoDaFicha.some((registro) =>
+        registro.cardio.some((item) => item.tipo === cardioAtual.registro.tipo)
+      ),
+    [cardioAtual, historicoDaFicha]
   );
+
+  // Timer inline visível só com descanso em andamento (rodando ou pausado no meio).
+  const timerVisivel =
+    exercicioAtual !== undefined &&
+    segundosDescanso > 0 &&
+    (timer.rodando || (timer.segundosRestantes > 0 && timer.segundosRestantes < segundosDescanso));
 
   const persistirFinalizacao = () => {
     const registro = sessao.finalizar();
@@ -92,139 +128,222 @@ export function ExecucaoTreinoPage({
   };
 
   const solicitarFinalizacao = () => {
-    const resumo = sessao.resumoFinalizacao();
-    if (resumo.completo) {
+    if (sessao.resumoFinalizacao().completo) {
       persistirFinalizacao();
       return;
     }
     setConfirmarFinalizarAberto(true);
   };
 
-  if (!sessao.exercicioAtual && !sessao.temCardio) {
+  const concluirSerie = (indiceSerie: number) => {
+    const jaConcluida = exercicioAtual?.concluidas.has(indiceSerie);
+    sessao.marcarConcluida(sessao.indiceAtual, indiceSerie);
+    if (!jaConcluida) {
+      void appModule.feedbackTatil.impactoMedio();
+      if (segundosDescanso > 0) timer.reiniciar();
+      setDesfazerAlvo({ indiceSerie, texto: `Série ${indiceSerie + 1} concluída` });
+    }
+  };
+
+  const concluirCardio = (id: string) => {
+    if (cardioAtual && !cardioAtual.concluido) {
+      void appModule.feedbackTatil.impactoMedio();
+    }
+    sessao.marcarCardioConcluido(id);
+  };
+
+  if (sessao.itens.length === 0) {
     return (
-      <div className="min-h-[100dvh] bg-fundo px-4 py-8 text-center text-sm text-texto-secundario">
+      <div className="min-h-[100dvh] px-4 py-8 text-center text-sm text-texto-secundario">
         Esta ficha ainda não tem exercícios ou cardio.
       </div>
     );
   }
 
+  const botaoProximo = (
+    <Botao
+      variante="secundario"
+      ocuparLarguraTotal
+      onClick={sessao.ultimoItem ? solicitarFinalizacao : sessao.proximo}
+    >
+      <span className="min-w-0 truncate">
+        {sessao.ultimoItem ? "Finalizar treino" : `Próximo: ${nomeProximo}`}
+      </span>
+      <Icone nome="setaDireita" tamanho={15} className="shrink-0" />
+    </Botao>
+  );
+
   return (
-    <div className="min-h-[100dvh] bg-fundo text-texto-primario">
+    // Sem bg opaco: deixa o degradê quente do #root (index.css) aparecer.
+    <div className="flex h-[100dvh] flex-col overflow-hidden text-texto-primario">
       <HeaderExecucao
         nomeFicha={ficha.nome}
         iconeFicha={ficha.icone}
         emojiFicha={ficha.emoji}
-        modo={sessao.modo}
-        podeAlternarModo={sessao.podeAlternarModo}
-        aoAlternarModo={sessao.alternarModo}
-        aoCancelar={() => setConfirmarCancelarAberto(true)}
+        iniciadoEm={sessao.iniciadoEm}
+        progresso={sessao.progresso}
+        aoFinalizar={solicitarFinalizacao}
       />
 
-      {sessao.modo === "cardio" ? (
-        <PainelCardio
-          cardio={sessao.cardio}
+      <div className="flex min-h-0 flex-1">
+        <RailItens
+          itens={sessao.statusItens}
+          catalogo={catalogo}
           tiposCardio={tiposCardio}
-          cardioConcluido={sessao.cardioConcluido}
-          aoAtualizarCardio={sessao.atualizarCardio}
-          exibirVoltarMusculacao={sessao.podeAlternarModo}
-          aoConcluirCardio={(id) => {
-            if (!sessao.cardioConcluido.has(id)) {
-              void appModule.feedbackTatil.impactoMedio();
-            }
-            sessao.marcarCardioConcluido(id);
-          }}
-          aoVoltarMusculacao={sessao.alternarModo}
-          aoFinalizar={solicitarFinalizacao}
+          aoIrPara={sessao.irPara}
+          aoAbandonar={() => setConfirmarCancelarAberto(true)}
         />
-      ) : sessao.exercicioAtual && sessao.configuracaoAtual ? (
-        <>
-          <BarraProgressoExercicios
-            total={sessao.exercicios.length}
-            indiceAtual={sessao.indiceAtual}
-            concluidos={concluidos}
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <ChipsItens
+            itens={sessao.statusItens}
+            catalogo={catalogo}
+            tiposCardio={tiposCardio}
             aoIrPara={sessao.irPara}
           />
 
-          <main className="mx-auto w-full max-w-[768px] px-4 pb-[calc(var(--safe-bottom)+180px)] pt-3">
-            <section className="mb-8 transition-transform duration-300">
-              <div className="flex items-start justify-between gap-3">
-                <h1 className="min-w-0 flex-1 break-words font-display text-[clamp(22px,6.5vw,32px)] font-semibold leading-[1.1] text-texto-primario md:text-[32px]">
-                  {exercicioCatalogo?.nome ?? "Exercício"}
+          <div className="flex min-h-0 flex-1">
+            <main className="min-w-0 flex-1 overflow-y-auto px-4 pb-8 pt-2 md:px-6 md:pt-4">
+              <div className="mx-auto w-full max-w-[640px]">
+                <h1 className="break-words font-display text-[clamp(24px,6.5vw,28px)] font-semibold leading-[1.1] text-texto-primario">
+                  {nomeAtual}
                 </h1>
-                <div className="flex-shrink-0">
-                  <BotaoTimerDescanso
-                    tempo={timer.tempoFormatado}
-                    rodando={timer.rodando}
-                    aoAbrir={() => setTimerAberto(true)}
-                  />
+                <p className="mt-1.5 text-[13px] text-texto-secundario">
+                  {exercicioAtual && sessao.configuracaoAtual
+                    ? `${grupoMuscular ?? "Grupo"} · ${sessao.configuracaoAtual.series}x${sessao.configuracaoAtual.repeticoes} · ${sessao.configuracaoAtual.descansoSegundos}s descanso`
+                    : cardioPrePreenchido
+                      ? "Cardio · valores da última sessão pré-preenchidos"
+                      : "Cardio"}
+                </p>
+
+                {timerVisivel ? (
+                  <div className="mt-3">
+                    <TimerDescansoInline
+                      tempoFormatado={timer.tempoFormatado}
+                      segundosRestantes={timer.segundosRestantes}
+                      segundosIniciais={segundosDescanso}
+                      rodando={timer.rodando}
+                      aoAlternar={timer.alternar}
+                      aoPular={timer.resetar}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="mt-3.5">
+                  {exercicioAtual && sessao.configuracaoAtual ? (
+                    <CardSeries
+                      exercicio={exercicioAtual}
+                      usaCarga={sessao.configuracaoAtual.usaCarga}
+                      seriesAnteriores={seriesAnteriores}
+                      aoAtualizarSerie={(indiceSerie, atualizacao) =>
+                        sessao.atualizarSerie(sessao.indiceAtual, indiceSerie, atualizacao)
+                      }
+                      aoAdicionarSerie={() => sessao.adicionarSerie(sessao.indiceAtual)}
+                      aoRemoverSerie={(indiceSerie) =>
+                        sessao.removerSerie(sessao.indiceAtual, indiceSerie)
+                      }
+                      aoMarcarConcluida={concluirSerie}
+                      aoAbrirHistorico={setSerieHistoricoAlvo}
+                    />
+                  ) : cardioAtual ? (
+                    <CardRegistroCardio
+                      registro={cardioAtual.registro}
+                      tiposCardio={tiposCardio}
+                      concluido={cardioAtual.concluido}
+                      aoAtualizar={(atualizacao) =>
+                        sessao.atualizarCardio(cardioAtual.registro.cardioId, atualizacao)
+                      }
+                      aoConcluir={() => concluirCardio(cardioAtual.registro.cardioId)}
+                    />
+                  ) : null}
                 </div>
+
+                {/* Nota/progressão colapsadas — no lg+ vivem abertas no painel */}
+                <div className="mt-3 space-y-3 lg:hidden">
+                  {exercicioAtual ? (
+                    <>
+                      <NotaExercicio
+                        nota={exercicioAtual.nota}
+                        aoAtualizar={(nota) => sessao.atualizarNota(sessao.indiceAtual, nota)}
+                      />
+                      <AccordionProgressao
+                        exercicioId={exercicioAtual.exercicioId}
+                        historico={historicoDaFicha}
+                        aoAbrirGrafico={() => setGraficoAberto(true)}
+                      />
+                    </>
+                  ) : cardioAtual ? (
+                    <NotaExercicio
+                      nota={cardioAtual.registro.nota}
+                      aoAtualizar={(nota) =>
+                        sessao.atualizarCardio(cardioAtual.registro.cardioId, { nota })
+                      }
+                      rotulo="nota desta atividade"
+                    />
+                  ) : null}
+                </div>
+
+                {/* Próximo inline (md+): o rail cobre o "Anterior" */}
+                <div className="mt-4 hidden md:block">{botaoProximo}</div>
               </div>
-              <p className="mt-3 text-sm text-texto-secundario">
-                {exercicioCatalogo?.grupoMuscular ?? "Grupo"} · {sessao.configuracaoAtual.series}x
-                {sessao.configuracaoAtual.repeticoes} · {sessao.configuracaoAtual.descansoSegundos}s descanso
-              </p>
-            </section>
+            </main>
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] md:items-start">
-              <CardSeries
-                exercicio={sessao.exercicioAtual}
-                usaCarga={sessao.configuracaoAtual.usaCarga}
-                aoAtualizarSerie={(indiceSerie, atualizacao) =>
-                  sessao.atualizarSerie(sessao.indiceAtual, indiceSerie, atualizacao)
-                }
-                aoAdicionarSerie={() => sessao.adicionarSerie(sessao.indiceAtual)}
-                aoRemoverSerie={(indiceSerie) => sessao.removerSerie(sessao.indiceAtual, indiceSerie)}
-                aoMarcarConcluida={(indiceSerie) => {
-                  const jaConcluida = sessao.exercicioAtual?.concluidas.has(indiceSerie);
-                  sessao.marcarConcluida(sessao.indiceAtual, indiceSerie);
-                  if (!jaConcluida) {
-                    void appModule.feedbackTatil.impactoMedio();
-                    timer.reiniciar();
-                    setTimerAberto(true);
-                    setDesfazerAlvo({
-                      indiceSerie,
-                      texto: `Série ${indiceSerie + 1} concluída`,
-                    });
-                  }
-                }}
-                aoAbrirHistorico={setSerieHistoricoAlvo}
-              />
+            {/* Painel de contexto (lg+): o que no mobile é accordion, aberto */}
+            <aside className="hidden w-[320px] shrink-0 space-y-3 overflow-y-auto py-4 pl-1 pr-5 lg:block">
+              {exercicioAtual ? (
+                <>
+                  <AccordionProgressao
+                    exercicioId={exercicioAtual.exercicioId}
+                    historico={historicoDaFicha}
+                    aoAbrirGrafico={() => setGraficoAberto(true)}
+                    variante="aberta"
+                  />
+                  <NotaExercicio
+                    nota={exercicioAtual.nota}
+                    aoAtualizar={(nota) => sessao.atualizarNota(sessao.indiceAtual, nota)}
+                    variante="aberta"
+                  />
+                </>
+              ) : cardioAtual ? (
+                <>
+                  <HistoricoCardio historico={historicoDaFicha} tiposCardio={tiposCardio} />
+                  <NotaExercicio
+                    nota={cardioAtual.registro.nota}
+                    aoAtualizar={(nota) =>
+                      sessao.atualizarCardio(cardioAtual.registro.cardioId, { nota })
+                    }
+                    rotulo="nota desta atividade"
+                    variante="aberta"
+                  />
+                </>
+              ) : null}
+            </aside>
+          </div>
+        </div>
+      </div>
 
-              <div className="grid gap-5">
-                <NotaExercicio
-                  nota={sessao.exercicioAtual.nota}
-                  aoAtualizar={(nota) => sessao.atualizarNota(sessao.indiceAtual, nota)}
-                />
-
-                <AccordionProgressao
-                  exercicioId={sessao.exercicioAtual.exercicioId}
-                  historico={historicoDaFicha}
-                  aoAbrirGrafico={() => setGraficoAberto(true)}
-                />
-              </div>
-            </div>
-          </main>
-
-          <TimerDescanso
-            aberto={timerAberto}
-            tempo={timer.tempoFormatado}
-            segundosRestantes={timer.segundosRestantes}
-            segundosIniciais={segundosDescanso}
-            rodando={timer.rodando}
-            aoAlternar={timer.alternar}
-            aoResetar={timer.resetar}
-            aoFechar={() => setTimerAberto(false)}
-          />
-          <NavegacaoExercicios
-            indiceAtual={sessao.indiceAtual}
-            total={sessao.exercicios.length}
-            ultimoExercicio={sessao.ultimoExercicio}
-            aoAnterior={sessao.anterior}
-            aoProximo={sessao.proximo}
-            aoFinalizar={solicitarFinalizacao}
-          />
-        </>
-      ) : null}
+      {/* Footer mobile: navegação entre itens + abandonar */}
+      <footer className="border-t border-borda-suave bg-fundo/95 px-4 pb-[calc(var(--safe-bottom)+10px)] pt-2.5 backdrop-blur-sm md:hidden">
+        <div className="grid grid-cols-[1fr_2fr] gap-2">
+          <Botao
+            variante="secundario"
+            ocuparLarguraTotal
+            disabled={sessao.indiceAtual === 0}
+            onClick={sessao.anterior}
+            icone={<Icone nome="setaEsquerda" tamanho={15} className="shrink-0" />}
+          >
+            <span className="min-w-0 truncate">{nomeAnterior ?? "Anterior"}</span>
+          </Botao>
+          {botaoProximo}
+        </div>
+        <button
+          type="button"
+          onClick={() => setConfirmarCancelarAberto(true)}
+          className="mt-1.5 inline-flex min-h-[34px] w-full cursor-pointer items-center justify-center gap-2 rounded-[8px] text-xs font-medium text-texto-sutil transition-colors duration-150 hover:text-perigo"
+        >
+          <Icone nome="sair" tamanho={13} /> Abandonar treino
+        </button>
+      </footer>
 
       <OverlayConfirmarFinalizar
         aberto={confirmarFinalizarAberto}
@@ -237,10 +356,10 @@ export function ExecucaoTreinoPage({
         aoContinuar={() => setConfirmarCancelarAberto(false)}
         aoDescartar={descartarTreino}
       />
-      {sessao.exercicioAtual && (
+      {exercicioAtual && (
         <OverlayHistoricoSerie
           aberto={serieHistoricoAlvo !== null}
-          exercicioId={sessao.exercicioAtual.exercicioId}
+          exercicioId={exercicioAtual.exercicioId}
           historico={historicoDaFicha}
           aoFechar={() => setSerieHistoricoAlvo(null)}
           aoSelecionar={(serie) => {
@@ -249,11 +368,11 @@ export function ExecucaoTreinoPage({
           }}
         />
       )}
-      {sessao.exercicioAtual && (
+      {exercicioAtual && (
         <OverlayGraficoProgressao
           aberto={graficoAberto}
           aoFechar={() => setGraficoAberto(false)}
-          exercicioId={sessao.exercicioAtual.exercicioId}
+          exercicioId={exercicioAtual.exercicioId}
           exercicios={catalogo}
           historico={historicoDaFicha}
         />
@@ -264,7 +383,7 @@ export function ExecucaoTreinoPage({
         aoDesfazer={() => {
           if (desfazerAlvo) {
             sessao.marcarConcluida(sessao.indiceAtual, desfazerAlvo.indiceSerie);
-            setTimerAberto(false);
+            timer.resetar();
           }
         }}
         aoFechar={() => setDesfazerAlvo(null)}

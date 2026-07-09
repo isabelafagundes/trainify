@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Definição de Rotas — Trainify
+   Definição de Rotas — Pezzo
    ═══════════════════════════════════════════ */
 
 /** Rotas da aplicação */

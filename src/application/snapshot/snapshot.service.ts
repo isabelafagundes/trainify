@@ -1,19 +1,21 @@
 import { VERSAO_SCHEMA } from "@/constants";
-import type { SnapshotTrainify } from "@/domain/snapshot";
+import type { SnapshotPezzo } from "@/domain/snapshot";
+import type { EntradaCardio, ExercicioFicha } from "@/domain/tipos";
+import { itensDeFormatoAntigo } from "@/domain/ficha";
 import type { Usuario } from "@/domain/usuario";
-import { trainifyState } from "@/application/state/trainify.state";
+import { pezzoState } from "@/application/state/pezzo.state";
 import { usuarioManager } from "@/application/state/usuario.state";
 
 export type EstrategiaImportacaoSnapshot = "substituir" | "maisRecente";
 
 export interface SnapshotService {
-  exportarSnapshot(): Promise<SnapshotTrainify>;
+  exportarSnapshot(): Promise<SnapshotPezzo>;
   importarSnapshot(
-    snapshot: SnapshotTrainify,
+    snapshot: SnapshotPezzo,
     estrategia: EstrategiaImportacaoSnapshot
   ): Promise<void>;
-  serializar(snapshot: SnapshotTrainify): string;
-  desserializar(texto: string): SnapshotTrainify;
+  serializar(snapshot: SnapshotPezzo): string;
+  desserializar(texto: string): SnapshotPezzo;
 }
 
 function ehObjeto(valor: unknown): valor is Record<string, unknown> {
@@ -45,12 +47,12 @@ function validarUsuario(valor: unknown): Usuario | null {
   };
 }
 
-function validarSnapshotV1(valor: unknown): SnapshotTrainify {
+function validarSnapshotV2(valor: unknown): SnapshotPezzo {
   if (!ehObjeto(valor)) {
     throw new Error("Backup invalido.");
   }
 
-  if (valor.versaoSchema !== 1) {
+  if (valor.versaoSchema !== 2) {
     throw new Error("Versao de backup invalida.");
   }
 
@@ -76,7 +78,7 @@ function validarSnapshotV1(valor: unknown): SnapshotTrainify {
   }
 
   return {
-    versaoSchema: 1,
+    versaoSchema: 2,
     atualizadoEm: valor.atualizadoEm,
     exportadoEm: valor.exportadoEm,
     usuario: validarUsuario(valor.usuario),
@@ -90,65 +92,96 @@ function validarSnapshotV1(valor: unknown): SnapshotTrainify {
   };
 }
 
-function migrarAteVersaoAtual(valor: unknown): SnapshotTrainify {
+/** v1 -> v2: ficha deixa de ter modalidade/exercicios/cardio separados e passa
+    a ter uma lista unica ordenada de itens (exercicios primeiro, cardio no fim). */
+function migrarFichaV1ParaV2(ficha: unknown): unknown {
+  if (!ehObjeto(ficha) || Array.isArray(ficha.itens)) return ficha;
+
+  const { modalidade: _modalidade, exercicios, cardio, ...resto } = ficha;
+  return {
+    ...resto,
+    itens: itensDeFormatoAntigo(
+      (Array.isArray(exercicios) ? exercicios : []) as ExercicioFicha[],
+      (Array.isArray(cardio) ? cardio : []) as EntradaCardio[]
+    ),
+  };
+}
+
+function migrarV1ParaV2(valor: Record<string, unknown>): Record<string, unknown> {
+  if (!ehObjeto(valor.dados) || !Array.isArray(valor.dados.fichas)) {
+    return { ...valor, versaoSchema: 2 };
+  }
+
+  return {
+    ...valor,
+    versaoSchema: 2,
+    dados: {
+      ...valor.dados,
+      fichas: valor.dados.fichas.map(migrarFichaV1ParaV2),
+    },
+  };
+}
+
+function migrarAteVersaoAtual(valor: unknown): SnapshotPezzo {
   if (!ehObjeto(valor) || typeof valor.versaoSchema !== "number") {
     throw new Error("Backup sem versao de schema.");
   }
 
   if (valor.versaoSchema > VERSAO_SCHEMA) {
-    throw new Error("Este backup foi criado por uma versao mais nova do Trainify.");
+    throw new Error("Este backup foi criado por uma versao mais nova do Pezzo.");
   }
 
   if (valor.versaoSchema < 1) {
     throw new Error("Versao de backup nao suportada.");
   }
 
-  // Cadeia de migracoes futuras: v1 -> v2 -> ...
-  return validarSnapshotV1(valor);
+  // Cadeia de migracoes: v1 -> v2 -> ...
+  const migrado = valor.versaoSchema === 1 ? migrarV1ParaV2(valor) : valor;
+  return validarSnapshotV2(migrado);
 }
 
 async function garantirInicializacao(): Promise<void> {
   await Promise.all([
-    trainifyState.inicializar(),
+    pezzoState.inicializar(),
     usuarioManager.inicializar(),
   ]);
 }
 
-class SnapshotTrainifyService implements SnapshotService {
-  async exportarSnapshot(): Promise<SnapshotTrainify> {
+class SnapshotPezzoService implements SnapshotService {
+  async exportarSnapshot(): Promise<SnapshotPezzo> {
     await garantirInicializacao();
 
     const agora = new Date().toISOString();
     return {
       versaoSchema: VERSAO_SCHEMA,
-      atualizadoEm: trainifyState.getAtualizadoEm(),
+      atualizadoEm: pezzoState.getAtualizadoEm(),
       exportadoEm: agora,
       usuario: usuarioManager.obterUsuario(),
-      dados: trainifyState.getDadosPortateis(),
+      dados: pezzoState.getDadosPortateis(),
     };
   }
 
   async importarSnapshot(
-    snapshot: SnapshotTrainify,
+    snapshot: SnapshotPezzo,
     estrategia: EstrategiaImportacaoSnapshot
   ): Promise<void> {
     await garantirInicializacao();
 
     if (estrategia === "maisRecente") {
-      const local = Date.parse(trainifyState.getAtualizadoEm());
+      const local = Date.parse(pezzoState.getAtualizadoEm());
       const remoto = Date.parse(snapshot.atualizadoEm);
       if (remoto <= local) return;
     }
 
     usuarioManager.substituirUsuario(snapshot.usuario);
-    trainifyState.substituirDados(snapshot.dados, snapshot.atualizadoEm);
+    pezzoState.substituirDados(snapshot.dados, snapshot.atualizadoEm);
   }
 
-  serializar(snapshot: SnapshotTrainify): string {
+  serializar(snapshot: SnapshotPezzo): string {
     return JSON.stringify(snapshot, null, 2);
   }
 
-  desserializar(texto: string): SnapshotTrainify {
+  desserializar(texto: string): SnapshotPezzo {
     try {
       return migrarAteVersaoAtual(JSON.parse(texto));
     } catch (erro) {
@@ -160,4 +193,4 @@ class SnapshotTrainifyService implements SnapshotService {
   }
 }
 
-export const snapshotService = new SnapshotTrainifyService();
+export const snapshotService = new SnapshotPezzoService();

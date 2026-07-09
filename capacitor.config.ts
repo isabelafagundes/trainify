@@ -3,7 +3,7 @@ import { KeyboardResize, KeyboardStyle } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.trainify.app',
-  appName: 'Trainify',
+  appName: 'Pezzo',
   webDir: 'dist',
   backgroundColor: '#f5f1ea',
   server: {

@@ -4,8 +4,15 @@
     {
       "name": "vite-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5180", "--strictPort"],
-      "port": 5180
+      "runtimeArgs": ["run", "dev"],
+      "port": 5180,
+      "autoPort": true
+    },
+    {
+      "name": "design-canvas",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["C:\\Users\\isabe\\.claude\\skills\\design-canvas\\serve.py", "tmp\\repensar-tela\\execucao-treino"],
+      "port": 8765
     },
     {
       "name": "vite-preview",

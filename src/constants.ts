@@ -1,15 +1,16 @@
 /* ═══════════════════════════════════════════
-   Constantes Globais — Trainify
+   Constantes Globais — Pezzo
    ═══════════════════════════════════════════ */
 
 /** Nome da aplicação */
-export const APP_NAME = "Trainify";
+export const APP_NAME = "Pezzo";
 
 /** Versão da aplicação */
 export const APP_VERSION = "1.0.0";
 
-/** Versao do formato de snapshot exportado/importado */
-export const VERSAO_SCHEMA = 1;
+/** Versao do formato de snapshot exportado/importado.
+    v2: ficha passou a ser lista unica ordenada de itens (exercicio | cardio). */
+export const VERSAO_SCHEMA = 2;
 
 /** Timeout padrão para requisições (ms) */
 export const DEFAULT_TIMEOUT = 30000;

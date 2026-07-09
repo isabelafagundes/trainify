@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Modelo de Usuário — Trainify
+   Modelo de Usuário — Pezzo
    ═══════════════════════════════════════════ */
 
 export interface Usuario {

@@ -1,4 +1,5 @@
 import type { Exercicio, Ficha } from "@/domain/tipos";
+import { exerciciosDaFicha } from "@/domain/ficha";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { extrairGruposMusculares } from "@/interface/page/area-logada/programa/utils";
@@ -27,8 +28,9 @@ export function FichaExpansivel({
   aoIniciarTreino,
   aoEditar,
 }: PropriedadesFichaExpansivel) {
-  const gruposMusculares = extrairGruposMusculares(ficha.exercicios, exerciciosCatalogo);
-  const semConteudo = ficha.exercicios.length === 0 && ficha.cardio.length === 0;
+  const exerciciosFicha = exerciciosDaFicha(ficha);
+  const gruposMusculares = extrairGruposMusculares(exerciciosFicha, exerciciosCatalogo);
+  const semConteudo = ficha.itens.length === 0;
 
   function nomeExercicio(exercicioId: string): string {
     return exerciciosCatalogo.find((e) => e.id === exercicioId)?.nome ?? "Exercício";
@@ -54,7 +56,7 @@ export function FichaExpansivel({
                 {ficha.nome}
               </span>
               <span className="flex-shrink-0 text-xs text-texto-secundario tabular-nums">
-                {ficha.exercicios.length} exerc.
+                {exerciciosFicha.length} exerc.
               </span>
             </span>
             {gruposMusculares.length > 0 && (
@@ -96,39 +98,40 @@ export function FichaExpansivel({
               </p>
             ) : (
               <ul className="space-y-1.5 pt-1">
-                {ficha.exercicios.map((ef, i) => (
-                  <li
-                    key={`${ef.exercicioId}-${i}`}
-                    className="flex items-baseline justify-between gap-3"
-                  >
-                    <span className="min-w-0 truncate text-sm text-texto-secundario">
-                      {nomeExercicio(ef.exercicioId)}
-                    </span>
-                    <span className="flex flex-shrink-0 items-center gap-2">
-                      <span className="text-xs font-medium tabular-nums text-texto-primario">
-                        {ef.series} × {ef.repeticoes}
+                {ficha.itens.map((item, i) =>
+                  item.tipo === "exercicio" ? (
+                    <li
+                      key={`${item.exercicio.exercicioId}-${i}`}
+                      className="flex items-baseline justify-between gap-3"
+                    >
+                      <span className="min-w-0 truncate text-sm text-texto-secundario">
+                        {nomeExercicio(item.exercicio.exercicioId)}
                       </span>
-                      {ef.usaCarga && (
-                        <span className="rounded-full bg-acento-suave px-2 py-0.5 text-[10px] font-medium text-texto-secundario">
-                          carga
+                      <span className="flex flex-shrink-0 items-center gap-2">
+                        <span className="text-xs font-medium tabular-nums text-texto-primario">
+                          {item.exercicio.series} × {item.exercicio.repeticoes}
                         </span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-                {ficha.cardio.map((c) => (
-                  <li
-                    key={c.id}
-                    className="flex items-baseline justify-between gap-3"
-                  >
-                    <span className="min-w-0 truncate text-sm text-texto-secundario">
-                      {c.tipo}
-                    </span>
-                    <span className="flex-shrink-0 text-xs font-medium tabular-nums text-texto-primario">
-                      {c.duracaoMinutos} min
-                    </span>
-                  </li>
-                ))}
+                        {item.exercicio.usaCarga && (
+                          <span className="rounded-full bg-acento-suave px-2 py-0.5 text-[10px] font-medium text-texto-secundario">
+                            carga
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ) : (
+                    <li
+                      key={item.cardio.id}
+                      className="flex items-baseline justify-between gap-3"
+                    >
+                      <span className="min-w-0 truncate text-sm text-texto-secundario">
+                        {item.cardio.tipo}
+                      </span>
+                      <span className="flex-shrink-0 text-xs font-medium tabular-nums text-texto-primario">
+                        {item.cardio.duracaoMinutos} min
+                      </span>
+                    </li>
+                  )
+                )}
               </ul>
             )}
 

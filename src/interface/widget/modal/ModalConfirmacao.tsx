@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Modal de Confirmação — Trainify
+   Modal de Confirmação — Pezzo
    Componente customizado para confirmações de ações destrutivas
    ═══════════════════════════════════════════ */
 

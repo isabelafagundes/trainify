@@ -1,4 +1,5 @@
 import type { Exercicio, ExercicioFicha, Ficha } from "@/domain/tipos";
+import { exerciciosDaFicha } from "@/domain/ficha";
 import { formatarDataRelativa } from "@/interface/page/area-logada/programa/utils";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
@@ -30,8 +31,13 @@ export function LinhaFicha({
   aoIniciarTreino,
   proximoTreino = false,
 }: PropriedadesLinhaFicha) {
-  const exerciciosFicha = Array.isArray(ficha.exercicios) ? ficha.exercicios : [];
+  const exerciciosFicha = exerciciosDaFicha(ficha);
   const gruposMusculares = extrairGruposMusculares(exerciciosFicha, exerciciosCatalogo);
+
+  // Metadados numa única linha, agrupados à esquerda: grupos + contagem.
+  // A recência ("Hoje") sai daqui e vira um chip ao lado do nome — antes ela
+  // era empurrada para a direita pelo flex-1 e ficava flutuando junto ao botão.
+  const meta = [...gruposMusculares, `${exerciciosFicha.length} exerc.`].join(" · ");
 
   return (
     <div className={`flex items-center gap-4 py-3 px-4 transition-all duration-200 group ${proximoTreino ? "bg-acento-suave/50 animate-highlight-pulse" : "hover:bg-superficie-suave"}`}>
@@ -46,25 +52,19 @@ export function LinhaFicha({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
-          <h3 className="text-sm font-semibold text-texto-primario leading-tight font-display truncate transition-colors duration-200 group-hover:text-texto-secundario">
+          <h3 className="min-w-0 truncate text-sm font-semibold text-texto-primario leading-tight font-display transition-colors duration-200 group-hover:text-texto-secundario">
             {ficha.nome}
           </h3>
-          <span className="flex-shrink-0 text-xs text-texto-secundario tabular-nums">
-            {exerciciosFicha.length} exerc.
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 mt-1 min-w-0">
-          {gruposMusculares.length > 0 && (
-            <p className="flex-1 min-w-0 truncate text-xs text-texto-sutil">
-              {gruposMusculares.join(" · ")}
-            </p>
-          )}
           {ultimoTreino && (
-            <span className="flex-shrink-0 text-xs text-texto-secundario whitespace-nowrap">
-              · {formatarDataRelativa(ultimoTreino)}
+            <span className="inline-flex flex-shrink-0 items-center rounded-full bg-acento-suave px-1.5 py-0.5 text-xs font-semibold leading-none tracking-[0.01em] text-acento">
+              <span className="sr-only">Última vez treinada: </span>
+              {formatarDataRelativa(ultimoTreino)}
             </span>
           )}
         </div>
+        <p className="mt-1 truncate text-xs text-texto-sutil">
+          {meta}
+        </p>
       </div>
 
       {proximoTreino ? (

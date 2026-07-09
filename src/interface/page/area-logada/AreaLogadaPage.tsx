@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Layout da Área Logada — Trainify
+   Layout da Área Logada — Pezzo
    ═══════════════════════════════════════════ */
 
 import type { ReactNode } from "react";

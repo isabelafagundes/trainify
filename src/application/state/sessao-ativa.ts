@@ -10,26 +10,36 @@ import type { RegistroCardio, RegistroSerie } from "@/domain/tipos";
 import { STORAGE_KEYS } from "@/constants";
 import { appModule } from "@/interface/configuration/module/app.module";
 
-export type ModoExecucao = "musculacao" | "cardio";
+/** Versão do esquema salvo. Snapshots de versões anteriores (formato de
+    "modos" musculação/cardio, sem campo `versao`) são descartados — a sessão
+    ativa é transitória e não justifica migração. */
+export const VERSAO_SESSAO_SALVA = 2;
 
-/** Exercício da sessão em formato serializável (Set → array). */
-export interface SessaoExercicioSalva {
-  exercicioId: string;
-  series: RegistroSerie[];
-  nota: string;
-  concluidas: number[];
-  visitado: boolean;
-}
+/** Item da sessão em formato serializável (Set → array). Espelha a posição
+    de `ficha.itens` — a identidade do item é o índice. */
+export type SessaoItemSalvo =
+  | {
+      tipo: "exercicio";
+      exercicioId: string;
+      series: RegistroSerie[];
+      nota: string;
+      concluidas: number[];
+      visitado: boolean;
+    }
+  | {
+      tipo: "cardio";
+      registro: RegistroCardio;
+      concluido: boolean;
+      visitado: boolean;
+    };
 
 /** Snapshot completo do treino em execução. */
 export interface SessaoTreinoSalva {
+  versao: typeof VERSAO_SESSAO_SALVA;
   fichaId: string;
   iniciadoEm: string;
-  modo: ModoExecucao;
   indiceAtual: number;
-  exercicios: SessaoExercicioSalva[];
-  cardio: RegistroCardio[];
-  cardioConcluido: string[];
+  itens: SessaoItemSalvo[];
   atualizadoEm: string;
 }
 
@@ -37,7 +47,12 @@ export async function carregarSessaoAtiva(): Promise<SessaoTreinoSalva | null> {
   try {
     const salvo = await appModule.armazenamento.obter(STORAGE_KEYS.SESSAO_ATIVA);
     if (!salvo) return null;
-    return JSON.parse(salvo) as SessaoTreinoSalva;
+    const dados = JSON.parse(salvo) as { versao?: number; itens?: unknown };
+    if (dados.versao !== VERSAO_SESSAO_SALVA || !Array.isArray(dados.itens)) {
+      await limparSessaoAtiva();
+      return null;
+    }
+    return dados as SessaoTreinoSalva;
   } catch (erro) {
     console.error("Erro ao carregar sessão ativa:", erro);
     return null;
