@@ -1,24 +1,38 @@
 import { AVATAR_EMOJI_PADRAO } from "@/domain/usuario";
 import { Icone } from "@/interface/widget/svg/Icone";
 import { ABAS, type AbaNavegacao } from "./NavegacaoInferior";
+import { ROTAS } from "@/interface/rota/rotas";
 
 interface PropriedadesNavegacaoLateral {
   abaAtiva: AbaNavegacao;
+  /** Caminho atual — distingue Programas / Fichas / Exercícios dentro da seção. */
+  caminhoAtual: string;
   aoMudarAba: (aba: AbaNavegacao) => void;
+  /** Navega para um caminho literal (sub-itens da seção Programas). */
+  aoIrPara: (caminho: string) => void;
   nomeUsuario?: string;
   avatarEmoji?: string;
   aoAbrirPerfil?: () => void;
 }
 
+/** Sub-itens (bibliotecas) aninhados sob "Programas" no desktop. */
+const SUBITENS_PROGRAMAS = [
+  { rotulo: "Fichas", icone: "halter", caminho: ROTAS.gerenciarFichas },
+  { rotulo: "Exercícios", icone: "alvo", caminho: ROTAS.gerenciarExercicios },
+];
+
 /**
  * Navegação principal em barra lateral — visível apenas no desktop (lg+).
- * Reaproveita exatamente a config de abas (ABAS) e o handler aoMudarAba
- * da navegação inferior; é só uma apresentação alternativa para telas largas.
- * No rodapé fica o acesso ao perfil/preferências (mesmo drawer do cabeçalho).
+ * Reaproveita a config de abas (ABAS) e o handler aoMudarAba da navegação
+ * inferior. A aba "Programas" (id "gerenciar") é a casa da seção de
+ * gerenciamento; quando ativa, expande em Fichas / Exercícios (as bibliotecas),
+ * espelhando o rodapé "Bibliotecas" do mobile.
  */
 export function NavegacaoLateral({
   abaAtiva,
+  caminhoAtual,
   aoMudarAba,
+  aoIrPara,
   nomeUsuario,
   avatarEmoji,
   aoAbrirPerfil,
@@ -42,27 +56,62 @@ export function NavegacaoLateral({
 
       <nav role="tablist" aria-label="Navegação principal" className="flex flex-col gap-1">
         {ABAS.map((aba) => {
-          const ativa = abaAtiva === aba.id;
+          const secaoGerenciar = aba.id === "gerenciar";
+          // A aba "Programas" só fica destacada quando estamos na home da seção
+          // (/gerenciar exato); nas bibliotecas quem destaca é o sub-item.
+          const ativa = secaoGerenciar
+            ? caminhoAtual === ROTAS.gerenciar
+            : abaAtiva === aba.id;
+
           return (
-            <button
-              key={aba.id}
-              role="tab"
-              aria-selected={ativa}
-              aria-label={aba.rotulo}
-              onClick={() => aoMudarAba(aba.id)}
-              className={`
-                flex items-center gap-3 rounded-xl px-3 py-2.5
-                text-sm transition-colors duration-150 ease-out cursor-pointer
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento
-                ${ativa
-                  ? "bg-acento-suave text-texto-primario font-semibold"
-                  : "text-texto-secundario font-medium hover:bg-superficie-suave hover:text-texto-primario"
-                }
-              `}
-            >
-              <Icone nome={aba.icone} tamanho={20} />
-              <span>{aba.rotulo}</span>
-            </button>
+            <div key={aba.id}>
+              <button
+                role="tab"
+                aria-selected={ativa}
+                aria-label={aba.rotulo}
+                onClick={() => aoMudarAba(aba.id)}
+                className={`
+                  flex w-full items-center gap-3 rounded-xl px-3 py-2.5
+                  text-sm transition-colors duration-150 ease-out cursor-pointer
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento
+                  ${ativa
+                    ? "bg-acento-suave text-texto-primario font-semibold"
+                    : "text-texto-secundario font-medium hover:bg-superficie-suave hover:text-texto-primario"
+                  }
+                `}
+              >
+                <Icone nome={aba.icone} tamanho={20} />
+                <span>{aba.rotulo}</span>
+              </button>
+
+              {/* Bibliotecas aninhadas — visíveis quando a seção está ativa. */}
+              {secaoGerenciar && abaAtiva === "gerenciar" && (
+                <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-borda pl-3">
+                  {SUBITENS_PROGRAMAS.map((sub) => {
+                    const subAtivo = caminhoAtual === sub.caminho;
+                    return (
+                      <button
+                        key={sub.caminho}
+                        onClick={() => aoIrPara(sub.caminho)}
+                        aria-current={subAtivo ? "page" : undefined}
+                        className={`
+                          flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2
+                          text-[13px] transition-colors duration-150 cursor-pointer
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento
+                          ${subAtivo
+                            ? "bg-acento-suave text-texto-primario font-semibold"
+                            : "text-texto-secundario font-medium hover:bg-superficie-suave hover:text-texto-primario"
+                          }
+                        `}
+                      >
+                        <Icone nome={sub.icone} tamanho={16} />
+                        <span>{sub.rotulo}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>

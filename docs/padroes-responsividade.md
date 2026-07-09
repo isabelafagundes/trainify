@@ -97,7 +97,24 @@ mobile (visualmente idêntico a um `space-y`):
   mobile.
 
 Aplicado em: Histórico (lista por mês), Estatísticas (progressão por exercício),
-Gerenciar (Programas, Fichas, grupos de Exercícios).
+Gerenciar (listas de "trocar para", Fichas, grupos de Exercícios).
+
+## Padrão de navegação de seção: rodapé (mobile) / sub-itens na sidebar (desktop)
+
+Quando uma aba raiz agrupa mais de um CRUD, a navegação entre eles **promove**
+para a sidebar no desktop — mesmo princípio das abas principais. Caso concreto:
+a aba **Programas** (`/gerenciar`) é a casa da seção; **Fichas**
+(`/gerenciar/fichas`) e **Exercícios** (`/gerenciar/exercicios`) são telas
+próprias (drill-in com voltar, via `ehTabRaiz` → falso nas sub-rotas).
+
+| Faixa | Como se alterna entre os CRUDs |
+|---|---|
+| Mobile / Tablet (`< lg`) | Seção **"Bibliotecas"** no rodapé da tela de Programas leva a Fichas/Exercícios (`lg:hidden`). |
+| Desktop (`lg`) | A entrada **"Programas"** na [`NavegacaoLateral`](../src/interface/widget/menu-lateral/NavegacaoLateral.tsx) expande em **Fichas / Exercícios** aninhados quando a seção está ativa. O rodapé "Bibliotecas" some. |
+
+Nunca se reintroduz um seletor segmentado (o antigo `BigSwitcher` foi removido):
+a decisão de "qual CRUD" mora no rodapé (mobile) ou na sidebar (desktop), nunca
+num controle de peso igual competindo com o conteúdo.
 
 ## Padrão de editores: drawer lateral (md+) / tela cheia (mobile)
 
@@ -185,7 +202,7 @@ tratamento de barra e vira botões de largura automática alinhados à direita:
 | Home / Treinos | ✅ | Container de leitura centralizado |
 | Histórico | ✅ | Grid 2 col por mês |
 | Estatísticas | ✅ | Grid 2 col na progressão |
-| Gerenciar | ✅ | Grid 2 col (programas/fichas/exercícios) |
+| Gerenciar / Programas | ✅ | Programas é a casa (herói + "trocar para"); Fichas/Exercícios são telas próprias, alcançadas por rodapé "Bibliotecas" (mobile/tablet) ou sub-itens da sidebar (desktop). Grid 2 col nas listas. |
 | Editores (programa/ficha) | ✅ | Drawer lateral md+ / tela cheia mobile |
 | Execução de Treino | ✅ | Conteúdo centralizado 768 + overlays viram modal centralizado md+ |
 | Resumo do Programa | ⏳ | herda o container |

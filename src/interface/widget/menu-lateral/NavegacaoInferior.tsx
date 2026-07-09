@@ -12,7 +12,7 @@ export const ABAS: { id: AbaNavegacao; rotulo: string; icone: string }[] = [
   { id: "treinos", rotulo: "Treinos", icone: "halter" },
   { id: "historico", rotulo: "Histórico", icone: "grafico" },
   { id: "estatisticas", rotulo: "Estatísticas", icone: "tendencia" },
-  { id: "gerenciar", rotulo: "Gerenciar", icone: "listaVerificacao" },
+  { id: "gerenciar", rotulo: "Programas", icone: "clipboard" },
 ];
 
 export type { AbaNavegacao };

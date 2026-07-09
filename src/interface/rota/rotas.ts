@@ -21,6 +21,8 @@ export const ROTAS = {
   historico: "/historico",
   estatisticas: "/estatisticas",
   gerenciar: "/gerenciar",
+  gerenciarFichas: "/gerenciar/fichas",
+  gerenciarExercicios: "/gerenciar/exercicios",
   execucao: "/execucao/:fichaId",
   sequencia: "/sequencia",
   resumoPrograma: "/programa/:programaId",
@@ -47,6 +49,10 @@ export function construirCaminho(destino: string, params: ParamsRota = {}): stri
       return "/estatisticas";
     case "gerenciar":
       return "/gerenciar";
+    case "gerenciarFichas":
+      return "/gerenciar/fichas";
+    case "gerenciarExercicios":
+      return "/gerenciar/exercicios";
     case "execucao":
       return `/execucao/${params.fichaId}`;
     case "detalheSequencia":
@@ -89,7 +95,9 @@ const TITULOS: { padrao: string; titulo: string }[] = [
   { padrao: ROTAS.sequencia, titulo: "Sequência" },
   { padrao: ROTAS.historico, titulo: "Histórico" },
   { padrao: ROTAS.estatisticas, titulo: "Estatísticas" },
-  { padrao: ROTAS.gerenciar, titulo: "Gerenciar" },
+  { padrao: ROTAS.gerenciarFichas, titulo: "Fichas" },
+  { padrao: ROTAS.gerenciarExercicios, titulo: "Exercícios" },
+  { padrao: ROTAS.gerenciar, titulo: "Programas" },
   { padrao: ROTAS.treinos, titulo: "Meus Treinos" },
 ];
 
