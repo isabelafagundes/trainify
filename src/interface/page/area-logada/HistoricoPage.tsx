@@ -54,7 +54,7 @@ export function HistoricoPage({
             let indiceGlobal = 0;
             return grupos.map((grupo) => (
               <section key={grupo.mes}>
-                <h2 className="sticky top-[72px] z-10 -mx-1 mb-2 bg-fundo/95 px-1 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil backdrop-blur reveal-up">
+                <h2 className="sticky top-[72px] z-10 -mx-1 mb-2 px-1 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil backdrop-blur reveal-up">
                   {grupo.mes}
                 </h2>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">

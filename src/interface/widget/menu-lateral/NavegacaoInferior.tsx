@@ -56,7 +56,7 @@ export function NavegacaoInferior({ abaAtiva, aoMudarAba }: PropriedadesNavegaca
           atrás de um blur/gradiente no rodapé, cobrindo a área da navigation bar. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed bottom-0 left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2 lg:hidden"
+        className="pointer-events-none fixed bottom-0 left-0 right-0 z-40 w-full lg:hidden"
         style={{
           height: "calc(var(--safe-bottom) + 96px)",
           backdropFilter: "blur(12px)",
