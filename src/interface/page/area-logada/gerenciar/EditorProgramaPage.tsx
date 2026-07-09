@@ -11,6 +11,7 @@ import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
 import { useToast } from "@/interface/widget/toast";
 import { ModalCopiarPrograma } from "@/interface/widget/modal/ModalCopiarPrograma";
+import { ModalConfirmacao } from "@/interface/widget/modal/ModalConfirmacao";
 import type { OpcoesNavegacao } from "@/interface/rota/useNavegar";
 
 interface PropriedadesEditorProgramaPage {
@@ -37,6 +38,7 @@ export function EditorProgramaPage({
   const [modalCopiarProgramaAberto, setModalCopiarProgramaAberto] = useState(false);
   const [modalNovaFicha, setModalNovaFicha] = useState(false);
   const [modalSelecionarFicha, setModalSelecionarFicha] = useState(false);
+  const [fichaParaRemover, setFichaParaRemover] = useState<{ id: string; nome: string } | null>(null);
 
   const editando = Boolean(programaId);
   const titulo = editando ? "Editar Programa" : "Novo Programa";
@@ -244,6 +246,14 @@ export function EditorProgramaPage({
                           >
                             Editar
                           </Botao>
+                          <button
+                            type="button"
+                            aria-label={`Remover ${ficha.nome} do programa`}
+                            onClick={() => setFichaParaRemover({ id: ficha.id, nome: ficha.nome })}
+                            className="shrink-0 p-1.5 text-texto-secundario hover:text-perigo hover:bg-superficie-suave rounded-lg transition-colors"
+                          >
+                            <Icone nome="lixeira" tamanho={16} />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -294,6 +304,28 @@ export function EditorProgramaPage({
         aberto={modalCopiarProgramaAberto}
         aoCopiar={handleCopiarProgramaExistente}
         aoCancelar={() => setModalCopiarProgramaAberto(false)}
+      />
+
+      {/* Modal de confirmação de remoção de ficha */}
+      <ModalConfirmacao
+        aberto={fichaParaRemover !== null}
+        titulo="Remover ficha do programa"
+        descricao={
+          fichaParaRemover
+            ? `Deseja remover "${fichaParaRemover.nome}" deste programa? A ficha não será apagada e continuará disponível em outros programas.`
+            : ""
+        }
+        textoConfirmar="Remover"
+        aoConfirmar={() => {
+          if (fichaParaRemover && idParaUsar) {
+            stateManagerRepository.desvincularFichaDoPrograma(
+              fichaParaRemover.id,
+              idParaUsar
+            );
+          }
+          setFichaParaRemover(null);
+        }}
+        aoCancelar={() => setFichaParaRemover(null)}
       />
 
       {/* Modal Nova Ficha - Opções */}
