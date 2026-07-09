@@ -27,4 +27,6 @@ export const STORAGE_KEYS = {
   SESSAO_ATIVA: "trainify_sessao_ativa",
   // Identificador estavel desta instalacao
   INSTALACAO_ID: "trainify_instalacao_id",
+  // Barra lateral do desktop recolhida (só ícones)
+  SIDEBAR_RECOLHIDA: "trainify_sidebar_recolhida",
 } as const;
