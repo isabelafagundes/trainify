@@ -140,7 +140,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
           atrás de um blur/gradiente no topo, cobrindo a área da status bar. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed left-0 right-0 top-0 z-30 mx-auto w-full max-w-[480px] md:max-w-[768px] lg:hidden"
+        className="pointer-events-none fixed left-0 right-0 top-0 z-30 w-full lg:hidden"
         style={{
           height: "calc(var(--safe-top) + 72px)",
           backdropFilter: "blur(12px)",
