@@ -1,4 +1,5 @@
 import type { Exercicio, ExercicioFicha, Ficha } from "@/domain/tipos";
+import { exerciciosDaFicha } from "@/domain/ficha";
 import { useState } from "react";
 import { Chip } from "@/interface/widget/chip/Chip";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
@@ -42,7 +43,8 @@ export function LinhaFichaDelight({
   aoIniciarTreino,
   pendente = false,
 }: PropriedadesLinhaFicha) {
-  const gruposMusculares = extrairGruposMusculares(ficha.exercicios, exerciciosCatalogo);
+  const exerciciosFicha = exerciciosDaFicha(ficha);
+  const gruposMusculares = extrairGruposMusculares(exerciciosFicha, exerciciosCatalogo);
   const [mostrarConfetti, setMostrarConfetti] = useState(false);
   const [hover, setHover] = useState(false);
   const [agoraMs] = useState(() => Date.now());
@@ -110,7 +112,7 @@ export function LinhaFichaDelight({
               {ficha.nome}
             </h3>
             <span className="flex-shrink-0 text-xs text-texto-sutil tabular-nums">
-              {ficha.exercicios.length} exerc.
+              {exerciciosFicha.length} exerc.
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 mt-1">

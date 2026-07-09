@@ -1,5 +1,7 @@
 import { VERSAO_SCHEMA } from "@/constants";
 import type { SnapshotTrainify } from "@/domain/snapshot";
+import type { EntradaCardio, ExercicioFicha } from "@/domain/tipos";
+import { itensDeFormatoAntigo } from "@/domain/ficha";
 import type { Usuario } from "@/domain/usuario";
 import { trainifyState } from "@/application/state/trainify.state";
 import { usuarioManager } from "@/application/state/usuario.state";
@@ -45,12 +47,12 @@ function validarUsuario(valor: unknown): Usuario | null {
   };
 }
 
-function validarSnapshotV1(valor: unknown): SnapshotTrainify {
+function validarSnapshotV2(valor: unknown): SnapshotTrainify {
   if (!ehObjeto(valor)) {
     throw new Error("Backup invalido.");
   }
 
-  if (valor.versaoSchema !== 1) {
+  if (valor.versaoSchema !== 2) {
     throw new Error("Versao de backup invalida.");
   }
 
@@ -76,7 +78,7 @@ function validarSnapshotV1(valor: unknown): SnapshotTrainify {
   }
 
   return {
-    versaoSchema: 1,
+    versaoSchema: 2,
     atualizadoEm: valor.atualizadoEm,
     exportadoEm: valor.exportadoEm,
     usuario: validarUsuario(valor.usuario),
@@ -90,21 +92,52 @@ function validarSnapshotV1(valor: unknown): SnapshotTrainify {
   };
 }
 
+/** v1 -> v2: ficha deixa de ter modalidade/exercicios/cardio separados e passa
+    a ter uma lista unica ordenada de itens (exercicios primeiro, cardio no fim). */
+function migrarFichaV1ParaV2(ficha: unknown): unknown {
+  if (!ehObjeto(ficha) || Array.isArray(ficha.itens)) return ficha;
+
+  const { modalidade: _modalidade, exercicios, cardio, ...resto } = ficha;
+  return {
+    ...resto,
+    itens: itensDeFormatoAntigo(
+      (Array.isArray(exercicios) ? exercicios : []) as ExercicioFicha[],
+      (Array.isArray(cardio) ? cardio : []) as EntradaCardio[]
+    ),
+  };
+}
+
+function migrarV1ParaV2(valor: Record<string, unknown>): Record<string, unknown> {
+  if (!ehObjeto(valor.dados) || !Array.isArray(valor.dados.fichas)) {
+    return { ...valor, versaoSchema: 2 };
+  }
+
+  return {
+    ...valor,
+    versaoSchema: 2,
+    dados: {
+      ...valor.dados,
+      fichas: valor.dados.fichas.map(migrarFichaV1ParaV2),
+    },
+  };
+}
+
 function migrarAteVersaoAtual(valor: unknown): SnapshotTrainify {
   if (!ehObjeto(valor) || typeof valor.versaoSchema !== "number") {
     throw new Error("Backup sem versao de schema.");
   }
 
   if (valor.versaoSchema > VERSAO_SCHEMA) {
-    throw new Error("Este backup foi criado por uma versao mais nova do Trainify.");
+    throw new Error("Este backup foi criado por uma versao mais nova do Pezzo.");
   }
 
   if (valor.versaoSchema < 1) {
     throw new Error("Versao de backup nao suportada.");
   }
 
-  // Cadeia de migracoes futuras: v1 -> v2 -> ...
-  return validarSnapshotV1(valor);
+  // Cadeia de migracoes: v1 -> v2 -> ...
+  const migrado = valor.versaoSchema === 1 ? migrarV1ParaV2(valor) : valor;
+  return validarSnapshotV2(migrado);
 }
 
 async function garantirInicializacao(): Promise<void> {

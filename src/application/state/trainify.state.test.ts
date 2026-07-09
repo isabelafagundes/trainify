@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { trainifyState } from "@/application/state/trainify.state";
+import { cardioDaFicha, exerciciosDaFicha } from "@/domain/ficha";
 import type {
   EntradaCardio,
   ExercicioFicha,
   Ficha,
+  ItemFicha,
   Programa,
 } from "@/domain/tipos";
 
@@ -40,15 +42,21 @@ function novaEntradaCardio(parcial: Partial<EntradaCardio> = {}): EntradaCardio 
   };
 }
 
+function itemExercicio(parcial: Partial<ExercicioFicha> = {}): ItemFicha {
+  return { tipo: "exercicio", exercicio: novoExercicioFicha(parcial) };
+}
+
+function itemCardio(parcial: Partial<EntradaCardio> = {}): ItemFicha {
+  return { tipo: "cardio", cardio: novaEntradaCardio(parcial) };
+}
+
 /** Cria os dados de uma ficha (sem id — para passar ao adicionarFicha) */
 function dadosFicha(parcial: Partial<Omit<Ficha, "id">> = {}): Omit<Ficha, "id"> {
   return {
     nome: "Treino A",
     descricao: "",
     icone: "halter",
-    modalidade: "musculacao",
-    exercicios: [novoExercicioFicha()],
-    cardio: [],
+    itens: [itemExercicio()],
     ...parcial,
   };
 }
@@ -99,26 +107,19 @@ describe("trainifyState", () => {
     expect(trainifyState.getAtualizadoEm()).toBe(atualizadoEm);
   });
 
-  it("normaliza modalidade de ficha antiga ao substituir dados", () => {
+  it("converte fichas do formato antigo (exercicios + cardio) para itens ao substituir dados", () => {
     trainifyState.substituirDados(
       {
         programas: [],
         fichas: [
           {
-            id: "ficha-cardio",
-            nome: "Cardio",
+            id: "ficha-antiga",
+            nome: "Treino antigo",
             descricao: "",
             icone: "halter",
-            exercicios: [],
-            cardio: [novaEntradaCardio()],
-          },
-          {
-            id: "ficha-musculacao",
-            nome: "Musculacao",
-            descricao: "",
-            icone: "halter",
-            exercicios: [novoExercicioFicha()],
-            cardio: [],
+            modalidade: "ambos",
+            exercicios: [novoExercicioFicha({ exercicioId: "ex-A" })],
+            cardio: [novaEntradaCardio({ id: "cardio-A" })],
           },
         ] as unknown as Ficha[],
         historico: [],
@@ -128,8 +129,13 @@ describe("trainifyState", () => {
       "2024-03-04T05:06:07.000Z"
     );
 
-    expect(trainifyState.getFichaPorId("ficha-cardio")?.modalidade).toBe("cardio");
-    expect(trainifyState.getFichaPorId("ficha-musculacao")?.modalidade).toBe("musculacao");
+    const ficha = trainifyState.getFichaPorId("ficha-antiga")!;
+    // Exercícios primeiro, cardio no fim — espelha o fluxo antigo de execução
+    expect(ficha.itens.map((item) => item.tipo)).toEqual(["exercicio", "cardio"]);
+    expect(exerciciosDaFicha(ficha).map((e) => e.exercicioId)).toEqual(["ex-A"]);
+    expect(cardioDaFicha(ficha).map((c) => c.id)).toEqual(["cardio-A"]);
+    expect(ficha).not.toHaveProperty("modalidade");
+    expect(ficha).not.toHaveProperty("exercicios");
   });
 
   it("normaliza arrays ausentes em dados antigos ao substituir dados", () => {
@@ -164,9 +170,7 @@ describe("trainifyState", () => {
     });
     expect(trainifyState.getFichaPorId("ficha-legada")).toMatchObject({
       icone: "halter",
-      modalidade: "ambos",
-      exercicios: [],
-      cardio: [],
+      itens: [],
     });
   });
 
@@ -412,31 +416,52 @@ describe("trainifyState", () => {
 
     it("gera novos ids para as entradas de cardio (sem compartilhar referencia)", () => {
       const original = trainifyState.adicionarFicha(
-        dadosFicha({ cardio: [novaEntradaCardio({ id: "cardio-orig" })] })
+        dadosFicha({ itens: [itemCardio({ id: "cardio-orig" })] })
       );
 
       const copia = trainifyState.copiarFicha(original.id)!;
+      const cardioCopia = cardioDaFicha(copia);
 
-      expect(copia.cardio).toHaveLength(1);
-      expect(copia.cardio[0].id).not.toBe("cardio-orig");
+      expect(cardioCopia).toHaveLength(1);
+      expect(cardioCopia[0].id).not.toBe("cardio-orig");
       // Conteúdo preservado, apenas o id muda
-      expect(copia.cardio[0].tipo).toBe("Esteira");
+      expect(cardioCopia[0].tipo).toBe("Esteira");
     });
 
-    it("copia os exercicios em um array novo (mutar a copia nao afeta o original)", () => {
+    it("preserva a ordem dos itens intercalados na copia", () => {
       const original = trainifyState.adicionarFicha(
-        dadosFicha({ exercicios: [novoExercicioFicha({ exercicioId: "ex-A" })] })
+        dadosFicha({
+          itens: [
+            itemCardio({ id: "cardio-aquecimento" }),
+            itemExercicio({ exercicioId: "ex-A" }),
+            itemCardio({ id: "cardio-final" }),
+          ],
+        })
       );
 
       const copia = trainifyState.copiarFicha(original.id)!;
 
-      // Editar a lista de exercícios da cópia
+      expect(copia.itens.map((item) => item.tipo)).toEqual([
+        "cardio",
+        "exercicio",
+        "cardio",
+      ]);
+    });
+
+    it("copia os itens em um array novo (mutar a copia nao afeta o original)", () => {
+      const original = trainifyState.adicionarFicha(
+        dadosFicha({ itens: [itemExercicio({ exercicioId: "ex-A" })] })
+      );
+
+      const copia = trainifyState.copiarFicha(original.id)!;
+
+      // Editar a lista de itens da cópia
       trainifyState.atualizarFicha(copia.id, {
-        exercicios: [novoExercicioFicha({ exercicioId: "ex-B" })],
+        itens: [itemExercicio({ exercicioId: "ex-B" })],
       });
 
       const originalAtual = trainifyState.getFichaPorId(original.id)!;
-      expect(originalAtual.exercicios.map((e) => e.exercicioId)).toEqual(["ex-A"]);
+      expect(exerciciosDaFicha(originalAtual).map((e) => e.exercicioId)).toEqual(["ex-A"]);
     });
   });
 

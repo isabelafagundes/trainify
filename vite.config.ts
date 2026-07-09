@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
 export default defineConfig({
+  // Respeita a porta atribuída pelo ambiente (ex.: preview do Claude Code).
+  server: process.env.PORT ? { port: Number(process.env.PORT) } : undefined,
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

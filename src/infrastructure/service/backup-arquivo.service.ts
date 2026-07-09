@@ -110,8 +110,8 @@ class BackupArquivoCapacitor implements BackupArquivoService {
     });
 
     await Share.share({
-      title: "Backup Trainify",
-      text: "Backup dos seus dados do Trainify.",
+      title: "Backup Pezzo",
+      text: "Backup dos seus dados do Pezzo.",
       url: uri,
       dialogTitle: "Exportar dados",
     });

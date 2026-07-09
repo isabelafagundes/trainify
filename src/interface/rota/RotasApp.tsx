@@ -204,7 +204,7 @@ function TelaCarregando() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-fundo px-6 text-center">
       <div>
-        <p className="font-display text-lg font-semibold text-texto-primario">Trainify</p>
+        <p className="font-display text-lg font-semibold text-texto-primario">Pezzo</p>
         <p className="mt-2 text-sm text-texto-secundario">Carregando seus treinos...</p>
       </div>
     </div>

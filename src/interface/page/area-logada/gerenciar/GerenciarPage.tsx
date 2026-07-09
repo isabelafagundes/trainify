@@ -11,6 +11,7 @@ import type {
   TipoCardioDef,
 } from "@/domain/tipos";
 import { META_METRICA_CARDIO } from "@/domain/tipos";
+import { cardioDaFicha, exerciciosDaFicha } from "@/domain/ficha";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
@@ -473,25 +474,26 @@ export function GerenciarPage({ aoNavegar }: PropriedadesGerenciarPage) {
                     const meta = META_METRICA_CARDIO[chave];
                     const selecionada = formCardio.metricas.includes(chave);
                     return (
-                      <label
+                      <button
                         key={chave}
-                        className={`flex min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        type="button"
+                        role="checkbox"
+                        aria-checked={selecionada}
+                        onClick={() => alternarMetricaCardio(chave)}
+                        className={`flex min-h-[44px] w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                           selecionada
                             ? "border-acento bg-acento/10 text-texto-primario"
-                            : "border-borda-suave bg-fundo text-texto-secundario"
+                            : "border-borda-suave bg-fundo text-texto-secundario hover:border-acento"
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={selecionada}
-                          onChange={() => alternarMetricaCardio(chave)}
-                          className="h-4 w-4"
-                        />
                         <span className="min-w-0 truncate">
                           {meta.rotulo}
                           {meta.unidade ? ` (${meta.unidade})` : ""}
                         </span>
-                      </label>
+                        {selecionada && (
+                          <Icone nome="check" tamanho={15} className="ml-auto shrink-0 text-acento" />
+                        )}
+                      </button>
                     );
                   })}
                 </div>
@@ -890,8 +892,8 @@ function CartaoFicha({ ficha, programasDaFicha = [], estaSendoExcluida = false, 
             {ficha.nome}
           </h3>
           <p className="text-sm text-texto-secundario mt-0.5">
-            {ficha.exercicios.length} {ficha.exercicios.length === 1 ? "exercício" : "exercícios"}
-            {ficha.cardio.length > 0 && ` · ${ficha.cardio.length} ${ficha.cardio.length === 1 ? "cardio" : "cardios"}`}
+            {exerciciosDaFicha(ficha).length} {exerciciosDaFicha(ficha).length === 1 ? "exercício" : "exercícios"}
+            {cardioDaFicha(ficha).length > 0 && ` · ${cardioDaFicha(ficha).length} ${cardioDaFicha(ficha).length === 1 ? "cardio" : "cardios"}`}
           </p>
           {programasDaFicha.length > 0 && (
             <p className="text-xs text-texto-sutil mt-1 truncate">

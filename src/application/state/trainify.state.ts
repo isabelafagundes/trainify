@@ -5,12 +5,15 @@
 import type {
   Programa,
   Ficha,
+  ItemFicha,
   RegistroTreino,
   Exercicio,
-  ModalidadeTreino,
+  ExercicioFicha,
+  EntradaCardio,
   TipoCardioDef,
 } from "@/domain/tipos";
 import { CATALOGO_CARDIO_BUILTIN } from "@/domain/tipos";
+import { exerciciosDaFicha, itensDeFormatoAntigo } from "@/domain/ficha";
 import { STORAGE_KEYS } from "@/constants";
 import { exerciciosPadrao } from "@/infrastructure/repo/mock/exercicio-mock.repo";
 import { appModule } from "@/interface/configuration/module/app.module";
@@ -32,8 +35,13 @@ interface DadosTreino extends DadosTreinoPortateis {
 /** Estado gerenciado pelo Trainify */
 type TrainifyState = DadosTreino;
 
-type FichaPersistida = Omit<Ficha, "modalidade"> & {
-  modalidade?: ModalidadeTreino;
+/** Ficha como pode existir em dados salvos: formato novo (itens) ou
+    antigo (modalidade + exercicios + cardio separados). */
+type FichaPersistida = Omit<Ficha, "itens"> & {
+  itens?: ItemFicha[];
+  modalidade?: string;
+  exercicios?: ExercicioFicha[];
+  cardio?: EntradaCardio[];
 };
 
 type ProgramaPersistido = Omit<Programa, "fichaIds" | "ativo"> & {
@@ -41,26 +49,28 @@ type ProgramaPersistido = Omit<Programa, "fichaIds" | "ativo"> & {
   ativo?: boolean;
 };
 
-function inferirModalidadeFicha(ficha: Pick<FichaPersistida, "exercicios" | "cardio">): ModalidadeTreino {
-  const temExercicios = ficha.exercicios.length > 0;
-  const temCardio = ficha.cardio.length > 0;
-
-  if (temCardio && !temExercicios) return "cardio";
-  if (temExercicios && !temCardio) return "musculacao";
-  return "ambos";
-}
-
-function normalizarFicha(ficha: FichaPersistida): Ficha {
-  const exercicios = Array.isArray(ficha.exercicios) ? ficha.exercicios : [];
-  const cardio = Array.isArray(ficha.cardio) ? ficha.cardio : [];
+function normalizarFicha(fichaPersistida: FichaPersistida): Ficha {
+  const { modalidade: _modalidade, exercicios, cardio, itens, ...ficha } = fichaPersistida;
 
   return {
     ...ficha,
     icone: ficha.icone ?? "halter",
-    exercicios,
-    cardio,
-    modalidade: ficha.modalidade ?? inferirModalidadeFicha({ exercicios, cardio }),
+    itens: Array.isArray(itens)
+      ? itens
+      : itensDeFormatoAntigo(
+          Array.isArray(exercicios) ? exercicios : [],
+          Array.isArray(cardio) ? cardio : []
+        ),
   };
+}
+
+/** Duplica itens da ficha gerando ids novos para as entradas de cardio */
+function copiarItens(itens: ItemFicha[]): ItemFicha[] {
+  return itens.map((item) =>
+    item.tipo === "cardio"
+      ? { tipo: "cardio", cardio: { ...item.cardio, id: crypto.randomUUID() } }
+      : { tipo: "exercicio", exercicio: { ...item.exercicio } }
+  );
 }
 
 function normalizarPrograma(programa: ProgramaPersistido): Programa {
@@ -501,9 +511,7 @@ export class TrainifyStateManager {
       descricao: ficha.descricao,
       icone: ficha.icone,
       emoji: ficha.emoji,
-      modalidade: ficha.modalidade,
-      exercicios: [...ficha.exercicios],
-      cardio: ficha.cardio.map((c) => ({ ...c, id: crypto.randomUUID() })),
+      itens: copiarItens(ficha.itens),
     });
 
     return copia;
@@ -535,12 +543,7 @@ export class TrainifyStateManager {
             descricao: fichaOriginal.descricao,
             icone: fichaOriginal.icone,
             emoji: fichaOriginal.emoji,
-            modalidade: fichaOriginal.modalidade,
-            exercicios: [...fichaOriginal.exercicios],
-            cardio: fichaOriginal.cardio.map((c) => ({
-              ...c,
-              id: crypto.randomUUID(),
-            })),
+            itens: copiarItens(fichaOriginal.itens),
           },
           copia.id // Adicionar ao programa copiado
         );
@@ -582,7 +585,7 @@ export class TrainifyStateManager {
     const grupos = new Set<string>();
 
     this.estado.fichas.forEach((ficha) => {
-      ficha.exercicios.forEach((exFicha) => {
+      exerciciosDaFicha(ficha).forEach((exFicha) => {
         const exercicio = this.getExercicioPorId(exFicha.exercicioId);
         if (exercicio) {
           grupos.add(exercicio.grupoMuscular);

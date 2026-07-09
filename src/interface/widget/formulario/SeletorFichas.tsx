@@ -3,6 +3,7 @@
    ═══════════════════════════════════════════ */
 
 import type { Ficha } from "@/domain/tipos";
+import { exerciciosDaFicha } from "@/domain/ficha";
 import { Chip } from "@/interface/widget/chip/Chip";
 import { emojisPorGrupoMuscular } from "@/interface/util/emoji-treino";
 
@@ -113,7 +114,7 @@ export function SeletorFichas({
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <p className="text-xs text-texto-secundario">
-                    {ficha.exercicios.length} exercício(s)
+                    {exerciciosDaFicha(ficha).length} exercício(s)
                   </p>
                   {grupos.length > 0 && (
                     <>

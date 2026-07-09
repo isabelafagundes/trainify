@@ -3,6 +3,7 @@
    ═══════════════════════════════════════════ */
 
 import { useState, useEffect, useMemo } from "react";
+import { exerciciosDaFicha, temCardio } from "@/domain/ficha";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
@@ -182,8 +183,8 @@ export function ModalCopiarFicha({
                       {ficha.nome}
                     </p>
                     <p className="text-xs text-texto-secundario">
-                      {ficha.exercicios.length} {ficha.exercicios.length === 1 ? "exercício" : "exercícios"}
-                      {ficha.cardio.length > 0 && " · cardio"}
+                      {exerciciosDaFicha(ficha).length} {exerciciosDaFicha(ficha).length === 1 ? "exercício" : "exercícios"}
+                      {temCardio(ficha) && " · cardio"}
                     </p>
                   </div>
 

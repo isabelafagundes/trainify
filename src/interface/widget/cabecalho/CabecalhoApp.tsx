@@ -113,11 +113,11 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
     }
 
     if (erro.message.includes("versao mais nova")) {
-      return "Este backup foi criado por uma versao mais nova do Trainify.";
+      return "Este backup foi criado por uma versao mais nova do Pezzo.";
     }
 
     if (erro.message.includes("schema") || erro.message.includes("Versao")) {
-      return "Este arquivo nao parece ser um backup compativel do Trainify.";
+      return "Este arquivo nao parece ser um backup compativel do Pezzo.";
     }
 
     if (
@@ -171,7 +171,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
           )}
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-[13px] font-bold text-texto-sutil uppercase tracking-[0.08em] font-display flex-shrink-0 lg:hidden">
-              Trainify
+              Pezzo
             </span>
             <span className="text-texto-sutil/30 text-[10px] flex-shrink-0 lg:hidden">/</span>
             <h1 className="text-sm font-semibold text-texto-primario tracking-tight font-display truncate">

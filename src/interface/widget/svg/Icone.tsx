@@ -110,6 +110,25 @@ const caminhoIcones: Record<string, { caminhos: string[]; preenchido?: boolean }
     ],
   },
 
+  pausar: {
+    caminhos: ["M8 5v14", "M16 5v14"],
+  },
+
+  nota: {
+    caminhos: [
+      "M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z",
+      "M14 3v5h5",
+    ],
+  },
+
+  sair: {
+    caminhos: [
+      "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4",
+      "M16 17l5-5-5-5",
+      "M21 12H9",
+    ],
+  },
+
   /* ── Fitness / Fichas ── */
 
   halter: {

@@ -1,4 +1,5 @@
 import type { Exercicio, ExercicioFicha, Ficha } from "@/domain/tipos";
+import { exerciciosDaFicha } from "@/domain/ficha";
 import { formatarDataRelativa } from "@/interface/page/area-logada/programa/utils";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
@@ -30,7 +31,7 @@ export function LinhaFicha({
   aoIniciarTreino,
   proximoTreino = false,
 }: PropriedadesLinhaFicha) {
-  const exerciciosFicha = Array.isArray(ficha.exercicios) ? ficha.exercicios : [];
+  const exerciciosFicha = exerciciosDaFicha(ficha);
   const gruposMusculares = extrairGruposMusculares(exerciciosFicha, exerciciosCatalogo);
 
   return (

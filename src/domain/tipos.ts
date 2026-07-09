@@ -30,8 +30,6 @@ export type TipoCardioBuiltin =
 
 export type TipoCardio = TipoCardioBuiltin | (string & {});
 
-export type ModalidadeTreino = "musculacao" | "cardio" | "ambos";
-
 export type ChaveMetricaCardio =
   | "duracaoMinutos"
   | "distanciaKm"
@@ -134,16 +132,20 @@ export interface EntradaCardio {
   spm?: number;
 }
 
-/** Ficha de treino */
+/** Item da ficha: um exercício de força ou uma atividade de cardio.
+    O envelope aninhado evita colisão com o campo `tipo` de EntradaCardio. */
+export type ItemFicha =
+  | { tipo: "exercicio"; exercicio: ExercicioFicha }
+  | { tipo: "cardio"; cardio: EntradaCardio };
+
+/** Ficha de treino: sequência única e ordenada de itens */
 export interface Ficha {
   id: string;
   nome: string;
   descricao: string;
   icone: NomeIcone;
   emoji?: string; /** Emoji opcional para substituir o ícone SVG */
-  modalidade: ModalidadeTreino;
-  exercicios: ExercicioFicha[];
-  cardio: EntradaCardio[];
+  itens: ItemFicha[];
 }
 
 /** Programa de treino */

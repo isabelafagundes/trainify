@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import type { Programa } from "@/domain/tipos";
+import { exerciciosDaFicha } from "@/domain/ficha";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Input } from "@/interface/widget/formulario/Input";
 import { Botao } from "@/interface/widget/botao/Botao";
@@ -233,7 +234,7 @@ export function EditorProgramaPage({
                               {ficha.nome}
                             </p>
                             <p className="text-xs text-texto-secundario">
-                              {ficha.exercicios.length} {ficha.exercicios.length === 1 ? "exercício" : "exercícios"}
+                              {exerciciosDaFicha(ficha).length} {exerciciosDaFicha(ficha).length === 1 ? "exercício" : "exercícios"}
                             </p>
                           </div>
                           <Botao
@@ -433,7 +434,7 @@ export function EditorProgramaPage({
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-texto-primario truncate">{ficha.nome}</p>
                           <p className="text-xs text-texto-secundario">
-                            {ficha.exercicios.length} {ficha.exercicios.length === 1 ? "exercício" : "exercícios"}
+                            {exerciciosDaFicha(ficha).length} {exerciciosDaFicha(ficha).length === 1 ? "exercício" : "exercícios"}
                           </p>
                         </div>
                         {jaVinculada && (

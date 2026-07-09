@@ -39,9 +39,22 @@ function criarSnapshot(atualizadoEm = "2024-01-02T03:04:05.000Z"): SnapshotTrain
           nome: "Treino A",
           descricao: "",
           icone: "halter",
-          modalidade: "ambos",
-          exercicios: [],
-          cardio: [],
+          itens: [
+            {
+              tipo: "cardio",
+              cardio: { id: "cardio-1", tipo: "Esteira", duracaoMinutos: 10, nota: "" },
+            },
+            {
+              tipo: "exercicio",
+              exercicio: {
+                exercicioId: "ex-1",
+                series: 3,
+                repeticoes: 10,
+                usaCarga: true,
+                descansoSegundos: 60,
+              },
+            },
+          ],
         },
       ],
       historico: [],
@@ -72,7 +85,7 @@ describe("snapshotService", () => {
     usuarioManager.substituirUsuario(null);
   });
 
-  it("serializa e desserializa um snapshot v1", () => {
+  it("serializa e desserializa um snapshot v2", () => {
     const snapshot = criarSnapshot();
 
     const resultado = snapshotService.desserializar(
@@ -80,6 +93,45 @@ describe("snapshotService", () => {
     );
 
     expect(resultado).toEqual(snapshot);
+  });
+
+  it("migra snapshot v1 convertendo fichas antigas para itens", () => {
+    const snapshotV1 = {
+      ...criarSnapshot(),
+      versaoSchema: 1,
+      dados: {
+        ...criarSnapshot().dados,
+        fichas: [
+          {
+            id: "ficha-antiga",
+            nome: "Treino antigo",
+            descricao: "",
+            icone: "halter",
+            modalidade: "ambos",
+            exercicios: [
+              {
+                exercicioId: "ex-1",
+                series: 3,
+                repeticoes: 10,
+                usaCarga: true,
+                descansoSegundos: 60,
+              },
+            ],
+            cardio: [{ id: "cardio-1", tipo: "Bike", duracaoMinutos: 20, nota: "" }],
+          },
+        ],
+      },
+    };
+
+    const resultado = snapshotService.desserializar(JSON.stringify(snapshotV1));
+
+    expect(resultado.versaoSchema).toBe(VERSAO_SCHEMA);
+    // Exercícios primeiro, cardio no fim — espelha o fluxo antigo de execução
+    expect(resultado.dados.fichas[0].itens.map((item) => item.tipo)).toEqual([
+      "exercicio",
+      "cardio",
+    ]);
+    expect(resultado.dados.fichas[0]).not.toHaveProperty("modalidade");
   });
 
   it("rejeita JSON invalido", () => {

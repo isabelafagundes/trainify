@@ -36,7 +36,7 @@ export function NavegacaoLateral({
       {/* Marca */}
       <div className="flex items-center gap-1.5 px-3 pb-6 pt-2">
         <span className="font-display text-lg font-bold tracking-tight text-texto-primario">
-          Trainify
+          Pezzo
         </span>
       </div>
 

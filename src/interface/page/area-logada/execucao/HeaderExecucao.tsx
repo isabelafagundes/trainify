@@ -1,56 +1,73 @@
 import type { NomeIcone } from "@/domain/tipos";
-import { Icone } from "@/interface/widget/svg/Icone";
-import { IconeFicha } from "@/interface/widget/svg/Icone";
+import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
+import { Botao } from "@/interface/widget/botao/Botao";
+import type { ProgressoSessao } from "./hooks/useSessaoTreino";
+import { useTempoDecorrido } from "./hooks/useTempoDecorrido";
 
 interface HeaderExecucaoProps {
   nomeFicha: string;
   iconeFicha: NomeIcone;
   emojiFicha?: string;
-  modo: "musculacao" | "cardio";
-  podeAlternarModo: boolean;
-  aoAlternarModo: () => void;
-  aoCancelar: () => void;
+  iniciadoEm: string;
+  progresso: ProgressoSessao;
+  aoFinalizar: () => void;
 }
 
+/** Header da execução: identidade da ficha + tempo decorrido + contadores +
+    Finalizar sempre à mão + barra fina de progresso. Sair do treino mora no
+    footer/rail ("Abandonar treino") — o X morreu. */
 export function HeaderExecucao({
   nomeFicha,
   iconeFicha,
   emojiFicha,
-  modo,
-  podeAlternarModo,
-  aoAlternarModo,
-  aoCancelar,
+  iniciadoEm,
+  progresso,
+  aoFinalizar,
 }: HeaderExecucaoProps) {
+  const tempo = useTempoDecorrido(iniciadoEm);
+
+  const partesMeta = [
+    tempo,
+    `${progresso.itensConcluidos}/${progresso.itensTotal} itens`,
+    ...(progresso.seriesTotal > 0
+      ? [`${progresso.seriesConcluidas}/${progresso.seriesTotal} séries`]
+      : []),
+  ];
+
   return (
-    <header className="sticky top-0 z-20 bg-fundo pt-[var(--safe-top)]">
-      <div className="mx-auto flex w-full max-w-[768px] items-center gap-2 px-4 py-3">
-        <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-[8px] bg-acento-suave text-texto-primario">
-          <IconeFicha nome={iconeFicha} emoji={emojiFicha} tamanho={22} />
+    <header className="sticky top-0 z-20 border-b border-borda-suave bg-fundo/95 pt-[var(--safe-top)] backdrop-blur-sm">
+      <div className="mx-auto w-full max-w-[1140px] px-4 pb-2.5 pt-3">
+        <div className="flex items-center gap-2.5">
+          <div className="grid h-[38px] w-[38px] flex-shrink-0 place-items-center rounded-[8px] bg-acento-suave text-texto-primario">
+            <IconeFicha nome={iconeFicha} emoji={emojiFicha} tamanho={19} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-texto-primario">{nomeFicha}</p>
+            <p className="flex items-center gap-1.5 text-xs tabular-nums text-texto-secundario">
+              <Icone nome="relogio" tamanho={12} />
+              {partesMeta.join(" · ")}
+            </p>
+          </div>
+
+          <Botao variante="primario" tamanho="compacto" onClick={aoFinalizar} className="shrink-0">
+            Finalizar
+          </Botao>
         </div>
 
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-texto-primario">{nomeFicha}</p>
-        </div>
-
-        {podeAlternarModo ? (
-          <button
-            type="button"
-            onClick={aoAlternarModo}
-            className="inline-flex items-center gap-1.5 rounded-[8px] bg-superficie px-3 py-2 text-xs font-medium text-texto-primario border border-borda-suave hover:bg-superficie-hover transition-colors"
-          >
-            <Icone nome={modo === "cardio" ? "halter" : "corrida"} tamanho={14} />
-            {modo === "cardio" ? "musculação" : "cardio"}
-          </button>
-        ) : null}
-
-        <button
-          type="button"
-          aria-label="Sair do treino"
-          onClick={aoCancelar}
-          className="grid h-10 w-10 place-items-center rounded-[8px] text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario transition-colors"
+        <div
+          className="mt-2.5 h-[3px] overflow-hidden rounded-full bg-borda-suave"
+          role="progressbar"
+          aria-valuenow={Math.round(progresso.fracao * 100)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Progresso do treino"
         >
-          <Icone nome="fechar" tamanho={18} />
-        </button>
+          <div
+            className="h-full rounded-full bg-texto-primario transition-[width] duration-300"
+            style={{ width: `${progresso.fracao * 100}%` }}
+          />
+        </div>
       </div>
     </header>
   );

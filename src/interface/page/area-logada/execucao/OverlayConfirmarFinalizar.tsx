@@ -1,10 +1,10 @@
 interface OverlayConfirmarFinalizarProps {
   aberto: boolean;
   resumo: {
-    exerciciosConcluidos: number;
-    exerciciosTotal: number;
-    cardioPreenchido: number;
-    cardioTotal: number;
+    itensConcluidos: number;
+    itensTotal: number;
+    seriesConcluidas: number;
+    seriesTotal: number;
   };
   aoContinuar: () => void;
   aoFinalizar: () => void;
@@ -18,15 +18,15 @@ export function OverlayConfirmarFinalizar({
 }: OverlayConfirmarFinalizarProps) {
   if (!aberto) return null;
 
-  const faltamExercicios = resumo.exerciciosConcluidos < resumo.exerciciosTotal;
-  const faltaCardio =
-    resumo.cardioTotal > 0 && resumo.cardioPreenchido < resumo.cardioTotal;
+  const faltamItens = resumo.itensConcluidos < resumo.itensTotal;
+  const faltamSeries =
+    resumo.seriesTotal > 0 && resumo.seriesConcluidas < resumo.seriesTotal;
 
   const pendencias = [
-    faltamExercicios &&
-      `${resumo.exerciciosConcluidos} de ${resumo.exerciciosTotal} ${resumo.exerciciosTotal === 1 ? "exercício concluído" : "exercícios concluídos"}`,
-    faltaCardio &&
-      `${resumo.cardioPreenchido} de ${resumo.cardioTotal} cardio preenchido`,
+    faltamItens &&
+      `${resumo.itensConcluidos} de ${resumo.itensTotal} ${resumo.itensTotal === 1 ? "item concluído" : "itens concluídos"}`,
+    faltamSeries &&
+      `${resumo.seriesConcluidas} de ${resumo.seriesTotal} séries feitas`,
   ].filter(Boolean);
 
   return (
