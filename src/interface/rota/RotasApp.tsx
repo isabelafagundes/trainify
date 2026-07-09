@@ -71,9 +71,9 @@ function EstatisticasRota() {
   return <EstatisticasPage historico={historico} exercicios={exercicios} aoNavegar={aoNavegar} />;
 }
 
-function GerenciarRota() {
+function GerenciarRota({ visualizacao }: { visualizacao?: "programas" | "fichas" | "exercicios" }) {
   const { aoNavegar } = useNavegar();
-  return <GerenciarPage aoNavegar={aoNavegar} />;
+  return <GerenciarPage aoNavegar={aoNavegar} visualizacao={visualizacao} />;
 }
 
 function DetalheSequenciaRota() {
@@ -236,7 +236,9 @@ export function RotasApp() {
           <Route path={ROTAS.treinos} element={<HomeRota />} />
           <Route path={ROTAS.historico} element={<HistoricoRota />} />
           <Route path={ROTAS.estatisticas} element={<EstatisticasRota />} />
-          <Route path={ROTAS.gerenciar} element={<GerenciarRota />} />
+          <Route path={ROTAS.gerenciar} element={<GerenciarRota visualizacao="programas" />} />
+          <Route path={ROTAS.gerenciarFichas} element={<GerenciarRota visualizacao="fichas" />} />
+          <Route path={ROTAS.gerenciarExercicios} element={<GerenciarRota visualizacao="exercicios" />} />
           <Route path={ROTAS.sequencia} element={<DetalheSequenciaRota />} />
           <Route path={ROTAS.detalheHistorico} element={<DetalheHistoricoRota />} />
           <Route path={ROTAS.grafico} element={<GraficoRota />} />

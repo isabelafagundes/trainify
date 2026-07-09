@@ -39,7 +39,9 @@ export function AppLayout() {
     <div className="flex h-[100dvh] overflow-hidden">
       <NavegacaoLateral
         abaAtiva={abaDoCaminho(location.pathname)}
+        caminhoAtual={location.pathname}
         aoMudarAba={(aba) => navigate(construirCaminho(aba))}
+        aoIrPara={(caminho) => navigate(caminho)}
         nomeUsuario={usuario?.nome}
         avatarEmoji={usuario?.avatarEmoji}
         aoAbrirPerfil={() => setMenuAberto(true)}
