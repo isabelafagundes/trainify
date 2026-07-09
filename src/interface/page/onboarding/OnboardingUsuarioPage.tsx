@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Onboarding — Primeiro acesso ao Trainify
+   Onboarding — Primeiro acesso ao Pezzo
    ═══════════════════════════════════════════ */
 
 import { FormularioPerfil } from "@/interface/widget/formulario/FormularioPerfil";

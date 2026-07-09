@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { snapshotService } from "@/application/snapshot/snapshot.service";
 import { temaManager } from "@/application/state/tema.state";
 import { usuarioManager } from "@/application/state/usuario.state";
-import type { SnapshotTrainify } from "@/domain/snapshot";
+import type { SnapshotPezzo } from "@/domain/snapshot";
 import type { Tema } from "@/domain/tema";
 import { AVATAR_EMOJI_PADRAO } from "@/domain/usuario";
 import { appModule } from "@/interface/configuration/module/app.module";
@@ -36,7 +36,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
   const [exportandoDados, setExportandoDados] = useState(false);
   const [selecionandoArquivo, setSelecionandoArquivo] = useState(false);
   const [importandoDados, setImportandoDados] = useState(false);
-  const [snapshotPendente, setSnapshotPendente] = useState<SnapshotTrainify | null>(null);
+  const [snapshotPendente, setSnapshotPendente] = useState<SnapshotPezzo | null>(null);
   const temas = temaManager.listarTemas();
   const emoji = avatarEmoji || AVATAR_EMOJI_PADRAO;
   const { showSuccess, showError } = useToast();

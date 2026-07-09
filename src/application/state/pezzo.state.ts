@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Estado do Trainify — Gerenciador de Dados de Treino
+   Estado do Pezzo — Gerenciador de Dados de Treino
    ═══════════════════════════════════════════ */
 
 import type {
@@ -32,8 +32,8 @@ interface DadosTreino extends DadosTreinoPortateis {
   atualizadoEm: string;
 }
 
-/** Estado gerenciado pelo Trainify */
-type TrainifyState = DadosTreino;
+/** Estado gerenciado pelo Pezzo */
+type PezzoState = DadosTreino;
 
 /** Ficha como pode existir em dados salvos: formato novo (itens) ou
     antigo (modalidade + exercicios + cardio separados). */
@@ -82,9 +82,9 @@ function normalizarPrograma(programa: ProgramaPersistido): Programa {
 }
 
 /** Gerenciador de estado global para dados de treino */
-export class TrainifyStateManager {
-  private static instancia: TrainifyStateManager;
-  private estado: TrainifyState;
+export class PezzoStateManager {
+  private static instancia: PezzoStateManager;
+  private estado: PezzoState;
   private listeners: Set<() => void>;
   private inicializado: boolean;
 
@@ -95,11 +95,11 @@ export class TrainifyStateManager {
   }
 
   /** Obter instância singleton */
-  static obterInstancia(): TrainifyStateManager {
-    if (!TrainifyStateManager.instancia) {
-      TrainifyStateManager.instancia = new TrainifyStateManager();
+  static obterInstancia(): PezzoStateManager {
+    if (!PezzoStateManager.instancia) {
+      PezzoStateManager.instancia = new PezzoStateManager();
     }
-    return TrainifyStateManager.instancia;
+    return PezzoStateManager.instancia;
   }
 
   /** Inscrever para mudanças de estado */
@@ -602,7 +602,7 @@ export class TrainifyStateManager {
   }
 
   /** Carregar dados salvos do localStorage */
-  private async carregarDadosSalvos(): Promise<TrainifyState | null> {
+  private async carregarDadosSalvos(): Promise<PezzoState | null> {
     try {
       const salvo = await appModule.armazenamento.obter(STORAGE_KEYS.DADOS_TREINO);
       if (salvo) {
@@ -632,7 +632,7 @@ export class TrainifyStateManager {
   }
 
   /** Criar estado inicial vazio */
-  private criarEstadoInicial(): TrainifyState {
+  private criarEstadoInicial(): PezzoState {
     return {
       programas: [],
       fichas: [],
@@ -674,4 +674,4 @@ export class TrainifyStateManager {
 }
 
 /** Instância global do gerenciador de estado */
-export const trainifyState = TrainifyStateManager.obterInstancia();
+export const pezzoState = PezzoStateManager.obterInstancia();

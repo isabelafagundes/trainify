@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Módulo de Injeção de Dependências — Trainify
+   Módulo de Injeção de Dependências — Pezzo
    ═══════════════════════════════════════════ */
 
 import type { FichaApiRepository } from "@/infrastructure/repo/api/ficha-api.repo";

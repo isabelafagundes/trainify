@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Constantes Globais — Trainify
+   Constantes Globais — Pezzo
    ═══════════════════════════════════════════ */
 
 /** Nome da aplicação */

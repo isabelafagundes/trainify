@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Repositório do State Manager — Trainify
+   Repositório do State Manager — Pezzo
    Abstração para acesso ao gerenciador de estado global
    ═══════════════════════════════════════════ */
 
@@ -10,7 +10,7 @@ import type {
   Exercicio,
   TipoCardioDef,
 } from "@/domain/tipos";
-import { trainifyState } from "@/application/state/trainify.state";
+import { pezzoState } from "@/application/state/pezzo.state";
 
 /** Interface do repositório de state manager */
 export interface StateManagerRepository {
@@ -84,62 +84,62 @@ export interface StateManagerRepository {
 
 /** Implementação do repositório usando o state manager */
 export const stateManagerRepository: StateManagerRepository = {
-  inicializar: () => trainifyState.inicializar(),
-  estaInicializado: () => trainifyState.estaInicializado(),
+  inicializar: () => pezzoState.inicializar(),
+  estaInicializado: () => pezzoState.estaInicializado(),
 
   // Programas
-  listarProgramas: () => trainifyState.getProgramas(),
-  obterProgramaPorId: (id) => trainifyState.getProgramaPorId(id),
-  obterProgramaAtivo: () => trainifyState.getProgramaAtivo(),
-  adicionarPrograma: (programa) => trainifyState.adicionarPrograma(programa),
+  listarProgramas: () => pezzoState.getProgramas(),
+  obterProgramaPorId: (id) => pezzoState.getProgramaPorId(id),
+  obterProgramaAtivo: () => pezzoState.getProgramaAtivo(),
+  adicionarPrograma: (programa) => pezzoState.adicionarPrograma(programa),
   atualizarPrograma: (id, atualizacoes) =>
-    trainifyState.atualizarPrograma(id, atualizacoes),
-  removerPrograma: (id) => trainifyState.removerPrograma(id),
-  copiarPrograma: (id) => trainifyState.copiarPrograma(id),
+    pezzoState.atualizarPrograma(id, atualizacoes),
+  removerPrograma: (id) => pezzoState.removerPrograma(id),
+  copiarPrograma: (id) => pezzoState.copiarPrograma(id),
 
   // Fichas
-  listarFichas: () => trainifyState.getFichas(),
-  obterFichaPorId: (id) => trainifyState.getFichaPorId(id),
+  listarFichas: () => pezzoState.getFichas(),
+  obterFichaPorId: (id) => pezzoState.getFichaPorId(id),
   obterFichasDoPrograma: (programaId) =>
-    trainifyState.getFichasDoPrograma(programaId),
+    pezzoState.getFichasDoPrograma(programaId),
   obterProgramasDaFicha: (fichaId) =>
-    trainifyState.getProgramasDaFicha(fichaId),
-  obterFichasOrfas: () => trainifyState.getFichasOrfas(),
+    pezzoState.getProgramasDaFicha(fichaId),
+  obterFichasOrfas: () => pezzoState.getFichasOrfas(),
   adicionarFicha: (ficha, programaId) =>
-    trainifyState.adicionarFicha(ficha, programaId),
+    pezzoState.adicionarFicha(ficha, programaId),
   atualizarFicha: (id, atualizacoes) =>
-    trainifyState.atualizarFicha(id, atualizacoes),
-  removerFicha: (id) => trainifyState.removerFicha(id),
-  copiarFicha: (id) => trainifyState.copiarFicha(id),
+    pezzoState.atualizarFicha(id, atualizacoes),
+  removerFicha: (id) => pezzoState.removerFicha(id),
+  copiarFicha: (id) => pezzoState.copiarFicha(id),
   vincularFichaAoPrograma: (fichaId, programaId) =>
-    trainifyState.vincularFichaAoPrograma(fichaId, programaId),
+    pezzoState.vincularFichaAoPrograma(fichaId, programaId),
   desvincularFichaDoPrograma: (fichaId, programaId) =>
-    trainifyState.desvincularFichaDoPrograma(fichaId, programaId),
+    pezzoState.desvincularFichaDoPrograma(fichaId, programaId),
 
   // Exercícios
-  listarTodosExercicios: () => trainifyState.getTodosExercicios(),
-  listarExerciciosCustom: () => trainifyState.getExerciciosCustom(),
-  obterExercicioPorId: (id) => trainifyState.getExercicioPorId(id),
+  listarTodosExercicios: () => pezzoState.getTodosExercicios(),
+  listarExerciciosCustom: () => pezzoState.getExerciciosCustom(),
+  obterExercicioPorId: (id) => pezzoState.getExercicioPorId(id),
   adicionarExercicioCustom: (exercicio) =>
-    trainifyState.adicionarExercicioCustom(exercicio),
-  removerExercicioCustom: (id) => trainifyState.removerExercicioCustom(id),
-  obterGruposMusculares: () => trainifyState.getGruposMusculares(),
+    pezzoState.adicionarExercicioCustom(exercicio),
+  removerExercicioCustom: (id) => pezzoState.removerExercicioCustom(id),
+  obterGruposMusculares: () => pezzoState.getGruposMusculares(),
 
   // Cardio
-  listarTiposCardio: () => trainifyState.getTiposCardio(),
-  listarCardioCustom: () => trainifyState.getCardioCustom(),
-  adicionarCardioCustom: (tipo) => trainifyState.adicionarCardioCustom(tipo),
+  listarTiposCardio: () => pezzoState.getTiposCardio(),
+  listarCardioCustom: () => pezzoState.getCardioCustom(),
+  adicionarCardioCustom: (tipo) => pezzoState.adicionarCardioCustom(tipo),
   atualizarCardioCustom: (id, atualizacoes) =>
-    trainifyState.atualizarCardioCustom(id, atualizacoes),
-  removerCardioCustom: (id) => trainifyState.removerCardioCustom(id),
+    pezzoState.atualizarCardioCustom(id, atualizacoes),
+  removerCardioCustom: (id) => pezzoState.removerCardioCustom(id),
 
   // Histórico
-  listarTreinos: () => trainifyState.getHistorico(),
+  listarTreinos: () => pezzoState.getHistorico(),
   obterHistoricoDaFicha: (fichaId) =>
-    trainifyState.getHistoricoDaFicha(fichaId),
-  adicionarTreino: (registro) => trainifyState.adicionarTreino(registro),
+    pezzoState.getHistoricoDaFicha(fichaId),
+  adicionarTreino: (registro) => pezzoState.adicionarTreino(registro),
 
   // Utilitários
-  gerarNomeFicha: () => trainifyState.gerarNomeFicha(),
-  inscrever: (callback) => trainifyState.inscrever(callback),
+  gerarNomeFicha: () => pezzoState.gerarNomeFicha(),
+  inscrever: (callback) => pezzoState.inscrever(callback),
 };

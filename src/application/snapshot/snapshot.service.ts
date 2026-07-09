@@ -1,21 +1,21 @@
 import { VERSAO_SCHEMA } from "@/constants";
-import type { SnapshotTrainify } from "@/domain/snapshot";
+import type { SnapshotPezzo } from "@/domain/snapshot";
 import type { EntradaCardio, ExercicioFicha } from "@/domain/tipos";
 import { itensDeFormatoAntigo } from "@/domain/ficha";
 import type { Usuario } from "@/domain/usuario";
-import { trainifyState } from "@/application/state/trainify.state";
+import { pezzoState } from "@/application/state/pezzo.state";
 import { usuarioManager } from "@/application/state/usuario.state";
 
 export type EstrategiaImportacaoSnapshot = "substituir" | "maisRecente";
 
 export interface SnapshotService {
-  exportarSnapshot(): Promise<SnapshotTrainify>;
+  exportarSnapshot(): Promise<SnapshotPezzo>;
   importarSnapshot(
-    snapshot: SnapshotTrainify,
+    snapshot: SnapshotPezzo,
     estrategia: EstrategiaImportacaoSnapshot
   ): Promise<void>;
-  serializar(snapshot: SnapshotTrainify): string;
-  desserializar(texto: string): SnapshotTrainify;
+  serializar(snapshot: SnapshotPezzo): string;
+  desserializar(texto: string): SnapshotPezzo;
 }
 
 function ehObjeto(valor: unknown): valor is Record<string, unknown> {
@@ -47,7 +47,7 @@ function validarUsuario(valor: unknown): Usuario | null {
   };
 }
 
-function validarSnapshotV2(valor: unknown): SnapshotTrainify {
+function validarSnapshotV2(valor: unknown): SnapshotPezzo {
   if (!ehObjeto(valor)) {
     throw new Error("Backup invalido.");
   }
@@ -122,7 +122,7 @@ function migrarV1ParaV2(valor: Record<string, unknown>): Record<string, unknown>
   };
 }
 
-function migrarAteVersaoAtual(valor: unknown): SnapshotTrainify {
+function migrarAteVersaoAtual(valor: unknown): SnapshotPezzo {
   if (!ehObjeto(valor) || typeof valor.versaoSchema !== "number") {
     throw new Error("Backup sem versao de schema.");
   }
@@ -142,46 +142,46 @@ function migrarAteVersaoAtual(valor: unknown): SnapshotTrainify {
 
 async function garantirInicializacao(): Promise<void> {
   await Promise.all([
-    trainifyState.inicializar(),
+    pezzoState.inicializar(),
     usuarioManager.inicializar(),
   ]);
 }
 
-class SnapshotTrainifyService implements SnapshotService {
-  async exportarSnapshot(): Promise<SnapshotTrainify> {
+class SnapshotPezzoService implements SnapshotService {
+  async exportarSnapshot(): Promise<SnapshotPezzo> {
     await garantirInicializacao();
 
     const agora = new Date().toISOString();
     return {
       versaoSchema: VERSAO_SCHEMA,
-      atualizadoEm: trainifyState.getAtualizadoEm(),
+      atualizadoEm: pezzoState.getAtualizadoEm(),
       exportadoEm: agora,
       usuario: usuarioManager.obterUsuario(),
-      dados: trainifyState.getDadosPortateis(),
+      dados: pezzoState.getDadosPortateis(),
     };
   }
 
   async importarSnapshot(
-    snapshot: SnapshotTrainify,
+    snapshot: SnapshotPezzo,
     estrategia: EstrategiaImportacaoSnapshot
   ): Promise<void> {
     await garantirInicializacao();
 
     if (estrategia === "maisRecente") {
-      const local = Date.parse(trainifyState.getAtualizadoEm());
+      const local = Date.parse(pezzoState.getAtualizadoEm());
       const remoto = Date.parse(snapshot.atualizadoEm);
       if (remoto <= local) return;
     }
 
     usuarioManager.substituirUsuario(snapshot.usuario);
-    trainifyState.substituirDados(snapshot.dados, snapshot.atualizadoEm);
+    pezzoState.substituirDados(snapshot.dados, snapshot.atualizadoEm);
   }
 
-  serializar(snapshot: SnapshotTrainify): string {
+  serializar(snapshot: SnapshotPezzo): string {
     return JSON.stringify(snapshot, null, 2);
   }
 
-  desserializar(texto: string): SnapshotTrainify {
+  desserializar(texto: string): SnapshotPezzo {
     try {
       return migrarAteVersaoAtual(JSON.parse(texto));
     } catch (erro) {
@@ -193,4 +193,4 @@ class SnapshotTrainifyService implements SnapshotService {
   }
 }
 
-export const snapshotService = new SnapshotTrainifyService();
+export const snapshotService = new SnapshotPezzoService();

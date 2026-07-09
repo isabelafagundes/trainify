@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { snapshotService } from "@/application/snapshot/snapshot.service";
-import { trainifyState } from "@/application/state/trainify.state";
+import { pezzoState } from "@/application/state/pezzo.state";
 import { usuarioManager } from "@/application/state/usuario.state";
 import { VERSAO_SCHEMA } from "@/constants";
-import type { SnapshotTrainify } from "@/domain/snapshot";
+import type { SnapshotPezzo } from "@/domain/snapshot";
 
 const dadosVazios = {
   programas: [],
@@ -13,7 +13,7 @@ const dadosVazios = {
   cardioCustom: [],
 };
 
-function criarSnapshot(atualizadoEm = "2024-01-02T03:04:05.000Z"): SnapshotTrainify {
+function criarSnapshot(atualizadoEm = "2024-01-02T03:04:05.000Z"): SnapshotPezzo {
   return {
     versaoSchema: VERSAO_SCHEMA,
     atualizadoEm,
@@ -81,7 +81,7 @@ function criarSnapshot(atualizadoEm = "2024-01-02T03:04:05.000Z"): SnapshotTrain
 describe("snapshotService", () => {
   beforeEach(() => {
     localStorage.clear();
-    trainifyState.substituirDados(dadosVazios, "2024-01-01T00:00:00.000Z");
+    pezzoState.substituirDados(dadosVazios, "2024-01-01T00:00:00.000Z");
     usuarioManager.substituirUsuario(null);
   });
 
@@ -155,22 +155,22 @@ describe("snapshotService", () => {
     await snapshotService.importarSnapshot(snapshot, "substituir");
 
     expect(usuarioManager.obterUsuario()).toEqual(snapshot.usuario);
-    expect(trainifyState.getProgramas()).toEqual(snapshot.dados.programas);
-    expect(trainifyState.getFichas()).toEqual(snapshot.dados.fichas);
-    expect(trainifyState.getExerciciosCustom()).toEqual(
+    expect(pezzoState.getProgramas()).toEqual(snapshot.dados.programas);
+    expect(pezzoState.getFichas()).toEqual(snapshot.dados.fichas);
+    expect(pezzoState.getExerciciosCustom()).toEqual(
       snapshot.dados.exerciciosCustom
     );
-    expect(trainifyState.getCardioCustom()).toEqual(snapshot.dados.cardioCustom);
-    expect(trainifyState.getAtualizadoEm()).toBe(snapshot.atualizadoEm);
+    expect(pezzoState.getCardioCustom()).toEqual(snapshot.dados.cardioCustom);
+    expect(pezzoState.getAtualizadoEm()).toBe(snapshot.atualizadoEm);
   });
 
   it("importarSnapshot com maisRecente ignora snapshot mais antigo", async () => {
-    trainifyState.substituirDados(dadosVazios, "2024-02-01T00:00:00.000Z");
+    pezzoState.substituirDados(dadosVazios, "2024-02-01T00:00:00.000Z");
     const snapshotAntigo = criarSnapshot("2024-01-01T00:00:00.000Z");
 
     await snapshotService.importarSnapshot(snapshotAntigo, "maisRecente");
 
-    expect(trainifyState.getProgramas()).toEqual([]);
+    expect(pezzoState.getProgramas()).toEqual([]);
     expect(usuarioManager.obterUsuario()).toBeNull();
   });
 });

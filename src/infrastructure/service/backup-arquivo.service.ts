@@ -9,7 +9,7 @@ export interface BackupArquivoService {
 
 function criarNomeArquivo(): string {
   const data = new Date().toISOString().slice(0, 10);
-  return `trainify-backup-${data}.json`;
+  return `pezzo-backup-${data}.json`;
 }
 
 function selecionarArquivoTexto(): Promise<string | null> {

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Tela Principal de Gerenciamento — Trainify
+   Tela Principal de Gerenciamento — Pezzo
    ═══════════════════════════════════════════ */
 
 import { useEffect, useMemo, useState } from "react";

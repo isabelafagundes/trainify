@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Estado do Usuário — Trainify
+   Estado do Usuário — Pezzo
    ═══════════════════════════════════════════ */
 
 import { STORAGE_KEYS } from "@/constants";

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Repositório de Fichas (API) — Trainify
+   Repositório de Fichas (API) — Pezzo
    ═══════════════════════════════════════════ */
 
 import type { Ficha } from "@/domain/tipos";

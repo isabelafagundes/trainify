@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Utilitários Responsivos — Trainify
+   Utilitários Responsivos — Pezzo
    ═══════════════════════════════════════════ */
 
 /** Breakpoints do sistema (mobile-first) */

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Cliente HTTP — Trainify
+   Cliente HTTP — Pezzo
    ═══════════════════════════════════════════ */
 
 import { DEFAULT_TIMEOUT } from "@/constants";

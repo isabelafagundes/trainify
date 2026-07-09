@@ -22,7 +22,7 @@ import { stateManagerRepository } from "@/infrastructure/repo/state/state-manage
 import { usuarioManager } from "@/application/state/usuario.state";
 import { carregarSessaoAtiva } from "@/application/state/sessao-ativa";
 
-interface DadosTrainify {
+interface DadosPezzo {
   programas: ReturnType<typeof stateManagerRepository.listarProgramas>;
   fichas: ReturnType<typeof stateManagerRepository.listarFichas>;
   historico: ReturnType<typeof stateManagerRepository.listarTreinos>;
@@ -31,9 +31,9 @@ interface DadosTrainify {
   carregando: boolean;
 }
 
-const ContextoDados = createContext<DadosTrainify | null>(null);
+const ContextoDados = createContext<DadosPezzo | null>(null);
 
-export function useDados(): DadosTrainify {
+export function useDados(): DadosPezzo {
   const ctx = useContext(ContextoDados);
   if (!ctx) {
     throw new Error("useDados deve ser usado dentro de <DadosProvider>");

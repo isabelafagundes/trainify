@@ -7,7 +7,7 @@ import type {
   TipoCardioDef,
 } from "@/domain/tipos";
 
-export interface DadosSnapshotTrainify {
+export interface DadosSnapshotPezzo {
   programas: Programa[];
   fichas: Ficha[];
   historico: RegistroTreino[];
@@ -15,10 +15,10 @@ export interface DadosSnapshotTrainify {
   cardioCustom: TipoCardioDef[];
 }
 
-export interface SnapshotTrainify {
+export interface SnapshotPezzo {
   versaoSchema: number;
   atualizadoEm: string;
   exportadoEm: string;
   usuario: Usuario | null;
-  dados: DadosSnapshotTrainify;
+  dados: DadosSnapshotPezzo;
 }
