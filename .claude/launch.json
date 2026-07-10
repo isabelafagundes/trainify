@@ -9,12 +9,6 @@
       "autoPort": true
     },
     {
-      "name": "design-canvas",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["C:\\Users\\isabe\\.claude\\skills\\design-canvas\\serve.py", "tmp\\repensar-tela\\execucao-treino"],
-      "port": 8765
-    },
-    {
       "name": "vite-preview",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "preview"],

@@ -8,7 +8,7 @@
    Sem BigSwitcher — qual visualização vem por rota (prop `visualizacao`).
    ═══════════════════════════════════════════ */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import type {
   ChaveMetricaCardio,
@@ -30,6 +30,8 @@ import { useToast } from "@/interface/widget/toast";
 
 type VisualizacaoGerenciar = "programas" | "fichas" | "exercicios";
 type TipoExclusaoGerenciar = "programa" | "exercicio" | "ficha" | "cardio";
+/** Sub-abas da biblioteca de Exercícios: força vs. cardio. */
+type AbaExercicios = "musculacao" | "cardio";
 
 interface ModalExclusaoGerenciar {
   aberto: boolean;
@@ -125,6 +127,8 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
   const [tiposCardio, setTiposCardio] = useState<TipoCardioDef[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalCriarExercicioAberto, setModalCriarExercicioAberto] = useState(false);
+  const [abaExercicios, setAbaExercicios] = useState<AbaExercicios>("musculacao");
+  const [buscaExercicios, setBuscaExercicios] = useState("");
   const [formCardioAberto, setFormCardioAberto] = useState(false);
   const [tipoCardioEditando, setTipoCardioEditando] = useState<TipoCardioDef | null>(null);
   const [formCardio, setFormCardio] = useState<FormTipoCardio>(FORM_CARDIO_INICIAL);
@@ -163,10 +167,23 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
     return `${count} exercícios customizados`;
   })();
 
+  // Termo de busca normalizado (aplicado à aba ativa)
+  const buscaNormalizada = buscaExercicios.trim().toLowerCase();
+
+  // Exercícios após a busca (por nome ou grupo muscular)
+  const exerciciosFiltrados = useMemo(() => {
+    if (!buscaNormalizada) return exerciciosCustom;
+    return exerciciosCustom.filter(
+      (e) =>
+        e.nome.toLowerCase().includes(buscaNormalizada) ||
+        e.grupoMuscular.toLowerCase().includes(buscaNormalizada)
+    );
+  }, [exerciciosCustom, buscaNormalizada]);
+
   // Exercícios agrupados por grupo muscular, ordenados alfabeticamente
   const gruposDeExercicios = useMemo(() => {
     const mapa = new Map<string, Exercicio[]>();
-    for (const exercicio of exerciciosCustom) {
+    for (const exercicio of exerciciosFiltrados) {
       const lista = mapa.get(exercicio.grupoMuscular) ?? [];
       lista.push(exercicio);
       mapa.set(exercicio.grupoMuscular, lista);
@@ -177,7 +194,19 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
         lista: [...lista].sort((a, b) => a.nome.localeCompare(b.nome)),
       }))
       .sort((a, b) => a.grupo.localeCompare(b.grupo));
-  }, [exerciciosCustom]);
+  }, [exerciciosFiltrados]);
+
+  // Tipos de cardio após a busca (por nome)
+  const tiposCardioFiltrados = useMemo(() => {
+    if (!buscaNormalizada) return tiposCardio;
+    return tiposCardio.filter((t) => t.nome.toLowerCase().includes(buscaNormalizada));
+  }, [tiposCardio, buscaNormalizada]);
+
+  // Troca de aba limpa a busca (evita um termo de uma aba filtrar a outra)
+  function trocarAbaExercicios(aba: AbaExercicios) {
+    setAbaExercicios(aba);
+    setBuscaExercicios("");
+  }
 
   const programaAtivo = programas.find((p) => p.ativo) ?? null;
   const programasInativos = programas.filter((p) => !p.ativo);
@@ -420,41 +449,41 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
         </section>
       )}
 
-      {/* ══ Visualização: Exercícios ══ */}
+      {/* ══ Visualização: Exercícios (abas Musculação / Cardio) ══ */}
       {visualizacao === "exercicios" && (
-        <>
-          <section className="space-y-4">
-            {carregando ? (
-              <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse border-b border-borda-suave last:border-b-0">
-                    <div className="flex-1">
-                      <div className="h-5 bg-borda-suave rounded w-32 mb-2"></div>
-                      <div className="h-4 bg-borda-suave rounded w-24"></div>
-                    </div>
-                    <div className="h-8 bg-borda-suave rounded w-16"></div>
+        <section className="space-y-4">
+          {carregando ? (
+            <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse border-b border-borda-suave last:border-b-0">
+                  <div className="flex-1">
+                    <div className="h-5 bg-borda-suave rounded w-32 mb-2"></div>
+                    <div className="h-4 bg-borda-suave rounded w-24"></div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-texto-sutil">
-                    {textoContadorExercicios}
-                  </span>
-                  {exerciciosCustom.length > 0 && (
-                    <Botao
-                      variante="fantasma"
-                      tamanho="compacto"
-                      icone={<Icone nome="mais" tamanho={16} />}
-                      onClick={() => setModalCriarExercicioAberto(true)}
-                    >
-                      Novo Exercício
-                    </Botao>
-                  )}
+                  <div className="h-8 bg-borda-suave rounded w-16"></div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <AbasExercicios
+                aba={abaExercicios}
+                aoAlterar={trocarAbaExercicios}
+                contagemMusculacao={exerciciosCustom.length}
+                contagemCardio={tiposCardio.length}
+              />
 
-                {exerciciosCustom.length === 0 ? (
+              {/* Busca — some só na biblioteca de força vazia (nada a filtrar) */}
+              {!(abaExercicios === "musculacao" && exerciciosCustom.length === 0) && (
+                <CampoBusca
+                  valor={buscaExercicios}
+                  aoAlterar={setBuscaExercicios}
+                  placeholder={abaExercicios === "musculacao" ? "Buscar exercício..." : "Buscar cardio..."}
+                />
+              )}
+
+              {abaExercicios === "musculacao" ? (
+                exerciciosCustom.length === 0 ? (
                   <EstadoVazio
                     icone="alvo"
                     titulo="Nenhum exercício customizado"
@@ -470,138 +499,157 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
                     }
                   />
                 ) : (
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-start">
-                    {gruposDeExercicios.map(({ grupo, lista }, i) => (
-                      <section
-                        key={grupo}
-                        className="space-y-2 reveal-up"
-                        style={{ animationDelay: `${60 + i * 70}ms` }}
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-texto-sutil">
+                        {textoContadorExercicios}
+                      </span>
+                      <Botao
+                        variante="fantasma"
+                        tamanho="compacto"
+                        icone={<Icone nome="mais" tamanho={16} />}
+                        onClick={() => setModalCriarExercicioAberto(true)}
                       >
-                        <div className="flex items-baseline justify-between px-1">
-                          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil">
-                            {grupo}
-                          </h3>
-                          <span className="text-xs tabular-nums text-texto-sutil/60">
-                            {lista.length}
-                          </span>
-                        </div>
-                        <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
-                          {lista.map((exercicio, index) => (
-                            <LinhaExercicioCustom
-                              key={exercicio.id}
-                              exercicio={exercicio}
-                              estaSendoExcluido={itensExcluindo.exercicio.has(exercicio.id)}
-                              aoExcluir={() => abrirModalExclusao("exercicio", exercicio.id, exercicio.nome)}
-                              semBorda={index === lista.length - 1}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    ))}
+                        Novo Exercício
+                      </Botao>
+                    </div>
+
+                    {gruposDeExercicios.length === 0 ? (
+                      <SemResultadoBusca termo={buscaExercicios} />
+                    ) : (
+                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-start">
+                        {gruposDeExercicios.map(({ grupo, lista }, i) => (
+                          <section
+                            key={grupo}
+                            className="space-y-2 reveal-up"
+                            style={{ animationDelay: `${60 + i * 70}ms` }}
+                          >
+                            <div className="flex items-baseline justify-between px-1">
+                              <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil">
+                                {grupo}
+                              </h3>
+                              <span className="text-xs tabular-nums text-texto-sutil/60">
+                                {lista.length}
+                              </span>
+                            </div>
+                            <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
+                              {lista.map((exercicio, index) => (
+                                <LinhaExercicioCustom
+                                  key={exercicio.id}
+                                  exercicio={exercicio}
+                                  estaSendoExcluido={itensExcluindo.exercicio.has(exercicio.id)}
+                                  aoExcluir={() => abrirModalExclusao("exercicio", exercicio.id, exercicio.nome)}
+                                  semBorda={index === lista.length - 1}
+                                />
+                              ))}
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-texto-sutil">
+                      Tipos e métricas usados nas fichas.
+                    </span>
+                    <Botao
+                      variante="fantasma"
+                      tamanho="compacto"
+                      icone={<Icone nome="mais" tamanho={16} />}
+                      onClick={() => abrirFormularioCardio()}
+                    >
+                      Novo Cardio
+                    </Botao>
                   </div>
-                )}
-              </>
-            )}
-          </section>
 
-          <section className="mt-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-texto-primario font-display">
-                  Cardio
-                </h2>
-                <p className="mt-0.5 text-xs text-texto-sutil">
-                  Tipos e métricas usados nas fichas.
-                </p>
-              </div>
-              <Botao
-                variante="fantasma"
-                tamanho="compacto"
-                icone={<Icone nome="mais" tamanho={16} />}
-                onClick={() => abrirFormularioCardio()}
-              >
-                Novo Cardio
-              </Botao>
-            </div>
+                  {formCardioAberto && (
+                    <div className="rounded-2xl border border-borda bg-superficie p-4 space-y-3">
+                      <div className="grid grid-cols-[72px_1fr] gap-3">
+                        <Input
+                          label="Emoji"
+                          tipo="text"
+                          value={formCardio.emoji}
+                          onChange={(e) => setFormCardio((atual) => ({ ...atual, emoji: e.target.value }))}
+                          placeholder="🏃"
+                        />
+                        <Input
+                          label="Nome"
+                          tipo="text"
+                          value={formCardio.nome}
+                          onChange={(e) => setFormCardio((atual) => ({ ...atual, nome: e.target.value }))}
+                          placeholder="Ex: Caminhada"
+                        />
+                      </div>
 
-            {formCardioAberto && (
-              <div className="rounded-2xl border border-borda bg-superficie p-4 space-y-3">
-                <div className="grid grid-cols-[72px_1fr] gap-3">
-                  <Input
-                    label="Emoji"
-                    tipo="text"
-                    value={formCardio.emoji}
-                    onChange={(e) => setFormCardio((atual) => ({ ...atual, emoji: e.target.value }))}
-                    placeholder="🏃"
-                  />
-                  <Input
-                    label="Nome"
-                    tipo="text"
-                    value={formCardio.nome}
-                    onChange={(e) => setFormCardio((atual) => ({ ...atual, nome: e.target.value }))}
-                    placeholder="Ex: Caminhada"
-                  />
-                </div>
+                      <div>
+                        <p className="mb-2 text-xs font-medium text-texto-secundario">
+                          Métricas
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {CHAVES_METRICAS_CARDIO.map((chave) => {
+                            const meta = META_METRICA_CARDIO[chave];
+                            const selecionada = formCardio.metricas.includes(chave);
+                            return (
+                              <button
+                                key={chave}
+                                type="button"
+                                role="checkbox"
+                                aria-checked={selecionada}
+                                onClick={() => alternarMetricaCardio(chave)}
+                                className={`flex min-h-[44px] w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                                  selecionada
+                                    ? "border-acento bg-acento/10 text-texto-primario"
+                                    : "border-borda-suave bg-fundo text-texto-secundario hover:border-acento"
+                                }`}
+                              >
+                                <span className="min-w-0 truncate">
+                                  {meta.rotulo}
+                                  {meta.unidade ? ` (${meta.unidade})` : ""}
+                                </span>
+                                {selecionada && (
+                                  <Icone nome="check" tamanho={15} className="ml-auto shrink-0 text-acento" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
 
-                <div>
-                  <p className="mb-2 text-xs font-medium text-texto-secundario">
-                    Métricas
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {CHAVES_METRICAS_CARDIO.map((chave) => {
-                      const meta = META_METRICA_CARDIO[chave];
-                      const selecionada = formCardio.metricas.includes(chave);
-                      return (
-                        <button
-                          key={chave}
-                          type="button"
-                          role="checkbox"
-                          aria-checked={selecionada}
-                          onClick={() => alternarMetricaCardio(chave)}
-                          className={`flex min-h-[44px] w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                            selecionada
-                              ? "border-acento bg-acento/10 text-texto-primario"
-                              : "border-borda-suave bg-fundo text-texto-secundario hover:border-acento"
-                          }`}
-                        >
-                          <span className="min-w-0 truncate">
-                            {meta.rotulo}
-                            {meta.unidade ? ` (${meta.unidade})` : ""}
-                          </span>
-                          {selecionada && (
-                            <Icone nome="check" tamanho={15} className="ml-auto shrink-0 text-acento" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                      <div className="flex justify-end gap-2 pt-1">
+                        <Botao variante="fantasma" tamanho="compacto" onClick={fecharFormularioCardio}>
+                          Cancelar
+                        </Botao>
+                        <Botao variante="primario" tamanho="compacto" onClick={salvarTipoCardio}>
+                          {tipoCardioEditando ? "Salvar" : "Criar"}
+                        </Botao>
+                      </div>
+                    </div>
+                  )}
 
-                <div className="flex justify-end gap-2 pt-1">
-                  <Botao variante="fantasma" tamanho="compacto" onClick={fecharFormularioCardio}>
-                    Cancelar
-                  </Botao>
-                  <Botao variante="primario" tamanho="compacto" onClick={salvarTipoCardio}>
-                    {tipoCardioEditando ? "Salvar" : "Criar"}
-                  </Botao>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
-              {tiposCardio.map((tipo, index) => (
-                <LinhaTipoCardio
-                  key={tipo.id}
-                  tipo={tipo}
-                  estaSendoExcluido={itensExcluindo.cardio.has(tipo.id)}
-                  aoEditar={() => abrirFormularioCardio(tipo)}
-                  aoExcluir={() => abrirModalExclusao("cardio", tipo.id, tipo.nome)}
-                  semBorda={index === tiposCardio.length - 1}
-                />
-              ))}
-            </div>
-          </section>
-        </>
+                  {tiposCardioFiltrados.length === 0 ? (
+                    <SemResultadoBusca termo={buscaExercicios} />
+                  ) : (
+                    <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
+                      {tiposCardioFiltrados.map((tipo, index) => (
+                        <LinhaTipoCardio
+                          key={tipo.id}
+                          tipo={tipo}
+                          estaSendoExcluido={itensExcluindo.cardio.has(tipo.id)}
+                          aoEditar={() => abrirFormularioCardio(tipo)}
+                          aoExcluir={() => abrirModalExclusao("cardio", tipo.id, tipo.nome)}
+                          semBorda={index === tiposCardioFiltrados.length - 1}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </section>
       )}
 
       {/* ── Modal de Criação de Exercício ── */}
@@ -692,6 +740,147 @@ function SkeletonCards() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+const OPCOES_ABAS_EXERCICIOS: { id: AbaExercicios; rotulo: string }[] = [
+  { id: "musculacao", rotulo: "Musculação" },
+  { id: "cardio", rotulo: "Cardio" },
+];
+
+interface AbasExerciciosProps {
+  aba: AbaExercicios;
+  aoAlterar: (aba: AbaExercicios) => void;
+  contagemMusculacao: number;
+  contagemCardio: number;
+}
+
+/** Abas sublinhadas Musculação / Cardio (padrão Hevy/Strong). Tablist acessível
+    com roving tabindex e navegação por setas/Home/End — espelha o BigSwitcher. */
+function AbasExercicios({ aba, aoAlterar, contagemMusculacao, contagemCardio }: AbasExerciciosProps) {
+  const contagens: Record<AbaExercicios, number> = {
+    musculacao: contagemMusculacao,
+    cardio: contagemCardio,
+  };
+
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, indiceAtual: number) {
+    const ultima = OPCOES_ABAS_EXERCICIOS.length - 1;
+    let proximo: number | null = null;
+
+    if (event.key === "ArrowRight") proximo = indiceAtual === ultima ? 0 : indiceAtual + 1;
+    if (event.key === "ArrowLeft") proximo = indiceAtual === 0 ? ultima : indiceAtual - 1;
+    if (event.key === "Home") proximo = 0;
+    if (event.key === "End") proximo = ultima;
+
+    if (proximo === null) return;
+
+    event.preventDefault();
+    aoAlterar(OPCOES_ABAS_EXERCICIOS[proximo].id);
+
+    const abas = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    requestAnimationFrame(() => abas?.[proximo]?.focus());
+  }
+
+  return (
+    <div role="tablist" aria-label="Tipo de exercício" className="flex gap-6 border-b border-borda">
+      {OPCOES_ABAS_EXERCICIOS.map((opcao, indice) => {
+        const selecionado = aba === opcao.id;
+        return (
+          <button
+            key={opcao.id}
+            type="button"
+            role="tab"
+            aria-selected={selecionado}
+            tabIndex={selecionado ? 0 : -1}
+            onClick={() => aoAlterar(opcao.id)}
+            onKeyDown={(event) => handleKeyDown(event, indice)}
+            className={`
+              relative -mb-px flex min-h-[44px] items-center gap-2 pb-2.5 pt-2
+              font-display text-[15px] transition-colors
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento
+              ${
+                selecionado
+                  ? "font-bold text-texto-primario"
+                  : "font-medium text-texto-sutil hover:text-texto-secundario"
+              }
+            `}
+          >
+            <span>{opcao.rotulo}</span>
+            <span
+              className={`inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+                selecionado
+                  ? "bg-acento text-texto-invertido"
+                  : "border border-borda bg-superficie text-texto-secundario"
+              }`}
+            >
+              {contagens[opcao.id]}
+            </span>
+            {selecionado && (
+              <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[2.5px] rounded-full bg-acento" />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+interface CampoBuscaProps {
+  valor: string;
+  aoAlterar: (valor: string) => void;
+  placeholder: string;
+}
+
+/** Campo de busca com lupa à esquerda e botão de limpar. Espelha o padrão do
+    PickerExercicios (mesmas classes/afinação de foco). */
+function CampoBusca({ valor, aoAlterar, placeholder }: CampoBuscaProps) {
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={valor}
+        onChange={(e) => aoAlterar(e.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className="
+          w-full px-4 py-3 pl-10 pr-10
+          bg-superficie border border-borda rounded-[10px]
+          text-sm text-texto-primario placeholder:text-texto-sutil
+          focus:border-acento focus:outline-none focus:ring-2 focus:ring-acento/20
+          transition-all duration-200
+        "
+      />
+      <svg
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-texto-sutil"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      {valor && (
+        <button
+          type="button"
+          onClick={() => aoAlterar("")}
+          aria-label="Limpar busca"
+          className="absolute right-2 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-texto-sutil transition-colors hover:bg-superficie-suave hover:text-texto-primario"
+        >
+          <Icone nome="fechar" tamanho={16} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Estado vazio de busca (nenhum resultado para o termo). */
+function SemResultadoBusca({ termo }: { termo: string }) {
+  return (
+    <div className="px-4 py-10 text-center">
+      <p className="text-sm text-texto-secundario">
+        Nenhum resultado para “{termo.trim()}”.
+      </p>
     </div>
   );
 }
