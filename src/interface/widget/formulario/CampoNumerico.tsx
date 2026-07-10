@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { parseNumeroBR, textoDecimalBR } from "@/interface/util/numero";
 
 /** Receita canônica de campo numérico "caixa preenchida" — usada pelo
     CampoNumerico (variante "caixa") e por inputs numéricos crus que não
@@ -34,10 +35,10 @@ export function CampoNumerico({
   ariaLabel,
   variante,
 }: CampoNumericoProps) {
-  const [texto, setTexto] = useState(String(valor));
+  const [texto, setTexto] = useState(textoDecimalBR(valor));
 
   useEffect(() => {
-    setTexto(String(valor));
+    setTexto(textoDecimalBR(valor));
   }, [valor]);
 
   function normalizar(valorDigitado: number): number {
@@ -55,36 +56,42 @@ export function CampoNumerico({
   }
 
   function aoMudar(evento: React.ChangeEvent<HTMLInputElement>) {
-    const proximoTexto = evento.target.value.replace(",", ".");
+    // Preserva o texto cru (ex.: "12," enquanto digita a parte decimal) —
+    // parseNumeroBR aceita vírgula ou ponto.
+    const proximoTexto = evento.target.value;
     setTexto(proximoTexto);
 
     if (proximoTexto === "" || proximoTexto === "-") return;
 
-    const proximoValor = decimal ? Number(proximoTexto) : parseInt(proximoTexto, 10);
+    const proximoValor = decimal
+      ? parseNumeroBR(proximoTexto)
+      : parseInt(proximoTexto.replace(",", "."), 10);
     if (Number.isFinite(proximoValor)) {
       aoAlterar(proximoValor);
     }
   }
 
   function aoSairDoCampo() {
-    const valorDigitado = decimal ? Number(texto) : parseInt(texto, 10);
+    const valorDigitado = decimal
+      ? parseNumeroBR(texto)
+      : parseInt(texto.replace(",", "."), 10);
 
     if (!Number.isFinite(valorDigitado)) {
-      setTexto(String(valor));
+      setTexto(textoDecimalBR(valor));
       return;
     }
 
     const valorNormalizado = normalizar(valorDigitado);
-    setTexto(String(valorNormalizado));
+    setTexto(textoDecimalBR(valorNormalizado));
     aoAlterar(valorNormalizado);
   }
 
   return (
     <input
-      type="number"
+      type="text"
       value={texto}
-      min={minimo}
-      max={maximo}
+      // step é ignorado em type="text" (não há stepper nativo), mas mantém a
+      // intenção declarada de passo e a compatibilidade da API do componente.
       step={passo}
       inputMode={decimal ? "decimal" : "numeric"}
       aria-label={ariaLabel}

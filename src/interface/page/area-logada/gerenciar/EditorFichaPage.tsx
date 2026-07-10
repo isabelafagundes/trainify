@@ -19,7 +19,8 @@ import type {
 import { META_METRICA_CARDIO, resolverTipoCardio } from "@/domain/tipos";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Input } from "@/interface/widget/formulario/Input";
-import { CampoNumerico, CLASSES_CAMPO_CAIXA } from "@/interface/widget/formulario/CampoNumerico";
+import { CampoNumerico } from "@/interface/widget/formulario/CampoNumerico";
+import { CampoNumeroOpcional } from "@/interface/widget/formulario/CampoNumeroOpcional";
 import { CampoCheck } from "@/interface/widget/formulario/CampoCheck";
 import { SeletorIcone } from "@/interface/widget/formulario/SeletorIcone";
 import { PickerExercicios } from "@/interface/widget/formulario/PickerExercicios";
@@ -1028,17 +1029,11 @@ function CampoMetricaCardioConfig({
       <span className="text-xs text-texto-secundario mb-1 block">
         {meta.rotulo}{meta.unidade ? ` (${meta.unidade})` : ""}
       </span>
-      <input
-        type="number"
-        value={valor ?? ""}
-        min={0}
-        step={meta.passo}
-        inputMode={ehDecimal ? "decimal" : "numeric"}
-        onChange={(e) => {
-          const texto = e.target.value.replace(",", ".");
-          aoAlterar(texto === "" ? undefined : Number(texto));
-        }}
-        className={CLASSES_CAMPO_CAIXA}
+      <CampoNumeroOpcional
+        valor={valor}
+        decimal={ehDecimal}
+        passo={meta.passo}
+        aoAlterar={aoAlterar}
       />
     </label>
   );

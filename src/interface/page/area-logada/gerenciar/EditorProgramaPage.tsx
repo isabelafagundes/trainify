@@ -12,6 +12,7 @@ import { Icone } from "@/interface/widget/svg/Icone";
 import { useToast } from "@/interface/widget/toast";
 import { ModalCopiarPrograma } from "@/interface/widget/modal/ModalCopiarPrograma";
 import { ModalConfirmacao } from "@/interface/widget/modal/ModalConfirmacao";
+import { MenuAcoes } from "@/interface/widget/menu/MenuAcoes";
 import type { OpcoesNavegacao } from "@/interface/rota/useNavegar";
 
 interface PropriedadesEditorProgramaPage {
@@ -137,26 +138,24 @@ export function EditorProgramaPage({
       {/* Conteúdo scrollável */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="px-5 py-4 pb-6 space-y-6">
-          {/* Copiar de existente */}
-          <Botao
-            variante="secundario"
-            tamanho="compacto"
-            className="w-full"
-            icone={<Icone nome="copiar" tamanho={14} />}
-            onClick={() => setModalCopiarProgramaAberto(true)}
-          >
-            Copiar de existente
-          </Botao>
-
-          {/* Nome */}
-          <Input
-            label="Nome"
-            tipo="text"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex: Rotina Janeiro"
-            ajuda="Nome para identificar o programa"
-          />
+          {/* Nome + atalho para copiar de um programa existente */}
+          <div className="space-y-2">
+            <Input
+              label="Nome"
+              tipo="text"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex: Rotina Janeiro"
+            />
+            <button
+              type="button"
+              onClick={() => setModalCopiarProgramaAberto(true)}
+              className="inline-flex items-center gap-1.5 px-0.5 text-xs text-texto-secundario transition-colors hover:text-texto-primario"
+            >
+              <Icone nome="copiar" tamanho={14} />
+              Copiar de um programa existente
+            </button>
+          </div>
 
           {/* Descrição */}
           <Input
@@ -169,104 +168,111 @@ export function EditorProgramaPage({
             ajuda="Descreva o objetivo ou características do programa"
           />
 
-          {/* Programa ativo */}
-          <button
-            type="button"
-            onClick={() => setAtivo(!ativo)}
-            className={`
-              flex items-center gap-3 px-4 py-3 rounded-xl transition-colors w-full
-              ${ativo
-                ? "bg-acento/20 text-acento"
-                : "bg-superficie-suave text-texto-secundario"
-              }
-            `}
-          >
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium">
-                Programa ativo
-              </p>
-              <p className="text-xs opacity-80">
-                Apenas um programa pode estar ativo por vez
-              </p>
-            </div>
-            <div className={`w-11 h-6 rounded-full relative transition-colors duration-200 ${ativo ? "bg-acento" : "bg-borda"}`}>
-              <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-superficie transition-transform duration-200 ${ativo ? "translate-x-5" : "translate-x-0"}`} />
-            </div>
-          </button>
-
-          {/* Info sobre fichas */}
-          <div className="px-4 py-3 bg-superficie-suave rounded-xl border border-borda-suave">
-            {programaPersistido && idParaUsar ? (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium text-texto-primario">
-                    Fichas do programa
-                  </p>
-                  <Botao
-                    variante="fantasma"
-                    tamanho="compacto"
-                    icone={<Icone nome="mais" tamanho={14} />}
-                    onClick={() => setModalNovaFicha(true)}
-                  >
-                    Nova ficha
-                  </Botao>
-                </div>
-
-                {(() => {
-                  const fichasDoPrograma = stateManagerRepository.obterFichasDoPrograma(idParaUsar);
-                  if (fichasDoPrograma.length === 0) {
-                    return (
-                      <p className="text-sm text-texto-sutil py-2">
-                        Nenhuma ficha criada ainda
-                      </p>
-                    );
-                  }
-                  return (
-                    <div className="space-y-2">
-                      {fichasDoPrograma.map((ficha) => (
-                        <div
-                          key={ficha.id}
-                          className="flex items-center gap-3 px-3 py-2 bg-superficie rounded-lg border border-borda-suave"
-                        >
-                          <span className="text-xl shrink-0">
-                            {ficha.emoji || "💪"}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-texto-primario truncate">
-                              {ficha.nome}
-                            </p>
-                            <p className="text-xs text-texto-secundario">
-                              {exerciciosDaFicha(ficha).length} {exerciciosDaFicha(ficha).length === 1 ? "exercício" : "exercícios"}
-                            </p>
-                          </div>
-                          <Botao
-                            variante="fantasma"
-                            tamanho="compacto"
-                            onClick={() => aoNavegar("editarFicha", { id: ficha.id })}
-                          >
-                            Editar
-                          </Botao>
-                          <button
-                            type="button"
-                            aria-label={`Remover ${ficha.nome} do programa`}
-                            onClick={() => setFichaParaRemover({ id: ficha.id, nome: ficha.nome })}
-                            className="shrink-0 p-1.5 text-texto-secundario hover:text-perigo hover:bg-superficie-suave rounded-lg transition-colors"
-                          >
-                            <Icone nome="lixeira" tamanho={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-texto-secundario">
-                  Salve o programa para criar fichas.
+          {/* Status */}
+          <div className="space-y-2">
+            <span className="block px-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-texto-sutil">
+              Status
+            </span>
+            <button
+              type="button"
+              onClick={() => setAtivo(!ativo)}
+              className="flex w-full items-center gap-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-left transition-colors hover:bg-superficie-suave"
+            >
+              <div className="flex-1">
+                <p className="text-sm font-medium text-texto-primario">
+                  Programa ativo
                 </p>
+                <p className="text-xs text-texto-sutil">
+                  Apenas um programa pode estar ativo por vez
+                </p>
+              </div>
+              <div className={`w-11 h-6 rounded-full relative transition-colors duration-200 ${ativo ? "bg-acento" : "bg-borda"}`}>
+                <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-superficie transition-transform duration-200 ${ativo ? "translate-x-5" : "translate-x-0"}`} />
+              </div>
+            </button>
+          </div>
+
+          {/* Fichas do programa */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 px-0.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-acento" />
+                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-texto-sutil">
+                  Fichas do programa
+                </span>
+              </div>
+              {programaPersistido && idParaUsar && (
                 <Botao
                   variante="fantasma"
+                  tamanho="compacto"
+                  icone={<Icone nome="mais" tamanho={14} />}
+                  onClick={() => setModalNovaFicha(true)}
+                >
+                  Nova ficha
+                </Botao>
+              )}
+            </div>
+
+            {programaPersistido && idParaUsar ? (
+              (() => {
+                const fichasDoPrograma = stateManagerRepository.obterFichasDoPrograma(idParaUsar);
+                if (fichasDoPrograma.length === 0) {
+                  return (
+                    <div className="rounded-2xl border border-dashed border-borda bg-superficie-suave/60 px-4 py-6 text-center">
+                      <p className="text-sm text-texto-secundario">
+                        Nenhuma ficha ainda. Adicione a primeira com “Nova ficha”.
+                      </p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="overflow-hidden rounded-2xl border border-borda bg-superficie">
+                    {fichasDoPrograma.map((ficha, i) => (
+                      <div
+                        key={ficha.id}
+                        className={`flex items-center gap-3 px-3 py-2.5 ${
+                          i > 0 ? "border-t border-borda-suave" : ""
+                        }`}
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-acento-suave text-lg">
+                          {ficha.emoji || "💪"}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-texto-primario">
+                            {ficha.nome}
+                          </p>
+                          <p className="text-xs text-texto-sutil">
+                            {exerciciosDaFicha(ficha).length} {exerciciosDaFicha(ficha).length === 1 ? "exercício" : "exercícios"}
+                          </p>
+                        </div>
+                        <MenuAcoes
+                          rotulo={`Ações de ${ficha.nome}`}
+                          itens={[
+                            {
+                              label: "Editar",
+                              icone: "editar",
+                              onClick: () => aoNavegar("editarFicha", { id: ficha.id }),
+                            },
+                            {
+                              label: "Remover do programa",
+                              icone: "lixeira",
+                              onClick: () => setFichaParaRemover({ id: ficha.id, nome: ficha.nome }),
+                              perigo: true,
+                            },
+                          ]}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="rounded-2xl border border-dashed border-borda bg-superficie-suave/60 px-4 py-5 text-center">
+                <p className="text-sm text-texto-secundario">
+                  Salve o programa para começar a montar as fichas.
+                </p>
+                <Botao
+                  variante="secundario"
                   tamanho="compacto"
                   className="mt-3"
                   icone={<Icone nome="mais" tamanho={14} />}
@@ -280,7 +286,7 @@ export function EditorProgramaPage({
                 >
                   Criar nova ficha
                 </Botao>
-              </>
+              </div>
             )}
           </div>
         </div>

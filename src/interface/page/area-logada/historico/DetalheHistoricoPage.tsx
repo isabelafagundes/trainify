@@ -182,16 +182,10 @@ export function DetalheHistoricoPage({
             );
           })}
         </div>
-      ) : (
-        <EstadoVazio
-          icone="listaVerificacao"
-          titulo="Sem séries registradas"
-          descricao="Este treino foi finalizado sem séries de musculação registradas."
-        />
-      )}
+      ) : null}
 
       {registro.cardio.length > 0 ? (
-        <div className="mt-4 space-y-3">
+        <div className={`space-y-3 ${exerciciosComSeries.length > 0 ? "mt-4" : ""}`}>
           {registro.cardio.map((cardio) => (
             <BlocoCardioHistorico
               key={cardio.cardioId}
@@ -204,6 +198,14 @@ export function DetalheHistoricoPage({
             />
           ))}
         </div>
+      ) : null}
+
+      {exerciciosComSeries.length === 0 && registro.cardio.length === 0 ? (
+        <EstadoVazio
+          icone="listaVerificacao"
+          titulo="Sem exercícios registrados"
+          descricao="Este treino foi finalizado sem nenhum exercício registrado."
+        />
       ) : null}
     </div>
   );

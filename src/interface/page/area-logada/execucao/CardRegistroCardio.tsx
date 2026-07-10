@@ -12,6 +12,7 @@ import {
 } from "@/domain/tipos";
 import { Icone } from "@/interface/widget/svg/Icone";
 import { CLASSES_CAMPO_CAIXA } from "@/interface/widget/formulario/CampoNumerico";
+import { CampoNumeroOpcional } from "@/interface/widget/formulario/CampoNumeroOpcional";
 
 type AtualizacaoCardio = Partial<Pick<RegistroCardio, ChaveMetricaCardio | "nota">>;
 
@@ -65,20 +66,13 @@ function CampoMetricaCardio({
         className={CLASSES_CAMPO_CAIXA}
       />
     ) : (
-      <input
-        type="number"
-        value={valorExibido ?? ""}
-        min={0}
-        step={ehRemoDistancia ? 50 : meta.passo}
-        inputMode={meta.passo < 1 ? "decimal" : "numeric"}
-        onChange={(evento) => {
-          const texto = evento.target.value.replace(",", ".");
-          const proximo = texto === "" ? undefined : Number(texto);
-          if (proximo === undefined || Number.isFinite(proximo)) {
-            aoAlterar(ehRemoDistancia && proximo !== undefined ? proximo / 1000 : proximo);
-          }
-        }}
-        className={CLASSES_CAMPO_CAIXA}
+      <CampoNumeroOpcional
+        valor={valorExibido}
+        decimal={meta.passo < 1 && !ehRemoDistancia}
+        passo={ehRemoDistancia ? 50 : meta.passo}
+        aoAlterar={(proximo) =>
+          aoAlterar(ehRemoDistancia && proximo !== undefined ? proximo / 1000 : proximo)
+        }
       />
     );
 
