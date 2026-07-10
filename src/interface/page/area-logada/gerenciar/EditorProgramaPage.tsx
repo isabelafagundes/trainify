@@ -14,6 +14,12 @@ import { ModalCopiarPrograma } from "@/interface/widget/modal/ModalCopiarProgram
 import { ModalConfirmacao } from "@/interface/widget/modal/ModalConfirmacao";
 import { MenuAcoes } from "@/interface/widget/menu/MenuAcoes";
 import type { OpcoesNavegacao } from "@/interface/rota/useNavegar";
+import { useGuardaSaida } from "./useGuardaSaida";
+
+/** Assinatura dos campos que só são persistidos ao salvar. */
+function assinaturaPrograma(nome: string, descricao: string, ativo: boolean): string {
+  return JSON.stringify({ nome: nome.trim(), descricao: descricao.trim(), ativo });
+}
 
 interface PropriedadesEditorProgramaPage {
   programaId?: string;
@@ -41,10 +47,18 @@ export function EditorProgramaPage({
   const [modalSelecionarFicha, setModalSelecionarFicha] = useState(false);
   const [fichaParaRemover, setFichaParaRemover] = useState<{ id: string; nome: string } | null>(null);
 
+  // Snapshot dos campos no momento em que foram carregados/salvos, para detectar
+  // alterações não salvas ao tentar fechar.
+  const [baseline, setBaseline] = useState<string | null>(null);
+
   const editando = Boolean(programaId);
   const titulo = editando ? "Editar Programa" : "Novo Programa";
   const idParaUsar = programaId || programaTempId;
   const programaPersistido = Boolean(idParaUsar);
+
+  const temAlteracoes =
+    baseline !== null && baseline !== assinaturaPrograma(nome, descricao, ativo);
+  const guarda = useGuardaSaida(temAlteracoes);
 
   // Carregar dados
   useEffect(() => {
@@ -56,11 +70,14 @@ export function EditorProgramaPage({
           setNome(prog.nome);
           setDescricao(prog.descricao);
           setAtivo(prog.ativo);
+          setBaseline(assinaturaPrograma(prog.nome, prog.descricao, prog.ativo));
         }
       } else {
         // Novo programa - começar como ativo se não houver outros
         const programaAtivo = stateManagerRepository.obterProgramaAtivo();
-        setAtivo(!programaAtivo);
+        const ativoInicial = !programaAtivo;
+        setAtivo(ativoInicial);
+        setBaseline(assinaturaPrograma("", "", ativoInicial));
       }
     };
 
@@ -113,7 +130,7 @@ export function EditorProgramaPage({
       {/* Backdrop do drawer — apenas tablet/desktop (md+); fecha ao clicar fora. */}
       <div
         className="hidden md:block fixed inset-0 z-[55] bg-black/30 backdrop-blur-sm animate-fade-in"
-        onClick={aoVoltar}
+        onClick={() => guarda.solicitarSaida(aoVoltar)}
         aria-hidden="true"
       />
       {/* Tela cheia no mobile; drawer lateral à direita no md+. */}
@@ -126,7 +143,7 @@ export function EditorProgramaPage({
           </h1>
           <button
             type="button"
-            onClick={aoVoltar}
+            onClick={() => guarda.solicitarSaida(aoVoltar)}
             className="flex items-center gap-1.5 px-2 -mr-2 text-texto-secundario hover:text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
           >
             <span className="text-sm">Fechar</span>
@@ -304,6 +321,18 @@ export function EditorProgramaPage({
           </Botao>
         </div>
       </div>
+
+      {/* Confirmação de saída com alterações não salvas */}
+      <ModalConfirmacao
+        aberto={guarda.confirmando}
+        variant="atencao"
+        titulo="Descartar alterações?"
+        descricao="Você fez alterações neste programa que ainda não foram salvas. Se sair agora, elas serão perdidas."
+        textoConfirmar="Descartar"
+        textoCancelar="Continuar editando"
+        aoConfirmar={guarda.confirmarSaida}
+        aoCancelar={guarda.cancelarSaida}
+      />
 
       {/* Modal de copiar programa */}
       <ModalCopiarPrograma

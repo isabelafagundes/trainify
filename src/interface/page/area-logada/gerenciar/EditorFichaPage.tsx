@@ -45,7 +45,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { ModalCriarExercicio } from "@/interface/widget/modal/ModalCriarExercicio";
 import { ModalCopiarFicha } from "@/interface/widget/modal/ModalCopiarFicha";
+import { ModalConfirmacao } from "@/interface/widget/modal/ModalConfirmacao";
 import { useToast } from "@/interface/widget/toast";
+import { useGuardaSaida } from "./useGuardaSaida";
 
 interface PropriedadesEditorFichaPage {
   fichaId?: string;
@@ -61,6 +63,24 @@ const ETAPAS = [
   { id: "info" as const, titulo: "Info básica", descricao: "Nome, ícone e programas" },
   { id: "itens" as const, titulo: "Itens", descricao: "Monte a sequência do treino" },
 ];
+
+/** Assinatura dos campos que só são persistidos ao salvar, usada para detectar
+    alterações não salvas (os vínculos de programa também só valem no "Salvar"). */
+function assinaturaFicha(
+  nome: string,
+  descricao: string,
+  icone: string | null,
+  itens: ItemFicha[],
+  programaIds: string[]
+): string {
+  return JSON.stringify({
+    nome: nome.trim(),
+    descricao: descricao.trim(),
+    icone: icone ?? "",
+    itens,
+    programaIds: [...programaIds].sort(),
+  });
+}
 
 /** Id estável do item para o dnd-kit (exercícios não se repetem na ficha;
     entradas de cardio têm UUID próprio). */
@@ -78,6 +98,9 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [programasVinculados, setProgramasVinculados] = useState<Programa[]>([]);
   const vinculosProgramasAlteradosRef = useRef(false);
+  // Snapshot dos campos no momento em que foram carregados, para detectar
+  // alterações não salvas ao tentar fechar.
+  const [baseline, setBaseline] = useState<string | null>(null);
 
   // Estado do formulário
   const [nome, setNome] = useState("");
@@ -108,6 +131,12 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   const totalExercicios = itens.filter((item) => item.tipo === "exercicio").length;
   const totalCardio = itens.filter((item) => item.tipo === "cardio").length;
 
+  const temAlteracoes =
+    baseline !== null &&
+    baseline !==
+      assinaturaFicha(nome, descricao, icone, itens, programasVinculados.map((p) => p.id));
+  const guarda = useGuardaSaida(temAlteracoes);
+
   // Carregar dados
   useEffect(() => {
     vinculosProgramasAlteradosRef.current = false;
@@ -130,11 +159,21 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
           setIcone(f.emoji || "💪");
           setItens(f.itens);
 
+          // Vínculos persistidos servem de baseline mesmo quando não recarregamos
+          // o estado local (para não sobrescrever edições pendentes do usuário).
+          const persistidosIds = stateManagerRepository
+            .obterProgramasDaFicha(fichaId)
+            .map((p) => p.id);
+
           // Carregar programas vinculados
           if (!vinculosProgramasAlteradosRef.current) {
             const programasVinc = stateManagerRepository.obterProgramasDaFicha(fichaId);
             setProgramasVinculados(programasVinc);
           }
+
+          setBaseline(
+            assinaturaFicha(f.nome, f.descricao, f.emoji || "💪", f.itens, persistidosIds)
+          );
         }
       } else {
         const nomeGerado = stateManagerRepository.gerarNomeFicha();
@@ -142,13 +181,19 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
         setIcone("💪");
 
         // Se foi fornecido um programaId, vincular automaticamente
+        let baselineProgramaIds: string[] = [];
         if (programaId) {
           const programa = programas.find((p) => p.id === programaId);
           if (programa) {
             setProgramasVinculados([programa]);
             vinculosProgramasAlteradosRef.current = true;
+            baselineProgramaIds = [programa.id];
           }
         }
+
+        // Ficha nova nasce "limpa": o nome gerado e o vínculo pré-preenchido não
+        // contam como alteração do usuário.
+        setBaseline(assinaturaFicha(nomeGerado, "", "💪", [], baselineProgramaIds));
       }
     };
 
@@ -382,7 +427,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
       {/* Backdrop do drawer — apenas tablet/desktop (md+); fecha ao clicar fora. */}
       <div
         className="hidden md:block fixed inset-0 z-[55] bg-black/30 backdrop-blur-sm animate-fade-in"
-        onClick={aoVoltar}
+        onClick={() => guarda.solicitarSaida(aoVoltar)}
         aria-hidden="true"
       />
       {/* Tela cheia no mobile; drawer lateral à direita no md+. */}
@@ -395,7 +440,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
           </h1>
           <button
             type="button"
-            onClick={aoVoltar}
+            onClick={() => guarda.solicitarSaida(aoVoltar)}
             className="flex items-center gap-1.5 px-2 -mr-2 text-texto-secundario hover:text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
           >
             <span className="text-sm">Fechar</span>
@@ -799,6 +844,18 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
           </Botao>
         </div>
       </div>
+
+      {/* Confirmação de saída com alterações não salvas */}
+      <ModalConfirmacao
+        aberto={guarda.confirmando}
+        variant="atencao"
+        titulo="Descartar alterações?"
+        descricao="Você fez alterações nesta ficha que ainda não foram salvas. Se sair agora, elas serão perdidas."
+        textoConfirmar="Descartar"
+        textoCancelar="Continuar editando"
+        aoConfirmar={guarda.confirmarSaida}
+        aoCancelar={guarda.cancelarSaida}
+      />
 
       {/* Modais */}
       <ModalCriarExercicio
