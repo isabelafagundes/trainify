@@ -8,8 +8,7 @@
    Sem BigSwitcher — qual visualização vem por rota (prop `visualizacao`).
    ═══════════════════════════════════════════ */
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import type {
   ChaveMetricaCardio,
   Exercicio,
@@ -26,6 +25,7 @@ import { EstadoVazio } from "@/interface/widget/EstadoVazio";
 import { Input } from "@/interface/widget/formulario/Input";
 import { ModalConfirmacao } from "@/interface/widget/modal/ModalConfirmacao";
 import { ModalCriarExercicio } from "@/interface/widget/modal/ModalCriarExercicio";
+import { MenuAcoes } from "@/interface/widget/menu/MenuAcoes";
 import { useToast } from "@/interface/widget/toast";
 
 type VisualizacaoGerenciar = "programas" | "fichas" | "exercicios";
@@ -124,6 +124,7 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
   const [programas, setProgramas] = useState<Programa[]>([]);
   const [fichas, _setFichas] = useState<Ficha[]>([]);
   const [exerciciosCustom, setExerciciosCustom] = useState<Exercicio[]>([]);
+  const [todosExercicios, setTodosExercicios] = useState<Exercicio[]>([]);
   const [tiposCardio, setTiposCardio] = useState<TipoCardioDef[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalCriarExercicioAberto, setModalCriarExercicioAberto] = useState(false);
@@ -145,6 +146,7 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
       setProgramas(stateManagerRepository.listarProgramas());
       _setFichas(stateManagerRepository.listarFichas());
       setExerciciosCustom(stateManagerRepository.listarExerciciosCustom());
+      setTodosExercicios(stateManagerRepository.listarTodosExercicios());
       setTiposCardio(stateManagerRepository.listarTiposCardio());
       setCarregando(false);
     };
@@ -159,26 +161,24 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
     };
   }, []);
 
-  // Texto do contador de exercícios com plural correto
-  const textoContadorExercicios = (() => {
-    const count = exerciciosCustom.length;
-    if (count === 0) return ""; // Vazio quando não há exercícios
-    if (count === 1) return "1 exercício customizado";
-    return `${count} exercícios customizados`;
-  })();
-
   // Termo de busca normalizado (aplicado à aba ativa)
   const buscaNormalizada = buscaExercicios.trim().toLowerCase();
 
-  // Exercícios após a busca (por nome ou grupo muscular)
+  // IDs dos exercícios customizados — o restante do catálogo é padrão do app
+  const idsExerciciosCustom = useMemo(
+    () => new Set(exerciciosCustom.map((e) => e.id)),
+    [exerciciosCustom]
+  );
+
+  // Exercícios (padrão + custom) após a busca (por nome ou grupo muscular)
   const exerciciosFiltrados = useMemo(() => {
-    if (!buscaNormalizada) return exerciciosCustom;
-    return exerciciosCustom.filter(
+    if (!buscaNormalizada) return todosExercicios;
+    return todosExercicios.filter(
       (e) =>
         e.nome.toLowerCase().includes(buscaNormalizada) ||
         e.grupoMuscular.toLowerCase().includes(buscaNormalizada)
     );
-  }, [exerciciosCustom, buscaNormalizada]);
+  }, [todosExercicios, buscaNormalizada]);
 
   // Exercícios agrupados por grupo muscular, ordenados alfabeticamente
   const gruposDeExercicios = useMemo(() => {
@@ -469,86 +469,74 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
               <AbasExercicios
                 aba={abaExercicios}
                 aoAlterar={trocarAbaExercicios}
-                contagemMusculacao={exerciciosCustom.length}
+                contagemMusculacao={todosExercicios.length}
                 contagemCardio={tiposCardio.length}
               />
 
-              {/* Busca — some só na biblioteca de força vazia (nada a filtrar) */}
-              {!(abaExercicios === "musculacao" && exerciciosCustom.length === 0) && (
-                <CampoBusca
-                  valor={buscaExercicios}
-                  aoAlterar={setBuscaExercicios}
-                  placeholder={abaExercicios === "musculacao" ? "Buscar exercício..." : "Buscar cardio..."}
-                />
-              )}
+              <CampoBusca
+                valor={buscaExercicios}
+                aoAlterar={setBuscaExercicios}
+                placeholder={abaExercicios === "musculacao" ? "Buscar exercício..." : "Buscar cardio..."}
+              />
 
               {abaExercicios === "musculacao" ? (
-                exerciciosCustom.length === 0 ? (
-                  <EstadoVazio
-                    icone="alvo"
-                    titulo="Nenhum exercício customizado"
-                    descricao="Crie seus próprios exercícios para usar nas fichas."
-                    acao={
-                      <Botao
-                        variante="secundario"
-                        icone={<Icone nome="mais" tamanho={16} />}
-                        onClick={() => setModalCriarExercicioAberto(true)}
-                      >
-                        Criar Exercício
-                      </Botao>
-                    }
-                  />
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-texto-sutil">
-                        {textoContadorExercicios}
-                      </span>
-                      <Botao
-                        variante="fantasma"
-                        tamanho="compacto"
-                        icone={<Icone nome="mais" tamanho={16} />}
-                        onClick={() => setModalCriarExercicioAberto(true)}
-                      >
-                        Novo Exercício
-                      </Botao>
-                    </div>
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-texto-sutil">
+                      Exercícios usados nas fichas.
+                    </span>
+                    <Botao
+                      variante="fantasma"
+                      tamanho="compacto"
+                      icone={<Icone nome="mais" tamanho={16} />}
+                      onClick={() => setModalCriarExercicioAberto(true)}
+                    >
+                      Novo Exercício
+                    </Botao>
+                  </div>
 
-                    {gruposDeExercicios.length === 0 ? (
-                      <SemResultadoBusca termo={buscaExercicios} />
-                    ) : (
-                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-start">
-                        {gruposDeExercicios.map(({ grupo, lista }, i) => (
-                          <section
-                            key={grupo}
-                            className="space-y-2 reveal-up"
-                            style={{ animationDelay: `${60 + i * 70}ms` }}
-                          >
-                            <div className="flex items-baseline justify-between px-1">
-                              <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil">
-                                {grupo}
-                              </h3>
-                              <span className="text-xs tabular-nums text-texto-sutil/60">
-                                {lista.length}
-                              </span>
-                            </div>
-                            <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
-                              {lista.map((exercicio, index) => (
+                  {gruposDeExercicios.length === 0 ? (
+                    <SemResultadoBusca termo={buscaExercicios} />
+                  ) : (
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-start">
+                      {gruposDeExercicios.map(({ grupo, lista }, i) => (
+                        <section
+                          key={grupo}
+                          className="space-y-2 reveal-up"
+                          style={{ animationDelay: `${60 + i * 70}ms` }}
+                        >
+                          <div className="flex items-baseline justify-between px-1">
+                            <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil">
+                              {grupo}
+                            </h3>
+                            <span className="text-xs tabular-nums text-texto-sutil/60">
+                              {lista.length}
+                            </span>
+                          </div>
+                          <div className="bg-superficie rounded-2xl border border-borda overflow-hidden">
+                            {lista.map((exercicio, index) => {
+                              const ehPadrao = !idsExerciciosCustom.has(exercicio.id);
+                              return (
                                 <LinhaExercicioCustom
                                   key={exercicio.id}
                                   exercicio={exercicio}
+                                  ehPadrao={ehPadrao}
                                   estaSendoExcluido={itensExcluindo.exercicio.has(exercicio.id)}
-                                  aoExcluir={() => abrirModalExclusao("exercicio", exercicio.id, exercicio.nome)}
+                                  aoExcluir={
+                                    ehPadrao
+                                      ? undefined
+                                      : () => abrirModalExclusao("exercicio", exercicio.id, exercicio.nome)
+                                  }
                                   semBorda={index === lista.length - 1}
                                 />
-                              ))}
-                            </div>
-                          </section>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )
+                              );
+                            })}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                  )}
+                </>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
@@ -885,110 +873,6 @@ function SemResultadoBusca({ termo }: { termo: string }) {
   );
 }
 
-/** Três pontos verticais (kebab) — inline por serem círculos preenchidos. */
-function IconeMaisOpcoes({ tamanho = 18 }: { tamanho?: number }) {
-  return (
-    <svg width={tamanho} height={tamanho} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <circle cx="12" cy="5" r="1.6" />
-      <circle cx="12" cy="12" r="1.6" />
-      <circle cx="12" cy="19" r="1.6" />
-    </svg>
-  );
-}
-
-interface AcaoMenu {
-  label: string;
-  icone: string;
-  onClick: () => void;
-  perigo?: boolean;
-}
-
-/** Menu de ações (kebab) — fecha em clique fora, Esc, scroll ou seleção.
-    O menu é renderizado em portal (fixed) porque os cartões da lista usam
-    `.reveal-up`, cujo transform residual cria um stacking context por item e
-    prenderia o z-index de um dropdown ancorado. */
-const LARGURA_MENU = 176;
-
-function MenuAcoesPrograma({ rotulo, itens }: { rotulo: string; itens: AcaoMenu[] }) {
-  const [aberto, setAberto] = useState(false);
-  const [posicao, setPosicao] = useState({ top: 0, left: 0 });
-  const botaoRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  function abrir() {
-    const r = botaoRef.current?.getBoundingClientRect();
-    if (r) setPosicao({ top: r.bottom + 4, left: Math.max(8, r.right - LARGURA_MENU) });
-    setAberto(true);
-  }
-
-  useEffect(() => {
-    if (!aberto) return;
-    const aoClicarFora = (e: MouseEvent) => {
-      const alvo = e.target as Node;
-      if (botaoRef.current?.contains(alvo) || menuRef.current?.contains(alvo)) return;
-      setAberto(false);
-    };
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setAberto(false);
-    };
-    const fechar = () => setAberto(false);
-    document.addEventListener("mousedown", aoClicarFora);
-    document.addEventListener("keydown", aoTeclar);
-    window.addEventListener("scroll", fechar, true);
-    window.addEventListener("resize", fechar);
-    return () => {
-      document.removeEventListener("mousedown", aoClicarFora);
-      document.removeEventListener("keydown", aoTeclar);
-      window.removeEventListener("scroll", fechar, true);
-      window.removeEventListener("resize", fechar);
-    };
-  }, [aberto]);
-
-  return (
-    <>
-      <button
-        ref={botaoRef}
-        type="button"
-        onClick={() => (aberto ? setAberto(false) : abrir())}
-        aria-label={rotulo}
-        aria-haspopup="menu"
-        aria-expanded={aberto}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-texto-sutil transition-colors hover:bg-superficie-suave hover:text-texto-primario"
-      >
-        <IconeMaisOpcoes tamanho={18} />
-      </button>
-      {aberto &&
-        createPortal(
-          <div
-            ref={menuRef}
-            role="menu"
-            style={{ position: "fixed", top: posicao.top, left: posicao.left, width: LARGURA_MENU }}
-            className="z-50 overflow-hidden rounded-xl border border-borda bg-superficie shadow-lg shadow-black/10"
-          >
-            {itens.map((it, i) => (
-              <button
-                key={it.label}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setAberto(false);
-                  it.onClick();
-                }}
-                className={`flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition-colors ${
-                  i > 0 ? "border-t border-borda-suave" : ""
-                } ${it.perigo ? "text-perigo hover:bg-perigo/10" : "text-texto-primario hover:bg-superficie-suave"}`}
-              >
-                <Icone nome={it.icone} tamanho={16} />
-                {it.label}
-              </button>
-            ))}
-          </div>,
-          document.body
-        )}
-    </>
-  );
-}
-
 interface HeroProgramaAtivoProps {
   programa: Programa;
   quantidadeFichas: number;
@@ -1043,7 +927,7 @@ function HeroProgramaAtivo({
         >
           Editar programa
         </Botao>
-        <MenuAcoesPrograma
+        <MenuAcoes
           rotulo={`Ações de ${programa.nome}`}
           itens={[
             { label: "Duplicar", icone: "copiar", onClick: aoDuplicar },
@@ -1099,7 +983,7 @@ function LinhaProgramaTrocar({
       >
         Ativar
       </button>
-      <MenuAcoesPrograma
+      <MenuAcoes
         rotulo={`Ações de ${programa.nome}`}
         itens={[
           { label: "Editar", icone: "editar", onClick: aoEditar },
@@ -1191,16 +1075,19 @@ function BotaoExcluirItem({ nome, aoExcluir }: BotaoExcluirItemProps) {
   );
 }
 
-// Exercícios customizados não exibem editar: hoje só possuem nome e grupo.
+// Exercícios não exibem editar (só possuem nome e grupo). Os padrão do app
+// ganham selo "padrão" e não podem ser excluídos; só os customizados têm lixeira.
 interface LinhaExercicioCustomProps {
   exercicio: Exercicio;
+  ehPadrao?: boolean;
   estaSendoExcluido?: boolean;
-  aoExcluir: () => void;
+  aoExcluir?: () => void;
   semBorda?: boolean;
 }
 
 function LinhaExercicioCustom({
   exercicio,
+  ehPadrao = false,
   estaSendoExcluido = false,
   aoExcluir,
   semBorda,
@@ -1215,11 +1102,18 @@ function LinhaExercicioCustom({
       `}
     >
       <div className="flex-1 min-w-0">
-        <p className="text-base font-medium text-texto-primario truncate">
-          {exercicio.nome}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-base font-medium text-texto-primario truncate">
+            {exercicio.nome}
+          </p>
+          {ehPadrao && (
+            <span className="shrink-0 rounded-full bg-superficie-suave px-2 py-0.5 text-[10px] font-medium text-texto-sutil">
+              padrão
+            </span>
+          )}
+        </div>
       </div>
-      <BotaoExcluirItem nome={exercicio.nome} aoExcluir={aoExcluir} />
+      {!ehPadrao && aoExcluir && <BotaoExcluirItem nome={exercicio.nome} aoExcluir={aoExcluir} />}
     </div>
   );
 }
