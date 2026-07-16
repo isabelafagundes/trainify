@@ -944,11 +944,11 @@ function HeroProgramaAtivo({
       className={`
         rounded-2xl border-[1.5px] border-acento bg-superficie
         shadow-lg shadow-acento/10 transition-all duration-200
-        flex flex-col gap-3 p-4 md:flex-row md:items-center md:gap-4 md:px-5
+        relative flex flex-col gap-3 p-4 md:flex-row md:items-center md:gap-4 md:px-5
         ${estaSendoExcluido ? "opacity-0 scale-95" : "opacity-100 scale-100"}
       `}
     >
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 pr-9 md:pr-0">
         <div className="mb-1 flex items-center gap-2">
           <span className="rounded-full bg-acento px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-texto-invertido">
             ATIVO
@@ -974,14 +974,16 @@ function HeroProgramaAtivo({
         >
           Editar programa
         </Botao>
-        <MenuAcoes
-          rotulo={`Ações de ${programa.nome}`}
-          itens={[
-            { label: "Duplicar", icone: "copiar", onClick: aoDuplicar },
-            { label: "Desativar", icone: "fechar", onClick: aoDesativar },
-            { label: "Excluir", icone: "lixeira", onClick: aoExcluir, perigo: true },
-          ]}
-        />
+        <div className="absolute right-2 top-2 md:static">
+          <MenuAcoes
+            rotulo={`Ações de ${programa.nome}`}
+            itens={[
+              { label: "Duplicar", icone: "copiar", onClick: aoDuplicar },
+              { label: "Desativar", icone: "fechar", onClick: aoDesativar },
+              { label: "Excluir", icone: "lixeira", onClick: aoExcluir, perigo: true },
+            ]}
+          />
+        </div>
       </div>
     </div>
   );

@@ -25,9 +25,28 @@ interface PropriedadesCabecalhoApp {
   aoFecharMenu?: () => void;
 }
 
+function AmostraTema({ tema }: { tema: Tema }) {
+  return (
+    <span
+      className="flex h-7 w-7 shrink-0 overflow-hidden rounded-full border border-borda-suave"
+      aria-hidden="true"
+    >
+      <span
+        className="h-full flex-1"
+        style={{ backgroundColor: tema.variaveis["--color-fundo"] }}
+      />
+      <span
+        className="h-full flex-1"
+        style={{ backgroundColor: tema.variaveis["--color-acento"] }}
+      />
+    </span>
+  );
+}
+
 export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, avatarEmoji, menuAberto, aoAbrirMenu, aoFecharMenu }: PropriedadesCabecalhoApp) {
   const [editandoPerfil, setEditandoPerfil] = useState(false);
   const [menuInternoAberto, setMenuInternoAberto] = useState(false);
+  const [seletorTemaAberto, setSeletorTemaAberto] = useState(false);
 
   // Controlado (props) tem prioridade; senão, estado interno.
   const menuAbertoEfetivo = menuAberto ?? menuInternoAberto;
@@ -38,18 +57,21 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
   const [importandoDados, setImportandoDados] = useState(false);
   const [snapshotPendente, setSnapshotPendente] = useState<SnapshotPezzo | null>(null);
   const temas = temaManager.listarTemas();
+  const temaAtual = temas.find((tema) => tema.id === temaAtualId) ?? temaManager.obterTema();
   const emoji = avatarEmoji || AVATAR_EMOJI_PADRAO;
   const { showSuccess, showError } = useToast();
 
   function selecionarTema(tema: Tema) {
     temaManager.definirTema(tema);
     setTemaAtualId(tema.id);
+    setSeletorTemaAberto(false);
   }
 
   function fecharMenu() {
     if (aoFecharMenu) aoFecharMenu();
     else setMenuInternoAberto(false);
     setEditandoPerfil(false);
+    setSeletorTemaAberto(false);
   }
 
   function salvarPerfil(dados: { nome: string; avatarEmoji: string }) {
@@ -208,7 +230,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
           barra fica oculta): pode ser aberto pelo perfil da barra lateral. */}
       {menuAbertoEfetivo && nomeUsuario && (
         <div
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-[60]"
           role="dialog"
           aria-modal="true"
           aria-label="Preferências do usuário"
@@ -224,7 +246,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
             absolute right-0 top-0 h-full w-[82%] max-w-[340px]
             bg-superficie border-l border-borda
             shadow-2xl shadow-black/15
-            px-5 py-[max(var(--safe-top),20px)]
+            overflow-y-auto px-5 pb-[max(var(--safe-bottom),20px)] pt-[max(var(--safe-top),20px)]
             animate-slide-in-right
           ">
             <div className="flex items-center justify-between gap-3">
@@ -237,7 +259,7 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
                     {nomeUsuario}
                   </p>
                   <p className="text-xs text-texto-secundario">
-                    {editandoPerfil ? "Editando perfil" : "Preferências"}
+                    Preferências
                   </p>
                 </div>
               </div>
@@ -251,17 +273,6 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
               </button>
             </div>
 
-            {editandoPerfil ? (
-              <div className="mt-7">
-                <FormularioPerfil
-                  nomeInicial={nomeUsuario}
-                  avatarInicial={emoji}
-                  textoBotao="Salvar perfil"
-                  aoSalvar={salvarPerfil}
-                />
-              </div>
-            ) : (
-            <>
             <button
               type="button"
               onClick={() => setEditandoPerfil(true)}
@@ -279,51 +290,54 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
                 Tema
               </h2>
 
-              <div className="space-y-2">
-                {temas.map((tema) => {
-                  const ativo = tema.id === temaAtualId;
-                  return (
-                    <button
-                      key={tema.id}
-                      type="button"
-                      onClick={() => selecionarTema(tema)}
-                      className={`
-                        w-full flex items-center justify-between gap-3
-                        px-3 py-3 rounded-xl border text-left
-                        transition-colors
-                        ${ativo
-                          ? "bg-acento-suave border-acento/25 text-texto-primario"
-                          : "bg-superficie-suave border-borda-suave text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario"
-                        }
-                      `}
-                    >
-                      <span className="flex items-center gap-3 min-w-0">
-                        <span
-                          className="flex h-7 w-7 shrink-0 overflow-hidden rounded-full border border-borda-suave"
-                          aria-hidden="true"
-                        >
-                          <span
-                            className="h-full flex-1"
-                            style={{ backgroundColor: tema.variaveis["--color-fundo"] }}
-                          />
-                          <span
-                            className="h-full flex-1"
-                            style={{ backgroundColor: tema.variaveis["--color-acento"] }}
-                          />
-                        </span>
-                        <span className="truncate text-sm font-medium">
-                          {tema.nome}
-                        </span>
-                      </span>
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={seletorTemaAberto}
+                  onClick={() => setSeletorTemaAberto((aberto) => !aberto)}
+                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-borda-suave bg-superficie-suave px-3 py-3 text-left text-texto-primario transition-colors hover:bg-superficie-hover"
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <AmostraTema tema={temaAtual} />
+                    <span className="truncate text-sm font-medium">{temaAtual.nome}</span>
+                  </span>
+                  <span className={`text-texto-sutil transition-transform ${seletorTemaAberto ? "rotate-180" : ""}`}>
+                    <Icone nome="setaBaixo" tamanho={16} />
+                  </span>
+                </button>
 
-                      {ativo && (
-                        <span className="h-5 w-5 rounded-full bg-acento text-texto-invertido flex items-center justify-center">
-                          <Icone nome="listaVerificacao" tamanho={14} />
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+                {seletorTemaAberto && (
+                  <div
+                    role="listbox"
+                    aria-label="Selecionar tema"
+                    className="absolute left-0 right-0 top-[calc(100%+6px)] z-10 overflow-hidden rounded-xl border border-borda bg-superficie-elevada p-1.5 shadow-xl shadow-black/15"
+                  >
+                    {temas.map((tema) => {
+                      const ativo = tema.id === temaAtualId;
+                      return (
+                        <button
+                          key={tema.id}
+                          type="button"
+                          role="option"
+                          aria-selected={ativo}
+                          onClick={() => selecionarTema(tema)}
+                          className={`flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2.5 text-left transition-colors ${
+                            ativo
+                              ? "bg-acento-suave text-texto-primario"
+                              : "text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario"
+                          }`}
+                        >
+                          <span className="flex min-w-0 items-center gap-3">
+                            <AmostraTema tema={tema} />
+                            <span className="truncate text-sm font-medium">{tema.nome}</span>
+                          </span>
+                          {ativo && <Icone nome="listaVerificacao" tamanho={16} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -364,9 +378,44 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
                 </button>
               </div>
             </div>
-            </>
-            )}
           </aside>
+
+          {editandoPerfil && (
+            <section
+              className="absolute inset-0 z-20 flex flex-col bg-superficie animate-slide-in-right md:left-auto md:w-full md:max-w-[560px] md:border-l md:border-borda md:shadow-2xl"
+              aria-label="Editar perfil"
+            >
+              <header className="flex shrink-0 items-center gap-3 border-b border-borda px-5 pb-4 pt-[max(var(--safe-top),16px)]">
+                <button
+                  type="button"
+                  onClick={() => setEditandoPerfil(false)}
+                  aria-label="Voltar para preferências"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-superficie-suave text-texto-secundario transition-colors hover:bg-superficie-hover hover:text-texto-primario"
+                >
+                  <Icone nome="setaEsquerda" tamanho={18} />
+                </button>
+                <div>
+                  <h2 className="font-display text-xl font-bold text-texto-primario">
+                    Editar perfil
+                  </h2>
+                  <p className="text-xs text-texto-secundario">
+                    Atualize seu nome e avatar
+                  </p>
+                </div>
+              </header>
+
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[max(var(--safe-bottom),24px)] pt-7">
+                <div className="mx-auto w-full max-w-[480px]">
+                  <FormularioPerfil
+                    nomeInicial={nomeUsuario}
+                    avatarInicial={emoji}
+                    textoBotao="Salvar perfil"
+                    aoSalvar={salvarPerfil}
+                  />
+                </div>
+              </div>
+            </section>
+          )}
         </div>
       )}
       <ModalConfirmacao

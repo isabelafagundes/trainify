@@ -45,6 +45,7 @@ export function EditorProgramaPage({
   const [modalCopiarProgramaAberto, setModalCopiarProgramaAberto] = useState(false);
   const [modalNovaFicha, setModalNovaFicha] = useState(false);
   const [modalSelecionarFicha, setModalSelecionarFicha] = useState(false);
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const [fichaParaRemover, setFichaParaRemover] = useState<{ id: string; nome: string } | null>(null);
 
   // Snapshot dos campos no momento em que foram carregados/salvos, para detectar
@@ -125,6 +126,13 @@ export function EditorProgramaPage({
     setModalCopiarProgramaAberto(false);
   };
 
+  const handleExcluir = () => {
+    if (!programaId) return;
+    stateManagerRepository.removerPrograma(programaId);
+    setModalExcluirAberto(false);
+    aoVoltar();
+  };
+
   return (
     <>
       {/* Backdrop do drawer — apenas tablet/desktop (md+); fecha ao clicar fora. */}
@@ -137,18 +145,21 @@ export function EditorProgramaPage({
       <div className="fixed inset-0 z-[60] flex flex-col bg-superficie md:left-auto md:right-0 md:w-full md:max-w-[560px] md:border-l md:border-borda md:shadow-2xl md-drawer-enter">
       {/* Header fixo */}
       <div className="px-5 pt-[max(var(--safe-top),16px)] pb-4 border-b border-borda shrink-0">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between min-h-[32px]">
           <h1 className="text-2xl font-bold font-display tracking-tight text-texto-primario">
             {titulo}
           </h1>
-          <button
-            type="button"
-            onClick={() => guarda.solicitarSaida(aoVoltar)}
-            className="flex items-center gap-1.5 px-2 -mr-2 text-texto-secundario hover:text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
-          >
-            <span className="text-sm">Fechar</span>
-            <Icone nome="fechar" tamanho={20} />
-          </button>
+          {/* Ação destrutiva no topo (menos alcançável), só no modo edição. */}
+          {editando && (
+            <button
+              type="button"
+              onClick={() => setModalExcluirAberto(true)}
+              className="flex items-center gap-1.5 px-2 -mr-2 text-perigo hover:bg-perigo-suave rounded-lg transition-colors"
+            >
+              <Icone nome="lixeira" tamanho={18} />
+              <span className="text-sm font-medium">Excluir</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -332,6 +343,17 @@ export function EditorProgramaPage({
         textoCancelar="Continuar editando"
         aoConfirmar={guarda.confirmarSaida}
         aoCancelar={guarda.cancelarSaida}
+      />
+
+      {/* Confirmação de exclusão do programa */}
+      <ModalConfirmacao
+        aberto={modalExcluirAberto}
+        variant="perigo"
+        titulo="Excluir programa"
+        descricao={`Deseja excluir "${nome.trim() || "este programa"}"? As fichas serão desvinculadas, mas não excluídas.`}
+        textoConfirmar="Excluir"
+        aoConfirmar={handleExcluir}
+        aoCancelar={() => setModalExcluirAberto(false)}
       />
 
       {/* Modal de copiar programa */}
