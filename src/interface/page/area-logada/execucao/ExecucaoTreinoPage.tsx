@@ -59,8 +59,8 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
     setConfirmarCancelarAberto(true);
   });
 
-  // Descanso terminou: feedback tátil e volta ao tempo programado (o card
-  // inline some sozinho — só aparece com descanso em andamento).
+  // Descanso terminou: feedback tátil e volta ao tempo programado. O card
+  // permanece disponível para que o usuário possa iniciá-lo novamente.
   useEffect(() => {
     if (rodandoAnterior.current && !timerRodando && timerSegundosRestantes === 0) {
       void appModule.feedbackTatil.sucesso();
@@ -113,11 +113,9 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
     [cardioAtual, historicoDaFicha]
   );
 
-  // Timer inline visível só com descanso em andamento (rodando ou pausado no meio).
-  const timerVisivel =
-    exercicioAtual !== undefined &&
-    segundosDescanso > 0 &&
-    (timer.rodando || (timer.segundosRestantes > 0 && timer.segundosRestantes < segundosDescanso));
+  // O timer fica sempre disponível nos exercícios que possuem descanso,
+  // inclusive antes do primeiro check e depois do fim da contagem.
+  const timerVisivel = exercicioAtual !== undefined && segundosDescanso > 0;
 
   const persistirFinalizacao = () => {
     const registro = sessao.finalizar();

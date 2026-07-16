@@ -15,7 +15,7 @@
     (`superficie`) — sem ele o input "some" no fundo. */
 export const CAMPO_BASE = `
   bg-superficie-suave
-  border border-borda
+  border border-borda-forte
   rounded-[10px]
   text-texto-primario placeholder:text-texto-sutil
   transition-all duration-200 ease-out
@@ -24,4 +24,4 @@ export const CAMPO_BASE = `
 `;
 
 /** Mesma base, mas com a borda em estado de erro. */
-export const CAMPO_BASE_ERRO = CAMPO_BASE.replace("border-borda", "border-perigo");
+export const CAMPO_BASE_ERRO = CAMPO_BASE.replace("border-borda-forte", "border-perigo");

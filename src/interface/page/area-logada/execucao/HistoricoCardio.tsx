@@ -5,6 +5,7 @@ import type {
   TipoCardioDef,
 } from "@/domain/tipos";
 import { resolverTipoCardio } from "@/domain/tipos";
+import { formatarNumeroBR } from "@/interface/util/numero";
 
 interface HistoricoCardioProps {
   historico: RegistroTreino[];
@@ -19,7 +20,8 @@ function formatarData(dataISO: string) {
 }
 
 function formatarValor(valor: number): string {
-  return String(Math.round(valor * 100) / 100).replace(".", ",");
+  const arredondado = Math.round(valor * 100) / 100;
+  return formatarNumeroBR(arredondado, 2);
 }
 
 function resumirCardio(item: RegistroCardio, nomeTipo: string): string {

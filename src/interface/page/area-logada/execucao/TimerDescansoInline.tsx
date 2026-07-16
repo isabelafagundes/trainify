@@ -10,8 +10,7 @@ interface TimerDescansoInlineProps {
 }
 
 /** Timer de descanso inline (substitui o overlay na página de exercício):
-    aparece entre o título e a tabela enquanto o descanso corre — auto-inicia
-    ao concluir uma série. */
+    permanece entre o título e a tabela e auto-inicia ao concluir uma série. */
 export function TimerDescansoInline({
   tempoFormatado,
   segundosRestantes,
@@ -21,6 +20,7 @@ export function TimerDescansoInline({
   aoPular,
 }: TimerDescansoInlineProps) {
   const fracao = segundosIniciais > 0 ? segundosRestantes / segundosIniciais : 0;
+  const prontoParaIniciar = !rodando && segundosRestantes === segundosIniciais;
 
   return (
     <div className="flex items-center gap-3 rounded-[10px] border border-borda-suave bg-superficie px-3 py-2.5">
@@ -44,7 +44,9 @@ export function TimerDescansoInline({
       <button
         type="button"
         onClick={aoAlternar}
-        aria-label={rodando ? "Pausar descanso" : "Retomar descanso"}
+        aria-label={
+          rodando ? "Pausar descanso" : prontoParaIniciar ? "Iniciar descanso" : "Retomar descanso"
+        }
         className="grid h-8 w-8 cursor-pointer place-items-center rounded-[8px] border border-borda-suave bg-superficie text-texto-secundario transition-colors duration-150 hover:text-texto-primario focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
       >
         <Icone nome={rodando ? "pausar" : "reproduzir"} tamanho={14} />

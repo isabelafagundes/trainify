@@ -12,6 +12,7 @@ import {
 import { EstadoVazio } from "@/interface/widget/EstadoVazio";
 import { criarIdGraficoCardio } from "@/interface/widget/grafico/cardioGraficoId";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
+import { formatarNumeroBR } from "@/interface/util/numero";
 
 interface DetalheHistoricoPageProps {
   registroId: string;
@@ -43,7 +44,7 @@ function calcularDuracaoMinutos(inicio: string, fim: string) {
 }
 
 function formatarCarga(carga: number) {
-  return Number.isInteger(carga) ? String(carga) : carga.toFixed(1);
+  return formatarNumeroBR(carga, 1);
 }
 
 const METRICAS_CARDIO_HISTORICO: ChaveMetricaCardio[] = [
@@ -58,10 +59,6 @@ const METRICAS_CARDIO_HISTORICO: ChaveMetricaCardio[] = [
   "ritmo500m",
   "spm",
 ];
-
-function formatarNumero(valor: number, casasDecimais = 1) {
-  return Number.isInteger(valor) ? String(valor) : valor.toFixed(casasDecimais);
-}
 
 function formatarRitmo(segundos: number) {
   const total = Math.max(0, Math.round(segundos));
@@ -78,9 +75,9 @@ function obterValorCardio(cardio: RegistroCardio, metrica: ChaveMetricaCardio): 
 function formatarValorCardio(metrica: ChaveMetricaCardio, valor: number) {
   const meta = META_METRICA_CARDIO[metrica];
   if (metrica === "ritmo500m") return `${formatarRitmo(valor)}${meta.unidade}`;
-  if (metrica === "distanciaKm") return `${formatarNumero(valor, 2)} ${meta.unidade}`;
-  if (meta.unidade) return `${formatarNumero(valor)} ${meta.unidade}`;
-  return formatarNumero(valor);
+  if (metrica === "distanciaKm") return `${formatarNumeroBR(valor, 2)} ${meta.unidade}`;
+  if (meta.unidade) return `${formatarNumeroBR(valor)} ${meta.unidade}`;
+  return formatarNumeroBR(valor);
 }
 
 function obterMetricasRegistradas(cardio: RegistroCardio) {
@@ -99,7 +96,7 @@ function obterRitmoMedioKm(cardio: RegistroCardio): string | null {
 function obterVelocidadeMedia(cardio: RegistroCardio): string | null {
   if (!cardio.distanciaKm || !cardio.duracaoMinutos) return null;
   const kmh = cardio.distanciaKm / (cardio.duracaoMinutos / 60);
-  return `${formatarNumero(kmh, 1)} km/h`;
+  return `${formatarNumeroBR(kmh, 1)} km/h`;
 }
 
 export function DetalheHistoricoPage({

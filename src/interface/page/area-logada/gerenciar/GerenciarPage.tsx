@@ -131,6 +131,7 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
   const [exercicioPadraoSelecionado, setExercicioPadraoSelecionado] = useState<Exercicio | null>(null);
   const [abaExercicios, setAbaExercicios] = useState<AbaExercicios>("musculacao");
   const [buscaExercicios, setBuscaExercicios] = useState("");
+  const [buscaFichas, setBuscaFichas] = useState("");
   const [formCardioAberto, setFormCardioAberto] = useState(false);
   const [tipoCardioEditando, setTipoCardioEditando] = useState<TipoCardioDef | null>(null);
   const [formCardio, setFormCardio] = useState<FormTipoCardio>(FORM_CARDIO_INICIAL);
@@ -164,6 +165,7 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
 
   // Termo de busca normalizado (aplicado à aba ativa)
   const buscaNormalizada = buscaExercicios.trim().toLowerCase();
+  const buscaFichasNormalizada = buscaFichas.trim().toLowerCase();
 
   // IDs dos exercícios customizados — o restante do catálogo é padrão do app
   const idsExerciciosCustom = useMemo(
@@ -196,6 +198,39 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
       }))
       .sort((a, b) => a.grupo.localeCompare(b.grupo));
   }, [exerciciosFiltrados]);
+
+  // Fichas agrupadas por programa (ativo primeiro), com as órfãs à parte.
+  // Uma ficha vinculada a mais de um programa aparece em cada um deles —
+  // o vínculo é muitos-para-muitos (Programa.fichaIds).
+  const gruposDeFichas = useMemo(() => {
+    // A busca casa o nome da ficha ou o do programa que a agrupa — o nome do
+    // programa é o cabeçalho visível aqui, então buscá-lo tem que funcionar.
+    const combina = (ficha: Ficha, nomePrograma?: string) =>
+      !buscaFichasNormalizada ||
+      ficha.nome.toLowerCase().includes(buscaFichasNormalizada) ||
+      (nomePrograma ?? "").toLowerCase().includes(buscaFichasNormalizada);
+
+    const porPrograma = [...programas]
+      .sort((a, b) => Number(b.ativo) - Number(a.ativo))
+      .map((programa) => ({
+        programa,
+        lista: fichas.filter(
+          (ficha) => programa.fichaIds.includes(ficha.id) && combina(ficha, programa.nome)
+        ),
+      }))
+      .filter(({ lista }) => lista.length > 0);
+
+    const vinculadas = new Set(programas.flatMap((programa) => programa.fichaIds));
+    const orfas = fichas.filter((ficha) => !vinculadas.has(ficha.id) && combina(ficha));
+
+    // Fichas distintas — uma ficha em dois programas aparece nos dois grupos.
+    const idsVisiveis = new Set([
+      ...porPrograma.flatMap(({ lista }) => lista.map((ficha) => ficha.id)),
+      ...orfas.map((ficha) => ficha.id),
+    ]);
+
+    return { porPrograma, orfas, totalVisivel: idsVisiveis.size };
+  }, [programas, fichas, buscaFichasNormalizada]);
 
   // Tipos de cardio após a busca (por nome)
   const tiposCardioFiltrados = useMemo(() => {
@@ -422,19 +457,29 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
           ) : (
             <>
               {fichas.length > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-texto-sutil">
-                    {fichas.length} {fichas.length === 1 ? "ficha" : "fichas"}
-                  </span>
-                  <Botao
-                    variante="fantasma"
-                    tamanho="compacto"
-                    icone={<Icone nome="mais" tamanho={16} />}
-                    onClick={() => aoNavegar("criarFicha")}
-                  >
-                    Nova Ficha
-                  </Botao>
-                </div>
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-texto-sutil">
+                      {buscaFichasNormalizada
+                        ? `${gruposDeFichas.totalVisivel} de ${fichas.length} fichas`
+                        : `${fichas.length} ${fichas.length === 1 ? "ficha" : "fichas"}`}
+                    </span>
+                    <Botao
+                      variante="fantasma"
+                      tamanho="compacto"
+                      icone={<Icone nome="mais" tamanho={16} />}
+                      onClick={() => aoNavegar("criarFicha")}
+                    >
+                      Nova Ficha
+                    </Botao>
+                  </div>
+
+                  <CampoBusca
+                    valor={buscaFichas}
+                    aoAlterar={setBuscaFichas}
+                    placeholder="Buscar ficha ou programa..."
+                  />
+                </>
               )}
 
               {fichas.length === 0 ? (
@@ -452,19 +497,38 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
                     </Botao>
                   }
                 />
+              ) : gruposDeFichas.totalVisivel === 0 ? (
+                <SemResultadoBusca termo={buscaFichas} />
               ) : (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 items-start">
-                  {fichas.map((ficha, i) => (
-                    <div key={ficha.id} className="reveal-up" style={{ animationDelay: `${60 + i * 60}ms` }}>
-                      <CartaoFicha
-                        ficha={ficha}
-                        programasDaFicha={stateManagerRepository.obterProgramasDaFicha(ficha.id)}
-                        estaSendoExcluida={itensExcluindo.ficha.has(ficha.id)}
-                        aoEditar={() => aoNavegar("editarFicha", { id: ficha.id })}
-                        aoExcluir={() => abrirModalExclusao("ficha", ficha.id, ficha.nome)}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-start">
+                  {gruposDeFichas.porPrograma.map(({ programa, lista }, i) => (
+                    <div key={programa.id} className="reveal-up" style={{ animationDelay: `${60 + i * 70}ms` }}>
+                      <GrupoFichas
+                        titulo={programa.nome}
+                        ativo={programa.ativo}
+                        fichas={lista}
+                        itensExcluindo={itensExcluindo.ficha}
+                        aoEditar={(ficha) => aoNavegar("editarFicha", { id: ficha.id })}
+                        aoExcluir={(ficha) => abrirModalExclusao("ficha", ficha.id, ficha.nome)}
                       />
                     </div>
                   ))}
+
+                  {gruposDeFichas.orfas.length > 0 && (
+                    <div
+                      className="reveal-up"
+                      style={{ animationDelay: `${60 + gruposDeFichas.porPrograma.length * 70}ms` }}
+                    >
+                      <GrupoFichas
+                        titulo="Sem programa"
+                        fichas={gruposDeFichas.orfas}
+                        tracejado
+                        itensExcluindo={itensExcluindo.ficha}
+                        aoEditar={(ficha) => aoNavegar("editarFicha", { id: ficha.id })}
+                        aoExcluir={(ficha) => abrirModalExclusao("ficha", ficha.id, ficha.nome)}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -790,16 +854,23 @@ function SkeletonProgramas() {
 
 function SkeletonCards() {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-      {[1, 2].map((i) => (
-        <div key={i} className="bg-superficie rounded-2xl border border-borda overflow-hidden">
-          <div className="px-5 py-4 bg-superficie-suave animate-pulse">
-            <div className="h-5 bg-borda-suave rounded w-1/3 mb-2"></div>
-            <div className="h-4 bg-borda-suave rounded w-1/2"></div>
-          </div>
-          <div className="px-5 py-3 flex items-center justify-between">
-            <div className="h-4 bg-borda-suave rounded w-16"></div>
-            <div className="h-8 bg-borda-suave rounded w-16"></div>
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      {[1, 2].map((grupo) => (
+        <div key={grupo} className="space-y-2">
+          <div className="h-3 w-24 rounded bg-borda-suave animate-pulse" />
+          <div className="overflow-hidden rounded-2xl border border-borda bg-superficie">
+            {[1, 2].map((linha) => (
+              <div
+                key={linha}
+                className="flex items-center gap-3 px-4 py-3 animate-pulse border-b border-borda-suave last:border-b-0"
+              >
+                <div className="h-10 w-10 shrink-0 rounded-[10px] bg-borda-suave" />
+                <div className="flex-1">
+                  <div className="mb-2 h-4 w-28 rounded bg-borda-suave" />
+                  <div className="h-3 w-20 rounded bg-borda-suave" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       ))}
@@ -1308,53 +1379,119 @@ function LinhaTipoCardio({
   );
 }
 
-interface CartaoFichaProps {
+interface GrupoFichasProps {
+  titulo: string;
+  fichas: Ficha[];
+  /** Marca o programa ativo com o mesmo ponto usado no herói de Programas. */
+  ativo?: boolean;
+  /** Borda tracejada — sinaliza o grupo das fichas sem programa. */
+  tracejado?: boolean;
+  itensExcluindo: Set<string>;
+  aoEditar: (ficha: Ficha) => void;
+  aoExcluir: (ficha: Ficha) => void;
+}
+
+/** Fichas de um programa numa superfície agrupada — mesma anatomia dos
+    grupos musculares da aba Exercícios (rótulo + contagem + linhas). */
+function GrupoFichas({
+  titulo,
+  fichas,
+  ativo = false,
+  tracejado = false,
+  itensExcluindo,
+  aoEditar,
+  aoExcluir,
+}: GrupoFichasProps) {
+  return (
+    <section className="space-y-2">
+      <div className="flex items-baseline justify-between px-1">
+        <div className="flex items-center gap-1.5">
+          {ativo && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-acento" />}
+          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil">
+            {titulo}
+          </h3>
+        </div>
+        <span className="text-xs tabular-nums text-texto-sutil/60">{fichas.length}</span>
+      </div>
+
+      <div
+        className={`overflow-hidden rounded-2xl border ${
+          tracejado ? "border-dashed border-borda" : "border-borda bg-superficie"
+        }`}
+      >
+        {fichas.map((ficha, index) => (
+          <LinhaFicha
+            key={ficha.id}
+            ficha={ficha}
+            estaSendoExcluida={itensExcluindo.has(ficha.id)}
+            aoEditar={() => aoEditar(ficha)}
+            aoExcluir={() => aoExcluir(ficha)}
+            semBorda={index === fichas.length - 1}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+interface LinhaFichaProps {
   ficha: Ficha;
-  programasDaFicha?: Programa[];
   estaSendoExcluida?: boolean;
   aoEditar: () => void;
   aoExcluir: () => void;
+  semBorda?: boolean;
 }
 
-function CartaoFicha({ ficha, programasDaFicha = [], estaSendoExcluida = false, aoEditar, aoExcluir }: CartaoFichaProps) {
+/** Linha da biblioteca de fichas. A linha inteira abre o editor (o job da
+    tela); o kebab carrega as mesmas ações, como em LinhaProgramaTrocar. */
+function LinhaFicha({ ficha, estaSendoExcluida = false, aoEditar, aoExcluir, semBorda }: LinhaFichaProps) {
+  const quantidadeExercicios = exerciciosDaFicha(ficha).length;
+  const quantidadeCardio = cardioDaFicha(ficha).length;
+  const meta = [
+    `${quantidadeExercicios} ${quantidadeExercicios === 1 ? "exercício" : "exercícios"}`,
+    ...(quantidadeCardio > 0
+      ? [`${quantidadeCardio} ${quantidadeCardio === 1 ? "cardio" : "cardios"}`]
+      : []),
+  ].join(" · ");
+
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Editar ${ficha.nome}`}
+      onClick={aoEditar}
+      onKeyDown={(evento) => {
+        if (evento.key === "Enter" || evento.key === " ") {
+          evento.preventDefault();
+          aoEditar();
+        }
+      }}
       className={`
-        bg-superficie rounded-2xl border border-borda overflow-hidden
-        hover:bg-superficie-suave transition-all duration-200
+        flex cursor-pointer items-center gap-3 px-4 py-3
+        transition-all duration-200 hover:bg-superficie-suave
+        focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-acento
         ${estaSendoExcluida ? "opacity-0 scale-95" : "opacity-100 scale-100"}
+        ${semBorda ? "" : "border-b border-borda-suave"}
       `}
     >
-      <div className="px-5 pt-4 pb-3 flex items-start gap-4">
-        <span className="text-3xl shrink-0 leading-none mt-0.5">
-          {ficha.emoji || "💪"}
-        </span>
-
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold font-display text-texto-primario leading-snug">
-            {ficha.nome}
-          </h3>
-          <p className="text-sm text-texto-secundario mt-0.5">
-            {exerciciosDaFicha(ficha).length} {exerciciosDaFicha(ficha).length === 1 ? "exercício" : "exercícios"}
-            {cardioDaFicha(ficha).length > 0 && ` · ${cardioDaFicha(ficha).length} ${cardioDaFicha(ficha).length === 1 ? "cardio" : "cardios"}`}
-          </p>
-          {programasDaFicha.length > 0 && (
-            <p className="text-xs text-texto-sutil mt-1 truncate">
-              {programasDaFicha.map((p) => p.nome).join(", ")}
-            </p>
-          )}
-        </div>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-acento-suave text-xl">
+        {ficha.emoji || "💪"}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-display text-[15px] font-semibold text-texto-primario">
+          {ficha.nome}
+        </p>
+        <p className="truncate text-xs text-texto-sutil">{meta}</p>
       </div>
-
-      <div className="flex items-center justify-end gap-1 px-3 py-1.5 border-t border-borda-suave">
-        <button
-          type="button"
-          onClick={aoEditar}
-          className="px-3.5 py-2 text-sm font-medium text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
-        >
-          Editar
-        </button>
-        <BotaoExcluirItem nome={ficha.nome} aoExcluir={aoExcluir} />
+      {/* O menu vive dentro de uma linha clicável — o clique não pode abrir o editor. */}
+      <div onClick={(evento) => evento.stopPropagation()}>
+        <MenuAcoes
+          rotulo={`Ações de ${ficha.nome}`}
+          itens={[
+            { label: "Editar", icone: "editar", onClick: aoEditar },
+            { label: "Excluir", icone: "lixeira", onClick: aoExcluir, perigo: true },
+          ]}
+        />
       </div>
     </div>
   );

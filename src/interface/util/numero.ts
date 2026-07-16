@@ -17,3 +17,16 @@ export function parseNumeroBR(texto: string): number {
 export function textoDecimalBR(valor: number): string {
   return String(valor).replace(".", ",");
 }
+
+/** Formata valores para exibição no app usando a convenção brasileira.
+ *  Mantém a quantidade de casas pedida para valores decimais e não acrescenta
+ *  zeros a inteiros. O agrupamento é desligado para métricas compactas. */
+export function formatarNumeroBR(valor: number, casasDecimais = 1): string {
+  const casas = Number.isInteger(valor) ? 0 : casasDecimais;
+
+  return new Intl.NumberFormat("pt-BR", {
+    useGrouping: false,
+    minimumFractionDigits: casas,
+    maximumFractionDigits: casas,
+  }).format(valor);
+}

@@ -56,6 +56,8 @@ export function CampoNumeroOpcional({
       value={texto}
       step={passo}
       inputMode={decimal ? "decimal" : "numeric"}
+      lang="pt-BR"
+      pattern={decimal ? "[0-9]*[,.]?[0-9]*" : "[0-9]*"}
       placeholder={placeholder}
       aria-label={ariaLabel}
       onChange={aoMudar}

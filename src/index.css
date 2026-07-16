@@ -31,9 +31,11 @@
   --color-acento-hover: oklch(0.310 0.018 55);
   --color-acento-suave: oklch(0.935 0.014 65);
 
-  /* Gráficos (amber quente vibrante, dentro da paleta) */
-  --color-grafico: oklch(0.78 0.115 70);
-  --color-grafico-forte: oklch(0.66 0.150 55);
+  /* Gráficos (amber quente vibrante, dentro da paleta).
+     Lightness fixada para dar ≥3:1 (WCAG 1.4.11) contra o `fundo` dos temas
+     claros sem perder o contraste nos escuros — as barras carregam o dado. */
+  --color-grafico: oklch(0.620 0.130 70);
+  --color-grafico-forte: oklch(0.545 0.140 50);
 
   /* Ações destrutivas (vermelho queimado, alinhado à paleta quente) */
   --color-perigo: oklch(0.455 0.095 35);

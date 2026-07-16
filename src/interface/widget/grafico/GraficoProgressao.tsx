@@ -8,6 +8,7 @@ import {
   type RegistroTreino,
 } from "@/domain/tipos";
 import { Icone } from "@/interface/widget/svg/Icone";
+import { formatarNumeroBR } from "@/interface/util/numero";
 import { decodificarIdGraficoCardio } from "./cardioGraficoId";
 
 interface GraficoProgressaoProps {
@@ -29,11 +30,7 @@ function formatarData(dataISO: string) {
 }
 
 function formatarCarga(valor: number) {
-  return Number.isInteger(valor) ? String(valor) : valor.toFixed(1);
-}
-
-function formatarNumero(valor: number, casasDecimais = 1) {
-  return Number.isInteger(valor) ? String(valor) : valor.toFixed(casasDecimais);
+  return formatarNumeroBR(valor, 1);
 }
 
 function formatarRitmo(segundos: number) {
@@ -51,9 +48,9 @@ function obterValorCardio(cardio: RegistroCardio, metrica: ChaveMetricaCardio): 
 function formatarValorCardio(metrica: ChaveMetricaCardio, valor: number) {
   const meta = META_METRICA_CARDIO[metrica];
   if (metrica === "ritmo500m") return `${formatarRitmo(valor)}${meta.unidade}`;
-  if (metrica === "distanciaKm") return `${formatarNumero(valor, 2)} ${meta.unidade}`;
-  if (meta.unidade) return `${formatarNumero(valor)} ${meta.unidade}`;
-  return formatarNumero(valor);
+  if (metrica === "distanciaKm") return `${formatarNumeroBR(valor, 2)} ${meta.unidade}`;
+  if (meta.unidade) return `${formatarNumeroBR(valor)} ${meta.unidade}`;
+  return formatarNumeroBR(valor);
 }
 
 function formatarVariacaoCardio(metrica: ChaveMetricaCardio, valor: number) {
@@ -145,10 +142,10 @@ function GraficoProgressaoExercicio({
                 <div key={ponto.id} className="flex h-full w-10 flex-col justify-end gap-2">
                   <div className="flex flex-1 items-end justify-center">
                     <div
-                      className={`w-full rounded-t-[6px] bg-gradient-to-t transition-all ${
+                      className={`w-full rounded-t-[6px] transition-all ${
                         ehUltimo
-                          ? "from-grafico-forte to-grafico shadow-sm"
-                          : "from-grafico/70 to-grafico/45"
+                          ? "bg-gradient-to-t from-grafico-forte to-grafico shadow-sm"
+                          : "bg-grafico"
                       }`}
                       style={{ height: `${altura}%` }}
                       title={`${formatarCarga(ponto.maiorCarga)} kg`}
@@ -281,10 +278,10 @@ function GraficoProgressaoCardio({
                 <div key={ponto.id} className="flex h-full w-10 flex-col justify-end gap-2">
                   <div className="flex flex-1 items-end justify-center">
                     <div
-                      className={`w-full rounded-t-[6px] bg-gradient-to-t transition-all ${
+                      className={`w-full rounded-t-[6px] transition-all ${
                         ehUltimo
-                          ? "from-grafico-forte to-grafico shadow-sm"
-                          : "from-grafico/70 to-grafico/45"
+                          ? "bg-gradient-to-t from-grafico-forte to-grafico shadow-sm"
+                          : "bg-grafico"
                       }`}
                       style={{ height: `${altura}%` }}
                       title={formatarValorCardio(metrica, ponto.valor)}

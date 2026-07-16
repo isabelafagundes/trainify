@@ -113,7 +113,11 @@ export function ResumoProgramaPage({
 
       {/* ── Ações ── */}
       <section
-        className="flex items-stretch gap-2 reveal-up"
+        className={`grid items-stretch gap-2 reveal-up ${
+          proximaFichaId
+            ? "grid-cols-[minmax(0,3fr)_minmax(128px,1fr)]"
+            : "grid-cols-1"
+        }`}
         style={{ animationDelay: "60ms" }}
       >
         {proximaFichaId && (
@@ -121,7 +125,7 @@ export function ResumoProgramaPage({
             variante="primario"
             icone={<Icone nome="reproduzir" tamanho={15} />}
             onClick={() => aoNavegar("execucao", { fichaId: proximaFichaId })}
-            className="flex-1 min-w-0"
+            className="w-full min-w-0"
           >
             Iniciar treino
           </Botao>
@@ -130,7 +134,7 @@ export function ResumoProgramaPage({
           variante="secundario"
           icone={<Icone nome="editar" tamanho={15} />}
           onClick={() => aoNavegar("editarPrograma", { id: programa.id })}
-          className={proximaFichaId ? "flex-shrink-0" : "flex-1"}
+          className="w-full min-w-0"
         >
           Editar
         </Botao>

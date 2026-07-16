@@ -78,7 +78,7 @@ export function StreakCounter({
   // Cor do ícone de fogo — escala sutil de cinza a laranja queimado
   const obterEstiloFogo = () => {
     if (diasConsecutivos === 0) {
-      return "text-texto-sutil opacity-50";
+      return "text-texto-sutil";
     } else if (diasConsecutivos < 3) {
       return "text-texto-secundario";
     } else if (diasConsecutivos < 7) {

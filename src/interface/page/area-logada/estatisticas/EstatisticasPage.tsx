@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { Exercicio, RegistroTreino } from "@/domain/tipos";
 import { EstadoVazio } from "@/interface/widget/EstadoVazio";
 import { Icone } from "@/interface/widget/svg/Icone";
+import { formatarNumeroBR } from "@/interface/util/numero";
 import { CardMetricaResumo } from "./CardMetricaResumo";
 import { ItemProgressaoExercicio } from "./ItemProgressaoExercicio";
 import {
@@ -128,7 +129,7 @@ export function EstatisticasPage({
             />
             <CardMetricaResumo
               rotulo="Distância"
-              valor={formatarNumero(resumoCardio.totalKm, 1)}
+              valor={formatarNumeroBR(resumoCardio.totalKm, 1)}
               sufixo="km"
               icone={<Icone nome="corrida" tamanho={14} />}
             />
@@ -224,10 +225,6 @@ export function EstatisticasPage({
   );
 }
 
-function formatarNumero(valor: number, casasDecimais = 1) {
-  return Number.isInteger(valor) ? String(valor) : valor.toFixed(casasDecimais);
-}
-
 function formatarRitmo(segundos: number) {
   const total = Math.max(0, Math.round(segundos));
   const minutos = Math.floor(total / 60);
@@ -237,6 +234,6 @@ function formatarRitmo(segundos: number) {
 
 function formatarValorCardio(item: ProgressaoCardio) {
   if (item.metrica === "ritmo500m") return `${formatarRitmo(item.ultimoValor)}/500m`;
-  if (item.metrica === "distanciaKm") return `${formatarNumero(item.ultimoValor, 2)} km`;
-  return formatarNumero(item.ultimoValor);
+  if (item.metrica === "distanciaKm") return `${formatarNumeroBR(item.ultimoValor, 2)} km`;
+  return formatarNumeroBR(item.ultimoValor);
 }

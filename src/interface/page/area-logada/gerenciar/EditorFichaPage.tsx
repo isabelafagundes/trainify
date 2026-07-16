@@ -9,6 +9,7 @@
    ═══════════════════════════════════════════ */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type {
   EntradaCardio,
   ChaveMetricaCardio,
@@ -144,7 +145,13 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
   const [modalCriarExercicioAberto, setModalCriarExercicioAberto] = useState(false);
   const [modalCopiarFichaAberto, setModalCopiarFichaAberto] = useState(false);
   const [modalVincularProgramaAberto, setModalVincularProgramaAberto] = useState(false);
+  const [programaParaVincularId, setProgramaParaVincularId] = useState<string | null>(null);
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
+
+  const abrirModalVincularPrograma = () => {
+    setProgramaParaVincularId(null);
+    setModalVincularProgramaAberto(true);
+  };
 
   const editando = Boolean(fichaId);
   const titulo = editando ? "Editar Ficha" : "Nova Ficha";
@@ -558,7 +565,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                       variante="fantasma"
                       tamanho="compacto"
                       icone={<Icone nome="mais" tamanho={14} />}
-                      onClick={() => setModalVincularProgramaAberto(true)}
+                      onClick={abrirModalVincularPrograma}
                     >
                       Vincular
                     </Botao>
@@ -580,7 +587,7 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                       variante="secundario"
                       tamanho="compacto"
                       icone={<Icone nome="mais" tamanho={16} />}
-                      onClick={() => setModalVincularProgramaAberto(true)}
+                      onClick={abrirModalVincularPrograma}
                     >
                       Vincular a um programa
                     </Botao>
@@ -874,30 +881,65 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
         />
 
         {/* Modal de vincular programas */}
-        {modalVincularProgramaAberto && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50">
-            <div className="bg-superficie rounded-2xl w-full max-w-sm mx-4 max-h-[80vh] overflow-hidden">
-              <div className="px-5 py-4 border-b border-borda">
-                <h3 className="text-lg font-semibold">Vincular a programas</h3>
-              </div>
-              <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
-                <div className="space-y-2">
+        {modalVincularProgramaAberto &&
+          createPortal(
+            <div
+              className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+              onClick={() => setModalVincularProgramaAberto(false)}
+            >
+              <div className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200" />
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="titulo-vincular-programas"
+                style={{ width: "min(350px, calc(100vw - 32px))" }}
+                className="relative shrink-0 bg-superficie rounded-3xl max-h-[80vh] overflow-hidden border border-borda shadow-xl animate-in zoom-in-95 duration-200 flex flex-col"
+                onClick={(evento) => evento.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-5 py-4 border-b border-borda-suave shrink-0">
+                  <h3 id="titulo-vincular-programas" className="text-lg font-semibold font-display text-texto-primario">
+                    Vincular a programas
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setModalVincularProgramaAberto(false)}
+                    className="p-2 -mr-2 text-texto-secundario hover:text-texto-primario hover:bg-superficie-suave rounded-lg transition-colors"
+                    aria-label="Fechar"
+                  >
+                    <Icone nome="fechar" tamanho={20} />
+                  </button>
+                </div>
+                <div className="flex-1 px-5 py-3 overflow-y-auto">
+                  <div className="space-y-2">
                   {programas
                     .filter((p) => !programasVinculados.some((v) => v.id === p.id))
                     .map((programa) => (
                       <button
                         key={programa.id}
                         type="button"
-                        onClick={() => {
-                          vinculosProgramasAlteradosRef.current = true;
-                          setProgramasVinculados([...programasVinculados, programa]);
-                          setModalVincularProgramaAberto(false);
-                        }}
-                        className="w-full px-4 py-3 bg-superficie-suave hover:bg-superficie-hover rounded-lg border border-borda-suave text-left transition-colors"
+                        onClick={() => setProgramaParaVincularId(programa.id)}
+                        className={`w-full px-3.5 py-3 bg-superficie-suave border rounded-xl flex items-center gap-3 text-left transition-all duration-150 hover:border-acento/50 ${
+                          programaParaVincularId === programa.id
+                            ? "border-acento bg-acento-suave ring-2 ring-acento/20"
+                            : "border-borda"
+                        }`}
                       >
-                        <p className="text-sm font-medium text-texto-primario">{programa.nome}</p>
-                        {programa.descricao && (
-                          <p className="text-xs text-texto-secundario truncate">{programa.descricao}</p>
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-superficie text-acento">
+                          <Icone nome="clipboard" tamanho={18} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-texto-primario">
+                            {programa.nome}
+                          </span>
+                          <span className="block text-xs text-texto-secundario">
+                            {programa.fichaIds.length} {programa.fichaIds.length === 1 ? "ficha" : "fichas"}
+                            {programa.ativo && " · Ativo"}
+                          </span>
+                        </span>
+                        {programaParaVincularId === programa.id && (
+                          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-acento text-texto-invertido">
+                            <Icone nome="check" tamanho={13} />
+                          </span>
                         )}
                       </button>
                     ))}
@@ -906,19 +948,35 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
                       Todos os programas já estão vinculados
                     </p>
                   )}
+                  </div>
+                </div>
+                <div className="flex gap-3 px-5 py-4 border-t border-borda-suave shrink-0">
+                  <Botao
+                    variante="secundario"
+                    onClick={() => setModalVincularProgramaAberto(false)}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Botao>
+                  <Botao
+                    variante="primario"
+                    className="flex-1"
+                    disabled={!programaParaVincularId}
+                    onClick={() => {
+                      const programa = programas.find((item) => item.id === programaParaVincularId);
+                      if (!programa) return;
+                      vinculosProgramasAlteradosRef.current = true;
+                      setProgramasVinculados([...programasVinculados, programa]);
+                      setModalVincularProgramaAberto(false);
+                    }}
+                  >
+                    Vincular
+                  </Botao>
                 </div>
               </div>
-              <div className="px-5 py-4 border-t border-borda flex justify-end">
-                <Botao
-                  variante="fantasma"
-                  onClick={() => setModalVincularProgramaAberto(false)}
-                >
-                  Cancelar
-                </Botao>
-              </div>
-            </div>
-          </div>
-        )}
+            </div>,
+            document.body
+          )}
       </div>
     </>
   );

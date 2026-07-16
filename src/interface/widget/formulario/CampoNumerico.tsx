@@ -95,6 +95,8 @@ export function CampoNumerico({
       // intenção declarada de passo e a compatibilidade da API do componente.
       step={passo}
       inputMode={decimal ? "decimal" : "numeric"}
+      lang="pt-BR"
+      pattern={decimal ? "[0-9]*[,.]?[0-9]*" : "[0-9]*"}
       aria-label={ariaLabel}
       onChange={aoMudar}
       onBlur={aoSairDoCampo}
