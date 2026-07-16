@@ -1,6 +1,7 @@
 import type { NomeIcone } from "@/domain/tipos";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
 import { Botao } from "@/interface/widget/botao/Botao";
+import { MenuAcoes } from "@/interface/widget/menu/MenuAcoes";
 import type { ProgressoSessao } from "./hooks/useSessaoTreino";
 import { useTempoDecorrido } from "./hooks/useTempoDecorrido";
 
@@ -11,11 +12,13 @@ interface HeaderExecucaoProps {
   iniciadoEm: string;
   progresso: ProgressoSessao;
   aoFinalizar: () => void;
+  aoAbandonar: () => void;
 }
 
 /** Header da execução: identidade da ficha + tempo decorrido + contadores +
-    Finalizar sempre à mão + barra fina de progresso. Sair do treino mora no
-    footer/rail ("Abandonar treino") — o X morreu. */
+    Finalizar sempre à mão + barra fina de progresso. "Abandonar treino" mora
+    no kebab (⋮) ao lado do Finalizar — fora da zona do dedão no mobile e com
+    lugar consistente nos 3 breakpoints. O X de fechar imediato morreu. */
 export function HeaderExecucao({
   nomeFicha,
   iconeFicha,
@@ -23,6 +26,7 @@ export function HeaderExecucao({
   iniciadoEm,
   progresso,
   aoFinalizar,
+  aoAbandonar,
 }: HeaderExecucaoProps) {
   const tempo = useTempoDecorrido(iniciadoEm);
 
@@ -53,6 +57,13 @@ export function HeaderExecucao({
           <Botao variante="primario" tamanho="compacto" onClick={aoFinalizar} className="shrink-0">
             Finalizar
           </Botao>
+
+          <MenuAcoes
+            rotulo="Mais opções do treino"
+            itens={[
+              { label: "Abandonar treino", icone: "sair", perigo: true, onClick: aoAbandonar },
+            ]}
+          />
         </div>
 
         <div

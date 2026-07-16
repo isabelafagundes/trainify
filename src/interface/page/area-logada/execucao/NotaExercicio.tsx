@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Icone } from "@/interface/widget/svg/Icone";
+import { CAMPO_BASE } from "@/interface/widget/formulario/campo.tokens";
 
 interface NotaExercicioProps {
   nota: string;
@@ -25,7 +26,7 @@ export function NotaExercicio({
         onChange={(evento) => aoAtualizar(evento.target.value)}
         rows={3}
         placeholder={`${rotulo}...`}
-        className="w-full resize-none rounded-[8px] border border-borda bg-superficie-suave px-3 py-2.5 text-sm text-texto-primario placeholder:text-texto-sutil focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-acento"
+        className={`${CAMPO_BASE.trim()} w-full resize-none px-3 py-2.5 text-sm`}
       />
     </label>
   );

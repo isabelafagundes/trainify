@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo } from "react";
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
+import { Input } from "@/interface/widget/formulario/Input";
 
 interface ModalCopiarProgramaProps {
   aberto: boolean;
@@ -104,35 +105,13 @@ export function ModalCopiarPrograma({
 
         {/* Busca */}
         <div className="px-5 py-4 border-b border-borda-suave shrink-0">
-          <div className="relative">
-            <input
-              type="text"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar programa..."
-              className="
-                w-full px-4 py-3 pl-10
-                bg-superficie-suave border border-borda
-                rounded-[10px]
-                text-sm text-texto-primario placeholder:text-texto-sutil
-                focus:border-acento focus:outline-none focus:ring-2 focus:ring-acento/20
-                transition-all duration-200
-              "
-            />
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-texto-sutil"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </div>
+          <Input
+            tipo="busca"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar programa..."
+            aoLimpar={() => setBusca("")}
+          />
         </div>
 
         {/* Lista de programas */}

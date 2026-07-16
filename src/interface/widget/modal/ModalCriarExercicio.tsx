@@ -146,19 +146,10 @@ export function ModalCriarExercicio({
 
             {!usarGrupoCustomizado ? (
               <div className="space-y-2">
-                <select
+                <Input
+                  tipo="select"
                   value={grupoMuscular}
                   onChange={(e) => setGrupoMuscular(e.target.value)}
-                  className="
-                    w-full px-4 py-3
-                    bg-superficie-suave border border-borda
-                    rounded-[10px]
-                    text-sm text-texto-primario
-                    focus:border-acento focus:outline-none focus:ring-2 focus:ring-acento/20
-                    transition-all duration-200
-                    appearance-none
-                    cursor-pointer
-                  "
                 >
                   <option value="">Selecione...</option>
                   {GRUPOS_MUSCULARES_PREDEFINIDOS.map((grupo) => (
@@ -166,7 +157,7 @@ export function ModalCriarExercicio({
                       {grupo}
                     </option>
                   ))}
-                </select>
+                </Input>
 
                 <button
                   type="button"

@@ -223,7 +223,7 @@ export function TrackerFrequencia({ dados }: PropriedadesTrackerFrequencia) {
 
       {/* Grid de contribuição com scroll horizontal */}
       <div className="px-4 pb-4">
-        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-borda-suave scrollbar-track-transparent">
+        <div className="scrollbar-mobile-hidden overflow-x-auto scrollbar-thin scrollbar-thumb-borda-suave scrollbar-track-transparent">
           {/* Container principal com labels de dias da semana */}
           <div className="inline-flex">
             {/* Coluna de labels dos dias da semana */}

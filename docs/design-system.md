@@ -551,18 +551,36 @@ py-12 px-6 text-center
 
 ### 7.12 Formularios (inputs)
 
-Padroes para campos de entrada (a serem construidos):
+**Fonte de verdade:** `CAMPO_BASE` em
+`src/interface/widget/formulario/campo.tokens.ts`. Todo campo do app herda dela
+via o componente canonico `Input` (ou via `CLASSES_CAMPO_CAIXA` para a caixa
+numerica). Mudar o look de um campo acontece em um lugar so.
+
+Base compartilhada (`CAMPO_BASE`):
 
 | Propriedade | Valor |
 |-------------|-------|
-| Background | `bg-superficie` |
+| Background | `bg-superficie-suave` |
 | Borda | `border border-borda` |
 | Radius | `rounded-[10px]` |
-| Padding | `px-4 py-3` |
-| Font | `text-base` |
 | Placeholder | `text-texto-sutil` |
 | Focus | `border-acento outline-none ring-2 ring-acento/20` |
+| Disabled | `opacity-40 cursor-not-allowed` |
 | Min-height | 44px (target de toque) |
+
+> **Por que `superficie-suave` e nao `superficie`:** o campo vive dentro de um
+> card (`bg-superficie`). Usar o mesmo tom faz o input "sumir" no fundo. O tom
+> `superficie-suave` da o contraste do card — mesmo look da tela de execucao.
+
+**Variantes** (`Input`, prop `tipo`) — mudam so o formato, nunca o estilo base:
+
+| Variante | Formato | Especifico |
+|----------|---------|------------|
+| `text` / `number` | linha unica | `px-4 py-3 text-base`, alinhado a esquerda |
+| `textarea` | multilinha | `resize-none`, `rows` |
+| `busca` | linha + lupa | icone a esquerda (`pl-10`), botao limpar opcional, `text-sm` |
+| `select` | dropdown | `appearance-none` + chevron |
+| `caixa` | numero compacto | `h-10 text-center font-semibold tabular-nums` (via `CampoNumerico`) |
 
 ---
 

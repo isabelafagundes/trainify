@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { parseNumeroBR, textoDecimalBR } from "@/interface/util/numero";
+import { CAMPO_BASE } from "./campo.tokens";
 
-/** Receita canônica de campo numérico "caixa preenchida" — usada pelo
-    CampoNumerico (variante "caixa") e por inputs numéricos crus que não
-    podem usar o componente (valores opcionais, formatos especiais). */
+/** Variante "caixa" (número compacto) do campo canônico — usada pelo
+    CampoNumerico e por inputs numéricos crus que não podem usar o componente
+    (valores opcionais, formatos especiais). Herda contraste/borda/raio/foco de
+    CAMPO_BASE; só adiciona o formato compacto e a remoção do stepper nativo. */
 export const CLASSES_CAMPO_CAIXA = `
-  h-10 w-full rounded-[10px] border border-borda bg-superficie-suave px-2
-  text-center text-base font-semibold tabular-nums text-texto-primario
-  focus:border-acento focus:outline-none
+  ${CAMPO_BASE.trim()}
+  h-10 w-full px-2 text-center text-base font-semibold tabular-nums
   [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none
 `;
 

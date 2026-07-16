@@ -128,6 +128,7 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
   const [tiposCardio, setTiposCardio] = useState<TipoCardioDef[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalCriarExercicioAberto, setModalCriarExercicioAberto] = useState(false);
+  const [exercicioPadraoSelecionado, setExercicioPadraoSelecionado] = useState<Exercicio | null>(null);
   const [abaExercicios, setAbaExercicios] = useState<AbaExercicios>("musculacao");
   const [buscaExercicios, setBuscaExercicios] = useState("");
   const [formCardioAberto, setFormCardioAberto] = useState(false);
@@ -250,6 +251,28 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
     setFormCardio(FORM_CARDIO_INICIAL);
     setFormCardioAberto(false);
   }
+
+  useEffect(() => {
+    if (!formCardioAberto) return;
+
+    const fecharComEscape = (evento: globalThis.KeyboardEvent) => {
+      if (evento.key === "Escape") fecharFormularioCardio();
+    };
+
+    window.addEventListener("keydown", fecharComEscape);
+    return () => window.removeEventListener("keydown", fecharComEscape);
+  }, [formCardioAberto]);
+
+  useEffect(() => {
+    if (!exercicioPadraoSelecionado) return;
+
+    const fecharComEscape = (evento: globalThis.KeyboardEvent) => {
+      if (evento.key === "Escape") setExercicioPadraoSelecionado(null);
+    };
+
+    window.addEventListener("keydown", fecharComEscape);
+    return () => window.removeEventListener("keydown", fecharComEscape);
+  }, [exercicioPadraoSelecionado]);
 
   function alternarMetricaCardio(chave: ChaveMetricaCardio) {
     setFormCardio((atual) => {
@@ -521,6 +544,11 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
                                   key={exercicio.id}
                                   exercicio={exercicio}
                                   ehPadrao={ehPadrao}
+                                  aoVerResumo={
+                                    ehPadrao
+                                      ? () => setExercicioPadraoSelecionado(exercicio)
+                                      : undefined
+                                  }
                                   estaSendoExcluido={itensExcluindo.exercicio.has(exercicio.id)}
                                   aoExcluir={
                                     ehPadrao
@@ -554,7 +582,39 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
                   </div>
 
                   {formCardioAberto && (
-                    <div className="rounded-2xl border border-borda bg-superficie p-4 space-y-3">
+                    <div
+                      className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="form-cardio-title"
+                    >
+                      <button
+                        type="button"
+                        aria-label="Fechar formulário de cardio"
+                        className="absolute inset-0 h-full w-full bg-black/25 backdrop-blur-sm animate-in fade-in duration-200"
+                        onClick={fecharFormularioCardio}
+                      />
+                      <div className="relative max-h-[90dvh] w-full space-y-4 overflow-y-auto rounded-t-3xl border border-borda bg-superficie p-5 shadow-xl animate-in slide-in-from-bottom-4 duration-200 sm:max-w-[560px] sm:rounded-3xl sm:zoom-in-95">
+                        <div className="flex items-start justify-between gap-4 border-b border-borda-suave pb-4">
+                          <div>
+                            <h2 id="form-cardio-title" className="text-lg font-semibold font-display text-texto-primario">
+                              {tipoCardioEditando
+                                ? `${tipoCardioEditando.builtin ? "Customizar" : "Editar"} ${tipoCardioEditando.nome}`
+                                : "Novo cardio"}
+                            </h2>
+                            <p className="mt-1 text-sm text-texto-secundario">
+                              Escolha o nome e as métricas usadas nas fichas.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={fecharFormularioCardio}
+                            className="-mr-2 rounded-lg p-2 text-texto-secundario transition-colors hover:bg-superficie-suave hover:text-texto-primario"
+                            aria-label="Fechar"
+                          >
+                            <Icone nome="fechar" tamanho={20} />
+                          </button>
+                        </div>
                       <div className="grid grid-cols-[72px_1fr] gap-3">
                         <Input
                           label="Emoji"
@@ -606,13 +666,23 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
                         </div>
                       </div>
 
-                      <div className="flex justify-end gap-2 pt-1">
-                        <Botao variante="fantasma" tamanho="compacto" onClick={fecharFormularioCardio}>
+                      <div className="-mx-5 -mb-5 mt-5 flex gap-3 border-t border-borda-suave px-5 py-4">
+                        <Botao
+                          variante="secundario"
+                          onClick={fecharFormularioCardio}
+                          className="flex-1"
+                        >
                           Cancelar
                         </Botao>
-                        <Botao variante="primario" tamanho="compacto" onClick={salvarTipoCardio}>
+                        <Botao
+                          variante="primario"
+                          onClick={salvarTipoCardio}
+                          className="flex-1"
+                          disabled={!formCardio.nome.trim()}
+                        >
                           {tipoCardioEditando ? "Salvar" : "Criar"}
                         </Botao>
+                      </div>
                       </div>
                     </div>
                   )}
@@ -645,6 +715,11 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
         aberto={modalCriarExercicioAberto}
         aoCriar={handleCriarExercicioCustom}
         aoCancelar={() => setModalCriarExercicioAberto(false)}
+      />
+
+      <ModalResumoExercicio
+        exercicio={exercicioPadraoSelecionado}
+        aoFechar={() => setExercicioPadraoSelecionado(null)}
       />
 
       {/* ── Modal de Confirmação ── */}
@@ -820,45 +895,17 @@ interface CampoBuscaProps {
   placeholder: string;
 }
 
-/** Campo de busca com lupa à esquerda e botão de limpar. Espelha o padrão do
-    PickerExercicios (mesmas classes/afinação de foco). */
+/** Campo de busca com lupa à esquerda e botão de limpar. Usa a variante
+    canônica "busca" do Input (fonte de verdade do estilo de campo). */
 function CampoBusca({ valor, aoAlterar, placeholder }: CampoBuscaProps) {
   return (
-    <div className="relative">
-      <input
-        type="text"
-        value={valor}
-        onChange={(e) => aoAlterar(e.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        className="
-          w-full px-4 py-3 pl-10 pr-10
-          bg-superficie border border-borda rounded-[10px]
-          text-sm text-texto-primario placeholder:text-texto-sutil
-          focus:border-acento focus:outline-none focus:ring-2 focus:ring-acento/20
-          transition-all duration-200
-        "
-      />
-      <svg
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-texto-sutil"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-      </svg>
-      {valor && (
-        <button
-          type="button"
-          onClick={() => aoAlterar("")}
-          aria-label="Limpar busca"
-          className="absolute right-2 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-texto-sutil transition-colors hover:bg-superficie-suave hover:text-texto-primario"
-        >
-          <Icone nome="fechar" tamanho={16} />
-        </button>
-      )}
-    </div>
+    <Input
+      tipo="busca"
+      value={valor}
+      onChange={(e) => aoAlterar(e.target.value)}
+      placeholder={placeholder}
+      aoLimpar={() => aoAlterar("")}
+    />
   );
 }
 
@@ -1082,6 +1129,7 @@ interface LinhaExercicioCustomProps {
   ehPadrao?: boolean;
   estaSendoExcluido?: boolean;
   aoExcluir?: () => void;
+  aoVerResumo?: () => void;
   semBorda?: boolean;
 }
 
@@ -1090,13 +1138,24 @@ function LinhaExercicioCustom({
   ehPadrao = false,
   estaSendoExcluido = false,
   aoExcluir,
+  aoVerResumo,
   semBorda,
 }: LinhaExercicioCustomProps) {
   return (
     <div
+      role={aoVerResumo ? "button" : undefined}
+      tabIndex={aoVerResumo ? 0 : undefined}
+      onClick={aoVerResumo}
+      onKeyDown={(evento) => {
+        if (aoVerResumo && (evento.key === "Enter" || evento.key === " ")) {
+          evento.preventDefault();
+          aoVerResumo();
+        }
+      }}
       className={`
         flex items-center gap-4 px-5 py-4 hover:bg-superficie-suave
         transition-all duration-200
+        ${aoVerResumo ? "cursor-pointer focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-acento" : ""}
         ${estaSendoExcluido ? "opacity-0 scale-95" : "opacity-100 scale-100"}
         ${semBorda ? "" : "border-b border-borda-suave"}
       `}
@@ -1113,7 +1172,78 @@ function LinhaExercicioCustom({
           )}
         </div>
       </div>
+      {ehPadrao && <Icone nome="setaDireita" tamanho={18} className="shrink-0 text-texto-sutil" />}
       {!ehPadrao && aoExcluir && <BotaoExcluirItem nome={exercicio.nome} aoExcluir={aoExcluir} />}
+    </div>
+  );
+}
+
+function ModalResumoExercicio({
+  exercicio,
+  aoFechar,
+}: {
+  exercicio: Exercicio | null;
+  aoFechar: () => void;
+}) {
+  if (!exercicio) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="resumo-exercicio-title"
+    >
+      <button
+        type="button"
+        aria-label="Fechar resumo do exercício"
+        className="absolute inset-0 h-full w-full bg-black/25 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={aoFechar}
+      />
+      <div className="relative w-full rounded-t-3xl border border-borda bg-superficie shadow-xl animate-in slide-in-from-bottom-4 duration-200 sm:max-w-[400px] sm:rounded-3xl sm:zoom-in-95">
+        <div className="flex items-start justify-between gap-4 border-b border-borda-suave px-5 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-acento-suave text-texto-primario">
+              <Icone nome="halter" tamanho={20} />
+            </span>
+            <div className="min-w-0">
+              <h2 id="resumo-exercicio-title" className="truncate text-lg font-semibold font-display text-texto-primario">
+                {exercicio.nome}
+              </h2>
+              <span className="text-xs font-medium text-texto-sutil">Exercício padrão</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={aoFechar}
+            className="-mr-2 rounded-lg p-2 text-texto-secundario transition-colors hover:bg-superficie-suave hover:text-texto-primario"
+            aria-label="Fechar"
+          >
+            <Icone nome="fechar" tamanho={20} />
+          </button>
+        </div>
+
+        <div className="space-y-4 px-5 py-5">
+          <div className="rounded-xl border border-borda-suave bg-superficie-suave p-4">
+            <p className="text-xs font-medium uppercase tracking-[0.08em] text-texto-sutil">
+              Grupo muscular principal
+            </p>
+            <p className="mt-1 text-base font-semibold text-texto-primario">
+              {exercicio.grupoMuscular}
+            </p>
+          </div>
+          <p className="text-sm leading-relaxed text-texto-secundario">
+            Movimento de musculação do catálogo do app com foco principal em {exercicio.grupoMuscular.toLowerCase()}.
+            Você pode adicioná-lo a uma ficha e configurar séries, repetições, carga e descanso conforme o seu treino.
+          </p>
+        </div>
+
+        <div className="border-t border-borda-suave px-5 py-4 pb-[max(var(--safe-bottom),16px)] sm:pb-4">
+          <Botao variante="primario" onClick={aoFechar} className="w-full">
+            Fechar
+          </Botao>
+        </div>
+      </div>
     </div>
   );
 }

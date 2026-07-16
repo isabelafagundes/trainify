@@ -21,6 +21,7 @@ import { OverlayHistoricoSerie } from "./OverlayHistoricoSerie";
 import { OverlayGraficoProgressao } from "./OverlayGraficoProgressao";
 import { useSessaoTreino } from "./hooks/useSessaoTreino";
 import { useTimerDescanso } from "./hooks/useTimerDescanso";
+import { useInterceptarVoltar } from "./hooks/useInterceptarVoltar";
 import { nomeDoItem } from "./nomeItem";
 
 interface ExecucaoTreinoPageProps {
@@ -45,6 +46,18 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
   const [desfazerAlvo, setDesfazerAlvo] = useState<{ indiceSerie: number; texto: string } | null>(null);
   const [finalizadoAberto, setFinalizadoAberto] = useState(false);
   const rodandoAnterior = useRef(false);
+
+  // "Voltar" (back do navegador ou físico do Android) não pode sair direto pra
+  // home: primeiro fecha algum overlay aberto; senão, pede confirmação de
+  // abandono — a mesma do kebab. Inativo quando o treino já foi finalizado
+  // (aí o "Concluir" do overlay de fim é quem leva embora).
+  useInterceptarVoltar(!finalizadoAberto, () => {
+    if (confirmarFinalizarAberto) return setConfirmarFinalizarAberto(false);
+    if (serieHistoricoAlvo !== null) return setSerieHistoricoAlvo(null);
+    if (graficoAberto) return setGraficoAberto(false);
+    if (confirmarCancelarAberto) return setConfirmarCancelarAberto(false);
+    setConfirmarCancelarAberto(true);
+  });
 
   // Descanso terminou: feedback tátil e volta ao tempo programado (o card
   // inline some sozinho — só aparece com descanso em andamento).
@@ -183,6 +196,7 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
         iniciadoEm={sessao.iniciadoEm}
         progresso={sessao.progresso}
         aoFinalizar={solicitarFinalizacao}
+        aoAbandonar={() => setConfirmarCancelarAberto(true)}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -191,7 +205,6 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
           catalogo={catalogo}
           tiposCardio={tiposCardio}
           aoIrPara={sessao.irPara}
-          aoAbandonar={() => setConfirmarCancelarAberto(true)}
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -322,8 +335,9 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
         </div>
       </div>
 
-      {/* Footer mobile: navegação entre itens + abandonar */}
-      <footer className="border-t border-borda-suave bg-fundo/95 px-4 pb-[calc(var(--safe-bottom)+10px)] pt-2.5 backdrop-blur-sm md:hidden">
+      {/* Footer mobile: navegação entre itens. Abandonar saiu daqui (zona do
+          dedão) e virou item do kebab no header. */}
+      <footer className="border-t border-borda-suave bg-fundo/95 px-4 pb-[calc(var(--safe-bottom)+18px)] pt-2.5 backdrop-blur-sm md:hidden">
         <div className="grid grid-cols-[1fr_2fr] gap-2">
           <Botao
             variante="secundario"
@@ -336,13 +350,6 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
           </Botao>
           {botaoProximo}
         </div>
-        <button
-          type="button"
-          onClick={() => setConfirmarCancelarAberto(true)}
-          className="mt-1.5 inline-flex min-h-[34px] w-full cursor-pointer items-center justify-center gap-2 rounded-[8px] text-xs font-medium text-texto-sutil transition-colors duration-150 hover:text-perigo"
-        >
-          <Icone nome="sair" tamanho={13} /> Abandonar treino
-        </button>
       </footer>
 
       <OverlayConfirmarFinalizar

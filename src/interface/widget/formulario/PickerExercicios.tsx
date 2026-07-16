@@ -6,6 +6,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import type { Exercicio } from "@/domain/tipos";
 import { Chip } from "@/interface/widget/chip/Chip";
 import { Icone } from "@/interface/widget/svg/Icone";
+import { Input } from "@/interface/widget/formulario/Input";
 
 interface PickerExerciciosProps {
   exercicios: Exercicio[];
@@ -113,36 +114,13 @@ export function PickerExercicios({
     <div className="flex flex-col gap-3">
       {/* Barra de busca + filtros — fixa ao rolar */}
       <div className="sticky top-0 z-10 -mx-1 px-1 pt-1 pb-2 bg-superficie/95 backdrop-blur-sm space-y-3">
-        <div className="relative">
-          <input
-            type="text"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar exercício..."
-            className="
-              w-full px-4 py-3 pl-10
-              bg-superficie
-              border border-borda
-              rounded-[10px]
-              text-sm text-texto-primario placeholder:text-texto-sutil
-              focus:border-acento focus:outline-none focus:ring-2 focus:ring-acento/20
-              transition-all duration-200
-            "
-          />
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-texto-sutil"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-        </div>
+        <Input
+          tipo="busca"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar exercício..."
+          aoLimpar={() => setBusca("")}
+        />
 
         {/* Filtro de grupo muscular — rolagem horizontal (swipe no mobile, setas na web) */}
         {gruposUnicos.length > 0 && (

@@ -23,7 +23,7 @@ export function ChipsItens({ itens, catalogo, tiposCardio, aoIrPara }: Proprieda
   }, [indiceAtivo]);
 
   return (
-    <div className="flex gap-1.5 overflow-x-auto px-4 pb-1 pt-2.5 md:hidden [scrollbar-width:none]">
+    <div className="scrollbar-mobile-hidden flex gap-1.5 overflow-x-auto px-4 pb-1 pt-2.5 md:hidden">
       {itens.map((item) => {
         const { nome, emoji } = nomeDoItem(item, catalogo, tiposCardio);
         const ativo = item.estado === "ativo";

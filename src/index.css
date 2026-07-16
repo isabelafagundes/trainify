@@ -148,6 +148,21 @@ html {
   scrollbar-color: var(--color-borda) transparent;
 }
 
+/* Listas horizontais seguem a convenção mobile de arrastar: a rolagem
+   continua ativa, mas a barra visual fica reservada para telas maiores. */
+@media (max-width: 767px) {
+  .scrollbar-mobile-hidden {
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scrollbar-mobile-hidden::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
 /* ═══════════════════════════════════════════
    Acessibilidade
    ═══════════════════════════════════════════ */

@@ -8,18 +8,16 @@ interface PropriedadesRailItens {
   catalogo: Exercicio[];
   tiposCardio: TipoCardioDef[];
   aoIrPara: (indice: number) => void;
-  aoAbandonar: () => void;
 }
 
 /** Lista lateral de itens (tablet/desktop): substitui os chips do mobile.
-    Mostra a sequência inteira com status e progresso por item; no pé fica o
-    "Abandonar treino" (no mobile ele mora no footer). */
+    Mostra a sequência inteira com status e progresso por item. "Abandonar
+    treino" saiu do pé daqui e virou item do kebab (⋮) no header. */
 export function RailItens({
   itens,
   catalogo,
   tiposCardio,
   aoIrPara,
-  aoAbandonar,
 }: PropriedadesRailItens) {
   return (
     <aside className="hidden w-[252px] shrink-0 flex-col border-r border-borda-suave md:flex lg:w-[288px]">
@@ -72,14 +70,6 @@ export function RailItens({
           );
         })}
       </nav>
-
-      <button
-        type="button"
-        onClick={aoAbandonar}
-        className="mx-3 mb-4 mt-2 inline-flex min-h-[34px] cursor-pointer items-center justify-center gap-2 rounded-lg text-xs font-medium text-texto-sutil transition-colors duration-150 hover:text-perigo focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
-      >
-        <Icone nome="sair" tamanho={13} /> Abandonar treino
-      </button>
     </aside>
   );
 }
