@@ -18,7 +18,7 @@ export interface AcaoMenu {
   perigo?: boolean;
 }
 
-const LARGURA_MENU = 176;
+const LARGURA_MENU = 208;
 
 /** Três pontos verticais (kebab) — inline por serem círculos preenchidos. */
 function IconeMaisOpcoes({ tamanho = 18 }: { tamanho?: number }) {
@@ -96,11 +96,13 @@ export function MenuAcoes({ rotulo, itens }: { rotulo: string; itens: AcaoMenu[]
                   setAberto(false);
                   it.onClick();
                 }}
-                className={`flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition-colors ${
+                className={`flex w-full items-center gap-2.5 whitespace-nowrap px-3.5 py-2.5 text-left text-sm transition-colors ${
                   i > 0 ? "border-t border-borda-suave" : ""
                 } ${it.perigo ? "text-perigo hover:bg-perigo/10" : "text-texto-primario hover:bg-superficie-suave"}`}
               >
-                <Icone nome={it.icone} tamanho={16} />
+                <span className="shrink-0">
+                  <Icone nome={it.icone} tamanho={16} />
+                </span>
                 {it.label}
               </button>
             ))}
