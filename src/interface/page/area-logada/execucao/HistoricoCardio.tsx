@@ -52,7 +52,7 @@ export function HistoricoCardio({
   );
 
   return (
-    <section className="rounded-[8px] border border-borda-suave bg-superficie px-3 py-3">
+    <section className="rounded-2xl border border-borda bg-superficie px-3 py-3">
       <h2 className="px-1 text-sm font-medium text-texto-secundario">
         Últimas sessões
       </h2>

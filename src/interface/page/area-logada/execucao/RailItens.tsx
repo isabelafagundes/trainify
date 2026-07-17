@@ -37,14 +37,18 @@ export function RailItens({
               type="button"
               onClick={() => aoIrPara(item.indice)}
               aria-current={ativo ? "step" : undefined}
-              className={`mb-0.5 flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento ${
-                ativo ? "bg-acento-suave" : "hover:bg-superficie-suave"
+              className={`mb-0.5 flex w-full cursor-pointer items-center gap-2.5 rounded-lg border px-2.5 py-2.5 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento ${
+                ativo
+                  ? "border-borda-suave bg-acento-suave text-texto-primario shadow-sm"
+                  : "border-transparent hover:bg-superficie-suave"
               }`}
             >
               <span
                 className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums ${
-                  concluido || ativo
+                  ativo
                     ? "border-acento bg-acento text-texto-invertido"
+                    : concluido
+                      ? "border-acento bg-acento text-texto-invertido"
                     : "border-borda-suave bg-superficie text-texto-sutil"
                 }`}
               >
@@ -62,7 +66,11 @@ export function RailItens({
                 >
                   {emoji ? `${emoji} ${nome}` : nome}
                 </span>
-                <span className="block text-[11px] tabular-nums text-texto-sutil">
+                <span
+                  className={`block text-[11px] tabular-nums ${
+                    ativo ? "text-texto-secundario" : "text-texto-sutil"
+                  }`}
+                >
                   {item.rotuloProgresso}
                 </span>
               </span>

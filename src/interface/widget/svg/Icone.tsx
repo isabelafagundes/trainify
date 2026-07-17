@@ -147,6 +147,13 @@ const caminhoIcones: Record<string, { caminhos: string[]; preenchido?: boolean }
     ],
   },
 
+  humano: {
+    caminhos: [
+      "M12 4.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z",
+      "M8.25 9.25L9.5 6.5h5l1.25 2.75M9.5 6.75L7 13m7.5-6.25L17 13M10 11.5l-.75 5.25L7.5 22m6.5-10.5l.75 5.25L16.5 22",
+    ],
+  },
+
   raio: {
     caminhos: ["M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"],
     preenchido: true,

@@ -33,7 +33,7 @@ export function NotaExercicio({
 
   if (variante === "aberta") {
     return (
-      <section className="rounded-[12px] border border-borda-suave bg-superficie px-3.5 py-3">
+      <section className="rounded-2xl border border-borda bg-superficie px-3.5 py-3">
         <div className="mb-2.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-texto-sutil">
           <Icone nome="nota" tamanho={13} /> {rotulo}
         </div>
@@ -43,7 +43,7 @@ export function NotaExercicio({
   }
 
   return (
-    <section className="rounded-[10px] border border-borda-suave bg-superficie">
+    <section className="rounded-2xl border border-borda bg-superficie">
       <button
         type="button"
         onClick={() => setAberta((atual) => !atual)}

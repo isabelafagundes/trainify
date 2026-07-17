@@ -23,6 +23,8 @@ import { useSessaoTreino } from "./hooks/useSessaoTreino";
 import { useTimerDescanso } from "./hooks/useTimerDescanso";
 import { useInterceptarVoltar } from "./hooks/useInterceptarVoltar";
 import { nomeDoItem } from "./nomeItem";
+import { ativacoesDoExercicio } from "@/domain/ativacao-muscular";
+import { MapaMuscular } from "@/interface/widget/musculatura/MapaMuscular";
 
 interface ExecucaoTreinoPageProps {
   ficha: Ficha;
@@ -43,6 +45,7 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
   const [confirmarCancelarAberto, setConfirmarCancelarAberto] = useState(false);
   const [serieHistoricoAlvo, setSerieHistoricoAlvo] = useState<number | null>(null);
   const [graficoAberto, setGraficoAberto] = useState(false);
+  const [mapaMuscularAberto, setMapaMuscularAberto] = useState(false);
   const [desfazerAlvo, setDesfazerAlvo] = useState<{ indiceSerie: number; texto: string } | null>(null);
   const [finalizadoAberto, setFinalizadoAberto] = useState(false);
   const rodandoAnterior = useRef(false);
@@ -55,6 +58,7 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
     if (confirmarFinalizarAberto) return setConfirmarFinalizarAberto(false);
     if (serieHistoricoAlvo !== null) return setSerieHistoricoAlvo(null);
     if (graficoAberto) return setGraficoAberto(false);
+    if (mapaMuscularAberto) return setMapaMuscularAberto(false);
     if (confirmarCancelarAberto) return setConfirmarCancelarAberto(false);
     setConfirmarCancelarAberto(true);
   });
@@ -83,9 +87,11 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
 
   const statusAtual = sessao.statusItens[sessao.indiceAtual];
   const nomeAtual = statusAtual ? nomeDoItem(statusAtual, catalogo, tiposCardio).nome : "";
-  const grupoMuscular = catalogo.find(
+  const exercicioCatalogo = catalogo.find(
     (exercicio) => exercicio.id === exercicioAtual?.exercicioId
-  )?.grupoMuscular;
+  );
+  const grupoMuscular = exercicioCatalogo?.grupoMuscular;
+  const ativacoes = exercicioCatalogo ? ativacoesDoExercicio(exercicioCatalogo) : [];
 
   const statusAnterior = sessao.indiceAtual > 0 ? sessao.statusItens[sessao.indiceAtual - 1] : undefined;
   const statusProximo = sessao.ultimoItem ? undefined : sessao.statusItens[sessao.indiceAtual + 1];
@@ -296,13 +302,27 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
 
                 {/* Próximo inline (md+): o rail cobre o "Anterior" */}
                 <div className="mt-4 hidden md:block">{botaoProximo}</div>
+
+                {exercicioAtual && (
+                  <button
+                    type="button"
+                    onClick={() => setMapaMuscularAberto(true)}
+                    className="mt-3 flex w-full cursor-pointer items-center gap-2 rounded-2xl border border-borda bg-superficie px-3 py-3 text-left text-[13px] font-medium text-texto-secundario transition-colors duration-150 hover:text-texto-primario lg:hidden"
+                  >
+                    <Icone nome="humano" tamanho={15} />
+                    <span>músculos atingidos</span>
+                    <span className="flex-1" />
+                    <Icone nome="setaDireita" tamanho={14} className="shrink-0" />
+                  </button>
+                )}
               </div>
             </main>
 
             {/* Painel de contexto (lg+): o que no mobile é accordion, aberto */}
-            <aside className="hidden w-[320px] shrink-0 space-y-3 overflow-y-auto py-4 pl-1 pr-5 lg:block">
+            <aside className="hidden w-[clamp(340px,30vw,480px)] shrink-0 space-y-3 overflow-y-auto py-4 pl-1 pr-5 lg:block">
               {exercicioAtual ? (
                 <>
+                  <MapaMuscular ativacoes={ativacoes} amplo />
                   <AccordionProgressao
                     exercicioId={exercicioAtual.exercicioId}
                     historico={historicoDaFicha}
@@ -349,6 +369,40 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
           {botaoProximo}
         </div>
       </footer>
+
+      {mapaMuscularAberto && exercicioAtual && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mapa-muscular-title"
+        >
+          <button
+            type="button"
+            aria-label="Fechar mapa muscular"
+            className="absolute inset-0 h-full w-full bg-black/30 backdrop-blur-sm"
+            onClick={() => setMapaMuscularAberto(false)}
+          />
+          <div className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border border-borda bg-superficie shadow-xl sm:max-w-[460px] sm:rounded-3xl">
+            <div className="flex items-start justify-between gap-4 border-b border-borda-suave px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil">Músculos atingidos</p>
+                <h2 id="mapa-muscular-title" className="mt-0.5 truncate font-display text-xl font-semibold text-texto-primario">{nomeAtual}</h2>
+              </div>
+              <button type="button" onClick={() => setMapaMuscularAberto(false)} className="-mr-2 rounded-lg p-2 text-texto-secundario hover:bg-superficie-suave" aria-label="Fechar">
+                <Icone nome="fechar" tamanho={20} />
+              </button>
+            </div>
+            <div className="p-5">
+              <MapaMuscular ativacoes={ativacoes} className="border-0 bg-transparent p-0" />
+              <p className="mt-4 text-center text-xs leading-relaxed text-texto-sutil">Quanto mais intensa a cor, maior a participação estimada do músculo no exercício.</p>
+            </div>
+            <div className="border-t border-borda-suave px-5 py-4 pb-[max(var(--safe-bottom),16px)] sm:pb-4">
+              <Botao variante="primario" ocuparLarguraTotal onClick={() => setMapaMuscularAberto(false)}>Fechar</Botao>
+            </div>
+          </div>
+        </div>
+      )}
 
       <OverlayConfirmarFinalizar
         aberto={confirmarFinalizarAberto}

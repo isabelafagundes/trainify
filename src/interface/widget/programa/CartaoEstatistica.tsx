@@ -13,7 +13,7 @@ interface PropriedadesCartaoEstatistica {
  */
 export function CartaoEstatistica({ valor, rotulo }: PropriedadesCartaoEstatistica) {
   return (
-    <div className="rounded-xl bg-superficie border border-borda-suave px-4 py-3">
+    <div className="rounded-2xl border border-borda bg-superficie px-4 py-3">
       <p className="text-xl font-bold text-texto-primario font-display tabular-nums leading-none">
         {valor}
       </p>

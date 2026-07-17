@@ -27,6 +27,8 @@ import { ModalConfirmacao } from "@/interface/widget/modal/ModalConfirmacao";
 import { ModalCriarExercicio } from "@/interface/widget/modal/ModalCriarExercicio";
 import { MenuAcoes } from "@/interface/widget/menu/MenuAcoes";
 import { useToast } from "@/interface/widget/toast";
+import { ativacoesDoExercicio } from "@/domain/ativacao-muscular";
+import { MapaMuscular } from "@/interface/widget/musculatura/MapaMuscular";
 
 type VisualizacaoGerenciar = "programas" | "fichas" | "exercicios";
 type TipoExclusaoGerenciar = "programa" | "exercicio" | "ficha" | "cardio";
@@ -608,11 +610,7 @@ export function GerenciarPage({ aoNavegar, visualizacao = "programas" }: Proprie
                                   key={exercicio.id}
                                   exercicio={exercicio}
                                   ehPadrao={ehPadrao}
-                                  aoVerResumo={
-                                    ehPadrao
-                                      ? () => setExercicioPadraoSelecionado(exercicio)
-                                      : undefined
-                                  }
+                                  aoVerResumo={() => setExercicioPadraoSelecionado(exercicio)}
                                   estaSendoExcluido={itensExcluindo.exercicio.has(exercicio.id)}
                                   aoExcluir={
                                     ehPadrao
@@ -1245,7 +1243,7 @@ function LinhaExercicioCustom({
           )}
         </div>
       </div>
-      {ehPadrao && <Icone nome="setaDireita" tamanho={18} className="shrink-0 text-texto-sutil" />}
+      <Icone nome="setaDireita" tamanho={18} className="shrink-0 text-texto-sutil" />
       {!ehPadrao && aoExcluir && <BotaoExcluirItem nome={exercicio.nome} aoExcluir={aoExcluir} />}
     </div>
   );
@@ -1283,7 +1281,7 @@ function ModalResumoExercicio({
               <h2 id="resumo-exercicio-title" className="truncate text-lg font-semibold font-display text-texto-primario">
                 {exercicio.nome}
               </h2>
-              <span className="text-xs font-medium text-texto-sutil">Exercício padrão</span>
+              <span className="text-xs font-medium text-texto-sutil">Mapa muscular do exercício</span>
             </div>
           </div>
           <button
@@ -1297,6 +1295,7 @@ function ModalResumoExercicio({
         </div>
 
         <div className="space-y-4 px-5 py-5">
+          <MapaMuscular ativacoes={ativacoesDoExercicio(exercicio)} />
           <div className="rounded-xl border border-borda-suave bg-superficie-suave p-4">
             <p className="text-xs font-medium uppercase tracking-[0.08em] text-texto-sutil">
               Grupo muscular principal

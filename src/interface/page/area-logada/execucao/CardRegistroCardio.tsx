@@ -108,7 +108,7 @@ export function CardRegistroCardio({
     : [];
 
   return (
-    <section className="rounded-[12px] border border-borda-suave bg-superficie p-3">
+    <section className="rounded-2xl border border-borda bg-superficie p-3">
       {/* Métricas se auto-rotulam (rótulo | valor | unidade); o check ocupa a
           coluna final — como a coluna "feito" do card de séries — centralizado
           verticalmente nas linhas de métrica. Sem header "REGISTRO" solto. */}

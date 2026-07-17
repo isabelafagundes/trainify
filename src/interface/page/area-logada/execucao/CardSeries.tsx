@@ -32,7 +32,7 @@ export function CardSeries({
   const cabecalho = "text-[10px] font-semibold uppercase tracking-[0.08em] text-texto-sutil";
 
   return (
-    <section className="rounded-[12px] border border-borda-suave bg-superficie px-3 pb-2 pt-3">
+    <section className="rounded-2xl border border-borda bg-superficie px-3 pb-2 pt-3">
       <div
         className={`grid items-center gap-2 px-1 pb-1 ${
           usaCarga

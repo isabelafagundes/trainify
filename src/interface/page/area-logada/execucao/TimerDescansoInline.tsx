@@ -23,7 +23,7 @@ export function TimerDescansoInline({
   const prontoParaIniciar = !rodando && segundosRestantes === segundosIniciais;
 
   return (
-    <div className="flex items-center gap-3 rounded-[10px] border border-borda-suave bg-superficie px-3 py-2.5">
+    <div className="flex items-center gap-3 rounded-2xl border border-borda bg-superficie px-3 py-2.5">
       <span className="text-texto-secundario">
         <Icone nome="relogio" tamanho={16} />
       </span>
