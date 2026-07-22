@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   META_METRICA_CARDIO,
   resolverTipoCardio,
@@ -9,7 +10,9 @@ import {
   type RegistroSerie,
   type RegistroTreino,
 } from "@/domain/tipos";
+import { OverlayCompartilharTreino } from "@/interface/page/area-logada/execucao/OverlayFinalizado";
 import { EstadoVazio } from "@/interface/widget/EstadoVazio";
+import { Botao } from "@/interface/widget/botao/Botao";
 import { criarIdGraficoCardio } from "@/interface/widget/grafico/cardioGraficoId";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
 import { formatarNumeroBR } from "@/interface/util/numero";
@@ -107,6 +110,7 @@ export function DetalheHistoricoPage({
   aoNavegar,
   aoVoltar,
 }: DetalheHistoricoPageProps) {
+  const [compartilhamentoAberto, setCompartilhamentoAberto] = useState(false);
   const registro = historico.find((item) => item.id === registroId);
 
   if (!registro) {
@@ -131,6 +135,13 @@ export function DetalheHistoricoPage({
   }
 
   const ficha = fichas.find((item) => item.id === registro.fichaId);
+  const fichaDoResultado: Ficha = ficha ?? {
+    id: registro.fichaId,
+    nome: "Ficha removida",
+    descricao: "",
+    icone: "halter",
+    itens: [],
+  };
   const duracaoMinutos = calcularDuracaoMinutos(registro.iniciadoEm, registro.finalizadoEm);
   const exerciciosComSeries = registro.exercicios.filter((item) => item.series.length > 0);
 
@@ -158,6 +169,16 @@ export function DetalheHistoricoPage({
           <ResumoMeta rotulo="Fim" valor={formatarHorario(registro.finalizadoEm)} />
           <ResumoMeta rotulo="Duração" valor={`${duracaoMinutos} min`} />
         </div>
+
+        <Botao
+          variante="secundario"
+          ocuparLarguraTotal
+          className="mt-3"
+          icone={<Icone nome="compartilhar" tamanho={17} />}
+          onClick={() => setCompartilhamentoAberto(true)}
+        >
+          Compartilhar resultado
+        </Botao>
       </header>
 
       {exerciciosComSeries.length > 0 ? (
@@ -204,6 +225,14 @@ export function DetalheHistoricoPage({
           descricao="Este treino foi finalizado sem nenhum exercício registrado."
         />
       ) : null}
+
+      <OverlayCompartilharTreino
+        aberto={compartilhamentoAberto}
+        registro={registro}
+        ficha={fichaDoResultado}
+        catalogo={exercicios}
+        aoFechar={() => setCompartilhamentoAberto(false)}
+      />
     </div>
   );
 }

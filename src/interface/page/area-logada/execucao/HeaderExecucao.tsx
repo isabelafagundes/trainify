@@ -1,6 +1,5 @@
 import type { NomeIcone } from "@/domain/tipos";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
-import { Botao } from "@/interface/widget/botao/Botao";
 import { MenuAcoes } from "@/interface/widget/menu/MenuAcoes";
 import type { ProgressoSessao } from "./hooks/useSessaoTreino";
 import { useTempoDecorrido } from "./hooks/useTempoDecorrido";
@@ -16,9 +15,9 @@ interface HeaderExecucaoProps {
 }
 
 /** Header da execução: identidade da ficha + tempo decorrido + contadores +
-    Finalizar sempre à mão + barra fina de progresso. "Abandonar treino" mora
-    no kebab (⋮) ao lado do Finalizar — fora da zona do dedão no mobile e com
-    lugar consistente nos 3 breakpoints. O X de fechar imediato morreu. */
+    barra fina de progresso. Finalizar e abandonar vivem no menu kebab — fora
+    da zona do dedão e sem adjacência entre a ação boa e a destrutiva. O
+    finalizar evidente é o do rodapé no último item. */
 export function HeaderExecucao({
   nomeFicha,
   iconeFicha,
@@ -38,6 +37,10 @@ export function HeaderExecucao({
       : []),
   ];
 
+  // Com tudo concluído, finalizar não é "antes" — é o encerramento natural.
+  const tudoConcluido =
+    progresso.itensTotal > 0 && progresso.itensConcluidos === progresso.itensTotal;
+
   return (
     <header className="sticky top-0 z-20 border-b border-borda-suave bg-fundo/95 pt-[var(--safe-top)] backdrop-blur-sm">
       <div className="mx-auto w-full max-w-[1140px] px-4 pb-2.5 pt-3">
@@ -54,14 +57,20 @@ export function HeaderExecucao({
             </p>
           </div>
 
-          <Botao variante="primario" tamanho="compacto" onClick={aoFinalizar} className="shrink-0">
-            Finalizar
-          </Botao>
-
           <MenuAcoes
-            rotulo="Mais opções do treino"
+            rotulo="Ações do treino"
             itens={[
-              { label: "Abandonar treino", icone: "sair", perigo: true, onClick: aoAbandonar },
+              {
+                label: tudoConcluido ? "Finalizar" : "Finalizar antes",
+                icone: "check",
+                onClick: aoFinalizar,
+              },
+              {
+                label: "Abandonar treino",
+                icone: "sair",
+                onClick: aoAbandonar,
+                perigo: true,
+              },
             ]}
           />
         </div>

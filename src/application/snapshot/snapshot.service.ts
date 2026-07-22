@@ -128,7 +128,7 @@ function migrarAteVersaoAtual(valor: unknown): SnapshotPezzo {
   }
 
   if (valor.versaoSchema > VERSAO_SCHEMA) {
-    throw new Error("Este backup foi criado por uma versao mais nova do Pezzo.");
+    throw new Error("Este backup foi criado por uma versao mais nova do Kynori.");
   }
 
   if (valor.versaoSchema < 1) {

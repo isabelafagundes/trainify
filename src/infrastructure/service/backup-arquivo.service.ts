@@ -9,7 +9,7 @@ export interface BackupArquivoService {
 
 function criarNomeArquivo(): string {
   const data = new Date().toISOString().slice(0, 10);
-  return `pezzo-backup-${data}.json`;
+  return `kynori-backup-${data}.json`;
 }
 
 function selecionarArquivoTexto(): Promise<string | null> {
@@ -110,8 +110,8 @@ class BackupArquivoCapacitor implements BackupArquivoService {
     });
 
     await Share.share({
-      title: "Backup Pezzo",
-      text: "Backup dos seus dados do Pezzo.",
+      title: "Backup Kynori",
+      text: "Backup dos seus dados do Kynori.",
       url: uri,
       dialogTitle: "Exportar dados",
     });

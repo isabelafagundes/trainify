@@ -414,6 +414,27 @@ html {
   animation: shimmer-btn 2.5s ease-in-out infinite;
 }
 
+/* Letreiro para metadados que não cabem em cards compactos. A segunda cópia
+   torna a repetição contínua, como em um painel de transporte. */
+@keyframes texto-letreiro {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-texto-letreiro {
+  animation: texto-letreiro 9s linear infinite;
+  will-change: transform;
+}
+
+.texto-letreiro-com-fade {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+}
+
 /* ── Entrada orquestrada da home (fade + subida) ── */
 @keyframes reveal-up {
   from {

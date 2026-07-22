@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Pezzo</string>
-    <string name="title_activity_main">Pezzo</string>
+    <string name="app_name">Kynori</string>
+    <string name="title_activity_main">Kynori</string>
     <string name="package_name">com.trainify.app</string>
     <string name="custom_url_scheme">com.trainify.app</string>
 </resources>

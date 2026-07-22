@@ -204,7 +204,8 @@ function TelaCarregando() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-fundo px-6 text-center">
       <div>
-        <p className="font-display text-lg font-semibold text-texto-primario">Pezzo</p>
+        <img src="/kynori-mark-black.png" alt="" className="mx-auto mb-3 h-10 w-10 object-contain" />
+        <p className="font-display text-lg font-semibold text-texto-primario">Kynori</p>
         <p className="mt-2 text-sm text-texto-secundario">Carregando seus treinos...</p>
       </div>
     </div>

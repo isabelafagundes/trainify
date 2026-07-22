@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════ */
 
 /** Nome da aplicação */
-export const APP_NAME = "Pezzo";
+export const APP_NAME = "Kynori";
 
 /** Versão da aplicação */
 export const APP_VERSION = "1.0.0";

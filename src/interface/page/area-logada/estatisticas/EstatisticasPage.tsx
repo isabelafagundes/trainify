@@ -1,8 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Exercicio, RegistroTreino } from "@/domain/tipos";
 import { EstadoVazio } from "@/interface/widget/EstadoVazio";
 import { Icone } from "@/interface/widget/svg/Icone";
 import { formatarNumeroBR } from "@/interface/util/numero";
+import { GraficoMaiorEvolucao } from "@/interface/widget/grafico/GraficoMaiorEvolucao";
+import { GraficoVolumeSemanal } from "@/interface/widget/grafico/GraficoVolumeSemanal";
+import { Input } from "@/interface/widget/formulario/Input";
+import { Chip } from "@/interface/widget/chip/Chip";
 import { CardMetricaResumo } from "./CardMetricaResumo";
 import { ItemProgressaoExercicio } from "./ItemProgressaoExercicio";
 import {
@@ -15,6 +19,7 @@ import {
   calcularRecordeStreak,
   calcularStreakAtual,
   calcularTreinosNoMes,
+  filtrarProgressaoExercicios,
 } from "./utils";
 
 interface PropriedadesEstatisticasPage {
@@ -44,6 +49,8 @@ export function EstatisticasPage({
   aoNavegar,
 }: PropriedadesEstatisticasPage) {
   const hoje = useMemo(() => new Date(), []);
+  const [buscaExercicio, setBuscaExercicio] = useState("");
+  const [grupoMuscular, setGrupoMuscular] = useState<string | null>(null);
 
   const treinosNoMes = useMemo(
     () => calcularTreinosNoMes(historico, hoje),
@@ -61,6 +68,18 @@ export function EstatisticasPage({
     () => agregarProgressaoPorExercicio(historico, exercicios),
     [historico, exercicios],
   );
+  const gruposMusculares = useMemo(
+    () =>
+      Array.from(new Set(progressao.map((item) => item.grupoMuscular))).sort(
+        (a, b) => a.localeCompare(b, "pt-BR"),
+      ),
+    [progressao],
+  );
+  const progressaoFiltrada = useMemo(
+    () => filtrarProgressaoExercicios(progressao, buscaExercicio, grupoMuscular),
+    [progressao, buscaExercicio, grupoMuscular],
+  );
+  const filtrosAtivos = buscaExercicio.trim().length > 0 || grupoMuscular !== null;
   const resumoCardio = useMemo(
     () => calcularResumoCardio(historico),
     [historico],
@@ -137,6 +156,19 @@ export function EstatisticasPage({
         ) : null}
       </section>
 
+      {/* Gráficos fixos de insight — volume semanal + maior evolução de carga */}
+      <section
+        className="grid grid-cols-1 gap-3 reveal-up md:grid-cols-2"
+        style={{ animationDelay: "60ms" }}
+      >
+        <GraficoVolumeSemanal historico={historico} />
+        <GraficoMaiorEvolucao
+          historico={historico}
+          exercicios={exercicios}
+          aoVerExercicio={(exercicioId) => aoNavegar("graficoProgressao", { exercicioId })}
+        />
+      </section>
+
       {/* Progressão por exercício */}
       <section>
         <div
@@ -147,26 +179,103 @@ export function EstatisticasPage({
             Progressão por exercício
           </h2>
           <span className="text-xs text-texto-sutil tabular-nums">
+            {filtrosAtivos ? `${progressaoFiltrada.length} de ` : ""}
             {progressao.length} {progressao.length === 1 ? "exercício" : "exercícios"}
           </span>
         </div>
 
         {progressao.length > 0 ? (
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            {progressao.map((item, i) => (
+          <div className="space-y-3">
+            <div
+              className="space-y-2.5 reveal-up"
+              style={{ animationDelay: "110ms" }}
+            >
+              <Input
+                tipo="busca"
+                value={buscaExercicio}
+                onChange={(evento) => setBuscaExercicio(evento.target.value)}
+                placeholder="Buscar exercício..."
+                ariaLabel="Buscar exercício nas estatísticas"
+                aoLimpar={() => setBuscaExercicio("")}
+              />
+
               <div
-                key={item.exercicioId}
-                className="reveal-up"
-                style={{ animationDelay: `${130 + i * 55}ms` }}
+                className="flex flex-nowrap gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                aria-label="Filtrar por grupo muscular"
               >
-                <ItemProgressaoExercicio
-                  progressao={item}
-                  aoClicar={(exercicioId) =>
-                    aoNavegar("graficoProgressao", { exercicioId })
-                  }
-                />
+                <button
+                  type="button"
+                  aria-pressed={grupoMuscular === null}
+                  onClick={() => setGrupoMuscular(null)}
+                  className="shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+                >
+                  <Chip
+                    rotulo="Todos"
+                    tamanho="pequeno"
+                    ativo={grupoMuscular === null}
+                    className="min-h-[36px] px-3.5 text-[13px]"
+                  />
+                </button>
+                {gruposMusculares.map((grupo) => (
+                  <button
+                    key={grupo}
+                    type="button"
+                    aria-pressed={grupoMuscular === grupo}
+                    onClick={() => setGrupoMuscular(grupo)}
+                    className="shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+                  >
+                    <Chip
+                      rotulo={grupo}
+                      tamanho="pequeno"
+                      ativo={grupoMuscular === grupo}
+                      className="min-h-[36px] px-3.5 text-[13px]"
+                    />
+                  </button>
+                ))}
               </div>
-            ))}
+
+              <span className="sr-only" aria-live="polite">
+                {progressaoFiltrada.length}{" "}
+                {progressaoFiltrada.length === 1
+                  ? "exercício encontrado"
+                  : "exercícios encontrados"}
+              </span>
+            </div>
+
+            {progressaoFiltrada.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                {progressaoFiltrada.map((item, i) => (
+                  <div
+                    key={item.exercicioId}
+                    className="reveal-up"
+                    style={{ animationDelay: `${150 + i * 55}ms` }}
+                  >
+                    <ItemProgressaoExercicio
+                      progressao={item}
+                      aoClicar={(exercicioId) =>
+                        aoNavegar("graficoProgressao", { exercicioId })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[12px] border border-dashed border-borda px-4 py-7 text-center">
+                <p className="text-sm text-texto-secundario">
+                  Nenhum exercício encontrado.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBuscaExercicio("");
+                    setGrupoMuscular(null);
+                  }}
+                  className="mt-2 min-h-[36px] text-sm font-medium text-acento hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+                >
+                  Limpar filtros
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-texto-sutil text-center py-6">

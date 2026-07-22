@@ -65,17 +65,21 @@ export function StripSemanal({ dados, aoAbrirDetalhe }: PropriedadesStripSemanal
         />
       </span>
 
-      <p className="flex-1 min-w-0 truncate text-sm text-texto-secundario">
-        {temStreak ? (
-          <>
-            <span className="font-bold tabular-nums text-texto-primario">{streak}</span>{" "}
-            {streak === 1 ? "dia" : "dias"} de sequência
-          </>
-        ) : (
-          "Comece sua sequência hoje"
-        )}
-        <span className="text-texto-sutil"> · {treinosSemana}/7 esta semana</span>
-      </p>
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-sm leading-tight text-texto-secundario">
+          {temStreak ? (
+            <>
+              <span className="font-bold tabular-nums text-texto-primario">{streak}</span>{" "}
+              {streak === 1 ? "dia" : "dias"} de sequência
+            </>
+          ) : (
+            "Comece sua sequência hoje"
+          )}
+        </p>
+        <p className="mt-1 text-xs leading-tight tabular-nums text-texto-sutil">
+          {treinosSemana}/7 esta semana
+        </p>
+      </div>
 
       {aoAbrirDetalhe && (
         <span className="flex-shrink-0 text-texto-sutil" aria-hidden="true">

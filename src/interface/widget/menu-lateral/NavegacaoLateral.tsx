@@ -72,12 +72,12 @@ export function NavegacaoLateral({
             recolhida ? "justify-center px-0" : "px-2"
           }`}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-acento font-display text-lg font-bold text-texto-invertido">
-            P
-          </span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-white p-1 shadow-sm">
+              <img src="/kynori-mark-black.png" alt="" className="h-full w-full object-contain" />
+            </span>
           {!recolhida && (
-            <span className="font-display text-lg font-bold tracking-tight text-texto-primario">
-              Pezzo
+            <span className="font-display text-[13px] font-bold uppercase tracking-[0.08em] text-texto-primario">
+              Kynori
             </span>
           )}
         </div>

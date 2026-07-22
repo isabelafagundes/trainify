@@ -135,11 +135,11 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
     }
 
     if (erro.message.includes("versao mais nova")) {
-      return "Este backup foi criado por uma versao mais nova do Pezzo.";
+      return "Este backup foi criado por uma versao mais nova do Kynori.";
     }
 
     if (erro.message.includes("schema") || erro.message.includes("Versao")) {
-      return "Este arquivo nao parece ser um backup compativel do Pezzo.";
+      return "Este arquivo nao parece ser um backup compativel do Kynori.";
     }
 
     if (
@@ -186,17 +186,20 @@ export function CabecalhoApp({ tituloTela, acaoDireita, onBack, nomeUsuario, ava
             <button
               onClick={onBack}
               aria-label="Voltar"
-              className="flex-shrink-0 w-10 h-10 rounded-lg border border-borda-forte bg-superficie-suave shadow-sm shadow-black/[0.04] flex items-center justify-center text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario hover:border-acento active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento transition-all duration-150"
+              className="flex-shrink-0 w-10 h-10 rounded-lg border border-borda bg-superficie-suave shadow-sm shadow-black/[0.04] flex items-center justify-center text-texto-secundario hover:bg-superficie-hover hover:text-texto-primario hover:border-acento active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento transition-all duration-150"
             >
               <Icone nome="setaEsquerda" tamanho={16} />
             </button>
           )}
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[13px] font-bold text-texto-sutil uppercase tracking-[0.08em] font-display flex-shrink-0 lg:hidden">
-              Pezzo
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] bg-white p-[3px] shadow-sm lg:hidden">
+                <img src="/kynori-mark-black.png" alt="" className="h-full w-full object-contain" />
+              </span>
+              <span className="text-[13px] font-bold text-texto-primario uppercase tracking-[0.08em] font-display flex-shrink-0 lg:hidden">
+                Kynori
             </span>
             <span className="text-texto-sutil/30 text-[10px] flex-shrink-0 lg:hidden">/</span>
-            <h1 className="text-sm font-semibold text-texto-primario tracking-tight font-display truncate">
+            <h1 className="text-sm font-semibold text-texto-sutil tracking-tight font-display truncate">
               {tituloTela}
             </h1>
           </div>

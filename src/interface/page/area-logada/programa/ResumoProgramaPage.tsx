@@ -8,8 +8,8 @@ import type {
 import { stateManagerRepository } from "@/infrastructure/repo/state/state-manager.repo";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone } from "@/interface/widget/svg/Icone";
-import { BarraProgressoSemanal } from "@/interface/widget/programa/BarraProgressoSemanal";
-import { CartaoEstatistica } from "@/interface/widget/programa/CartaoEstatistica";
+import { CartaoProximoTreino } from "@/interface/widget/programa/CartaoProximoTreino";
+import { FaixaMetricas } from "@/interface/widget/programa/FaixaMetricas";
 import { FichaExpansivel } from "@/interface/widget/ficha/FichaExpansivel";
 import {
   contarTreinosDoPrograma,
@@ -18,7 +18,6 @@ import {
   obterFichasTreinadasNaSemana,
   obterProximaFichaId,
   obterUltimoTreinoDoPrograma,
-  ordenarFichasComProximaPrimeiro,
 } from "@/interface/page/area-logada/programa/utils";
 
 interface PropriedadesResumoProgramaPage {
@@ -46,10 +45,15 @@ export function ResumoProgramaPage({
     if (!programa) return null;
     const fichasDoPrograma = obterFichasDoPrograma(programa, fichas);
     const proximaFichaId = obterProximaFichaId(fichasDoPrograma, historico);
+    const proxima =
+      fichasDoPrograma.find((f) => f.id === proximaFichaId) ?? fichasDoPrograma[0] ?? null;
+    const outras = proxima
+      ? fichasDoPrograma.filter((f) => f.id !== proxima.id)
+      : fichasDoPrograma;
     return {
       fichasDoPrograma,
-      fichasOrdenadas: ordenarFichasComProximaPrimeiro(fichasDoPrograma, proximaFichaId),
-      proximaFichaId,
+      proxima,
+      outras,
       treinadasSemana: obterFichasTreinadasNaSemana(fichasDoPrograma, historico),
       totalTreinos: contarTreinosDoPrograma(fichasDoPrograma, historico),
       ultimoTreino: obterUltimoTreinoDoPrograma(fichasDoPrograma, historico),
@@ -66,8 +70,8 @@ export function ResumoProgramaPage({
 
   const {
     fichasDoPrograma,
-    fichasOrdenadas,
-    proximaFichaId,
+    proxima,
+    outras,
     treinadasSemana,
     totalTreinos,
     ultimoTreino,
@@ -77,138 +81,139 @@ export function ResumoProgramaPage({
     stateManagerRepository.atualizarPrograma(programa!.id, { ativo: true });
   }
 
-  return (
-    <div className="px-4 py-4 space-y-5">
-      {/* ── Cabeçalho do programa ── */}
-      <section className="reveal-up">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-2xl font-bold text-texto-primario font-display leading-tight truncate">
-              {programa.nome}
-            </h2>
-          </div>
-
-          {programa.ativo ? (
-            <span className="flex-shrink-0 mt-1 rounded-full bg-acento-suave px-2.5 py-1 text-xs font-semibold text-texto-secundario">
-              Ativo
+  const cabecalho = (
+    <header className="reveal-up">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="truncate font-display text-2xl font-bold leading-tight text-texto-primario">
+            {programa.nome}
+          </h2>
+          <div className="mt-1.5 flex items-center gap-2 text-[13px] text-texto-secundario">
+            {programa.ativo ? (
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-grafico-forte" />
+                Programa ativo
+              </span>
+            ) : (
+              <span className="text-texto-sutil">Inativo</span>
+            )}
+            <span className="text-texto-sutil/50">·</span>
+            <span>
+              {fichasDoPrograma.length} ficha{fichasDoPrograma.length !== 1 ? "s" : ""}
             </span>
-          ) : (
-            <Botao
-              variante="secundario"
-              tamanho="compacto"
-              onClick={tornarAtivo}
-              className="flex-shrink-0"
-            >
-              Tornar ativo
-            </Botao>
+          </div>
+          {programa.descricao && (
+            <p className="mt-2 text-sm leading-snug text-texto-secundario">
+              {programa.descricao}
+            </p>
           )}
         </div>
 
-        {programa.descricao && (
-          <p className="mt-2 text-sm text-texto-secundario leading-snug">
-            {programa.descricao}
-          </p>
-        )}
-      </section>
-
-      {/* ── Ações ── */}
-      <section
-        className={`grid items-stretch gap-2 reveal-up ${
-          proximaFichaId
-            ? "grid-cols-[minmax(0,3fr)_minmax(128px,1fr)]"
-            : "grid-cols-1"
-        }`}
-        style={{ animationDelay: "60ms" }}
-      >
-        {proximaFichaId && (
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {!programa.ativo && (
+            <Botao variante="secundario" tamanho="compacto" onClick={tornarAtivo}>
+              Tornar ativo
+            </Botao>
+          )}
           <Botao
-            variante="primario"
-            icone={<Icone nome="reproduzir" tamanho={15} />}
-            onClick={() => aoNavegar("execucao", { fichaId: proximaFichaId })}
-            className="w-full min-w-0"
+            variante="secundario"
+            tamanho="compacto"
+            icone={<Icone nome="editar" tamanho={14} />}
+            onClick={() => aoNavegar("editarPrograma", { id: programa.id })}
           >
-            Iniciar treino
+            Editar
           </Botao>
-        )}
-        <Botao
-          variante="secundario"
-          icone={<Icone nome="editar" tamanho={15} />}
-          onClick={() => aoNavegar("editarPrograma", { id: programa.id })}
-          className="w-full min-w-0"
-        >
-          Editar
-        </Botao>
-      </section>
+        </div>
+      </div>
+    </header>
+  );
 
-      {/* ── Estatísticas ── */}
-      <section
-        className="grid grid-cols-2 gap-3 reveal-up"
-        style={{ animationDelay: "120ms" }}
-      >
-        <CartaoEstatistica
-          valor={fichasDoPrograma.length}
-          rotulo={`ficha${fichasDoPrograma.length !== 1 ? "s" : ""} no programa`}
-        />
-        <CartaoEstatistica valor={totalTreinos} rotulo="treinos realizados" />
-        <CartaoEstatistica
-          valor={`${treinadasSemana.size}/${fichasDoPrograma.length || 0}`}
-          rotulo="fichas esta semana"
-        />
-        <CartaoEstatistica
-          valor={ultimoTreino ? formatarDataRelativa(ultimoTreino) : "—"}
-          rotulo="último treino"
-        />
-      </section>
-
-      {/* ── Progresso semanal ── */}
-      {fichasDoPrograma.length > 0 && (
-        <section
-          className="rounded-2xl bg-superficie border border-borda px-4 py-4 reveal-up"
-          style={{ animationDelay: "180ms" }}
+  // Sem fichas: só o cabeçalho + estado vazio.
+  if (fichasDoPrograma.length === 0) {
+    return (
+      <div className="w-full max-w-[768px] space-y-5 px-4 py-4">
+        {cabecalho}
+        <div
+          className="reveal-up rounded-2xl border border-borda bg-superficie px-4 py-10 text-center"
+          style={{ animationDelay: "60ms" }}
         >
-          <BarraProgressoSemanal
-            concluidas={treinadasSemana.size}
-            total={fichasDoPrograma.length}
-            comRotulo
+          <p className="text-sm text-texto-sutil">
+            Nenhuma ficha adicionada ao programa ainda.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Duas colunas (desktop) só fazem sentido quando há fichas além da próxima.
+  const duasColunas = outras.length > 0;
+
+  const colunaAcao = (
+    <div className="space-y-5">
+      {cabecalho}
+      <div className="reveal-up" style={{ animationDelay: "60ms" }}>
+        <FaixaMetricas
+          totalTreinos={totalTreinos}
+          ultimoTreinoLabel={ultimoTreino ? formatarDataRelativa(ultimoTreino) : "—"}
+          treinadasSemana={treinadasSemana.size}
+          meta={fichasDoPrograma.length}
+        />
+      </div>
+      {proxima && (
+        <div className="reveal-up" style={{ animationDelay: "120ms" }}>
+          <CartaoProximoTreino
+            ficha={proxima}
+            exerciciosCatalogo={exercicios}
+            aoIniciar={(fichaId) => aoNavegar("execucao", { fichaId })}
+            aoEditar={(fichaId) =>
+              aoNavegar("editarFicha", { id: fichaId, programaId: programa.id })
+            }
           />
-        </section>
+        </div>
       )}
+    </div>
+  );
 
-      {/* ── Fichas ── */}
-      <section
-        className="reveal-up"
-        style={{ animationDelay: "240ms" }}
+  const biblioteca = duasColunas && (
+    <section
+      className="reveal-up mt-5 lg:mt-0"
+      style={{ animationDelay: "180ms" }}
+    >
+      <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil">
+        Outras fichas
+      </h3>
+      <div className="divide-y divide-borda-suave overflow-hidden rounded-2xl border border-borda bg-superficie">
+        {outras.map((ficha) => (
+          <FichaExpansivel
+            key={ficha.id}
+            ficha={ficha}
+            exerciciosCatalogo={exercicios}
+            expandida={fichaExpandidaId === ficha.id}
+            aoAlternar={() =>
+              setFichaExpandidaId((atual) => (atual === ficha.id ? null : ficha.id))
+            }
+            aoIniciarTreino={(fichaId) => aoNavegar("execucao", { fichaId })}
+            aoEditar={(fichaId) =>
+              aoNavegar("editarFicha", { id: fichaId, programaId: programa.id })
+            }
+          />
+        ))}
+      </div>
+    </section>
+  );
+
+  return (
+    <div className="px-4 py-4">
+      <div
+        className={
+          duasColunas
+            ? "lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-6"
+            : "w-full max-w-[768px]"
+        }
       >
-        <h3 className="px-1 mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil">
-          Fichas
-        </h3>
-
-        {fichasOrdenadas.length > 0 ? (
-          <div className="rounded-2xl overflow-hidden bg-superficie border border-borda divide-y divide-borda-suave">
-            {fichasOrdenadas.map((ficha) => (
-              <FichaExpansivel
-                key={ficha.id}
-                ficha={ficha}
-                exerciciosCatalogo={exercicios}
-                expandida={fichaExpandidaId === ficha.id}
-                aoAlternar={() =>
-                  setFichaExpandidaId((atual) => (atual === ficha.id ? null : ficha.id))
-                }
-                aoIniciarTreino={(fichaId) => aoNavegar("execucao", { fichaId })}
-                aoEditar={(fichaId) =>
-                  aoNavegar("editarFicha", { id: fichaId, programaId: programa.id })
-                }
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl bg-superficie border border-borda px-4 py-8 text-center">
-            <p className="text-sm text-texto-sutil">
-              Nenhuma ficha adicionada ao programa ainda.
-            </p>
-          </div>
-        )}
-      </section>
+        {colunaAcao}
+        {biblioteca}
+      </div>
     </div>
   );
 }

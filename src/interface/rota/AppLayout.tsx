@@ -12,6 +12,7 @@ import { useDados } from "./DadosProvider";
 import {
   abaDoCaminho,
   construirCaminho,
+  ehRotaLarga,
   ehRotaSemNav,
   ehTabRaiz,
   tituloDoCaminho,
@@ -24,6 +25,7 @@ export function AppLayout() {
 
   const semNav = ehRotaSemNav(location.pathname);
   const tabRaiz = ehTabRaiz(location.pathname);
+  const rotaLarga = ehRotaLarga(location.pathname);
   const titulo = tituloDoCaminho(location.pathname);
 
   // Drawer de preferências: estado de UI subido para cá porque, no desktop, o
@@ -66,8 +68,14 @@ export function AppLayout() {
           }`}
         >
           {/* Container de leitura: largura confortável e centralizada em telas largas.
-              (max-w em px explícito — o nome "3xl" colide com --spacing-3xl do @theme.) */}
-          <div className="mx-auto w-full max-w-[768px]">
+              (max-w em px explícito — o nome "3xl" colide com --spacing-3xl do @theme.)
+              Rotas "largas" (ex.: resumo do programa em 2 colunas) ganham mais
+              espaço no desktop; abaixo de lg seguem na coluna de leitura padrão. */}
+          <div
+            className={`mx-auto w-full ${
+              rotaLarga ? "max-w-[768px] lg:max-w-[1040px]" : "max-w-[768px]"
+            }`}
+          >
             {/* Título da página no topo do conteúdo (desktop): substitui a barra
                 superior, que fica oculta em lg+. Inclui voltar nas subtelas. */}
             <div className="hidden lg:flex items-center gap-3 px-4 pb-3 pt-2">
@@ -76,7 +84,7 @@ export function AppLayout() {
                   type="button"
                   onClick={() => navigate(-1)}
                   aria-label="Voltar"
-                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-borda-forte bg-superficie-suave shadow-sm shadow-black/[0.04] text-texto-secundario transition-all duration-150 hover:bg-superficie-hover hover:text-texto-primario hover:border-acento focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-borda bg-superficie-suave shadow-sm shadow-black/[0.04] text-texto-secundario transition-all duration-150 hover:bg-superficie-hover hover:text-texto-primario hover:border-acento focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
                 >
                   <Icone nome="setaEsquerda" tamanho={16} />
                 </button>

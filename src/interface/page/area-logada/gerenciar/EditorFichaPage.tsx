@@ -669,13 +669,6 @@ export function EditorFichaPage({ fichaId, aoVoltar, programaId }: PropriedadesE
               <h2 className="flex-1 text-xl font-bold font-display tracking-tight text-texto-primario">
                 Itens do treino
               </h2>
-              <button
-                type="button"
-                onClick={fecharTelaItens}
-                className="px-2 -mr-2 text-sm font-medium text-texto-secundario transition-colors hover:text-texto-primario"
-              >
-                Concluir
-              </button>
             </div>
 
             {/* Conteúdo */}

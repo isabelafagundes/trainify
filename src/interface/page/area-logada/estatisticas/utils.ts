@@ -17,6 +17,28 @@ function toISODate(data: Date): string {
   return `${ano}-${mes}-${dia}`;
 }
 
+/** Início da semana (segunda-feira, 00:00 local) que contém a data dada. */
+function inicioDaSemana(data: Date): Date {
+  const d = new Date(data);
+  d.setHours(0, 0, 0, 0);
+  const diaSegundaBase = (d.getDay() + 6) % 7; // 0 = segunda, 6 = domingo
+  d.setDate(d.getDate() - diaSegundaBase);
+  return d;
+}
+
+/** Volume (kg movimentados = Σ repetições × carga) de uma sessão de treino. */
+function volumeDaSessao(registro: RegistroTreino): number {
+  return registro.exercicios.reduce(
+    (totalExercicios, exercicio) =>
+      totalExercicios +
+      exercicio.series.reduce(
+        (totalSeries, serie) => totalSeries + serie.repeticoes * (serie.carga || 0),
+        0,
+      ),
+    0,
+  );
+}
+
 /** Conta treinos realizados no mês de referência (mês corrente por padrão) */
 export function calcularTreinosNoMes(
   historico: RegistroTreino[],
@@ -131,6 +153,32 @@ export interface ProgressaoExercicio {
   cargaMaxima: number; /** maior carga já registrada */
   ultimaCarga: number; /** maior carga da sessão mais recente */
   usaCarga: boolean;
+}
+
+function normalizarTexto(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim();
+}
+
+/** Filtra a lista de progressão pelo nome do exercício e pelo grupo muscular. */
+export function filtrarProgressaoExercicios(
+  progressao: ProgressaoExercicio[],
+  busca: string,
+  grupoMuscular: string | null,
+): ProgressaoExercicio[] {
+  const termo = normalizarTexto(busca);
+
+  return progressao.filter((item) => {
+    const correspondeAoGrupo =
+      grupoMuscular === null || item.grupoMuscular === grupoMuscular;
+    const correspondeABusca =
+      termo.length === 0 || normalizarTexto(item.nome).includes(termo);
+
+    return correspondeAoGrupo && correspondeABusca;
+  });
 }
 
 export interface ResumoCardio {
@@ -282,4 +330,129 @@ export function agregarProgressaoPorExercicio(
   return Array.from(mapa.values()).sort(
     (a, b) => new Date(b.ultimaData).getTime() - new Date(a.ultimaData).getTime(),
   );
+}
+
+export interface SemanaVolume {
+  inicioISO: string; /** segunda-feira que abre a semana (YYYY-MM-DD) */
+  volume: number; /** kg movimentados na semana */
+}
+
+export interface ResumoVolumeSemanal {
+  semanas: SemanaVolume[]; /** janela contígua terminando na semana atual */
+  volumeAtual: number;
+  volumeAnterior: number;
+  /** variação % da semana atual sobre a anterior; null se não há base de comparação */
+  deltaPct: number | null;
+}
+
+/**
+ * Agrega o volume (Σ repetições × carga) por semana ISO (segunda a domingo),
+ * numa janela contígua de `numSemanas` terminando na semana de `hoje`. Semanas
+ * sem treino entram com volume 0 — a janela é sempre contígua para o gráfico.
+ */
+export function calcularVolumeSemanal(
+  historico: RegistroTreino[],
+  numSemanas: number = 8,
+  hoje: Date = new Date(),
+): ResumoVolumeSemanal {
+  const volumePorSemana = new Map<string, number>();
+  for (const registro of historico) {
+    const chave = toISODate(inicioDaSemana(new Date(registro.iniciadoEm)));
+    volumePorSemana.set(chave, (volumePorSemana.get(chave) ?? 0) + volumeDaSessao(registro));
+  }
+
+  const inicioAtual = inicioDaSemana(hoje);
+  const semanas: SemanaVolume[] = [];
+  for (let i = numSemanas - 1; i >= 0; i--) {
+    const cursor = new Date(inicioAtual);
+    cursor.setDate(cursor.getDate() - i * 7);
+    const chave = toISODate(cursor);
+    semanas.push({ inicioISO: chave, volume: volumePorSemana.get(chave) ?? 0 });
+  }
+
+  const volumeAtual = semanas[semanas.length - 1]?.volume ?? 0;
+  const volumeAnterior = semanas[semanas.length - 2]?.volume ?? 0;
+  const deltaPct =
+    volumeAnterior > 0 ? ((volumeAtual - volumeAnterior) / volumeAnterior) * 100 : null;
+
+  return { semanas, volumeAtual, volumeAnterior, deltaPct };
+}
+
+export interface PontoCarga {
+  data: string; /** iniciadoEm da sessão */
+  maiorCarga: number;
+}
+
+export interface EvolucaoCarga {
+  exercicioId: string;
+  nome: string;
+  grupoMuscular: string;
+  pontos: PontoCarga[]; /** maior carga por sessão, ordem cronológica, últimas `janela` */
+  cargaInicial: number;
+  cargaAtual: number;
+  delta: number; /** cargaAtual − cargaInicial dentro da janela (sempre > 0) */
+}
+
+/**
+ * Encontra o exercício com maior ganho de carga dentro das últimas `janela`
+ * sessões em que foi registrado com carga. Base do card "maior evolução de
+ * carga". Retorna null se nenhum exercício progrediu (delta ≤ 0) ou não tem
+ * pelo menos 2 sessões com carga.
+ */
+export function calcularMaiorEvolucaoCarga(
+  historico: RegistroTreino[],
+  exercicios: Exercicio[],
+  janela: number = 8,
+): EvolucaoCarga | null {
+  const catalogo = new Map(exercicios.map((e) => [e.id, e]));
+  const pontosPorExercicio = new Map<string, PontoCarga[]>();
+
+  const ordenado = [...historico].sort(
+    (a, b) => new Date(a.iniciadoEm).getTime() - new Date(b.iniciadoEm).getTime(),
+  );
+
+  for (const registro of ordenado) {
+    for (const exReg of registro.exercicios) {
+      if (!catalogo.has(exReg.exercicioId)) continue;
+      const maiorCarga = exReg.series.length
+        ? Math.max(...exReg.series.map((s) => s.carga || 0))
+        : 0;
+      if (maiorCarga <= 0) continue; // só faz sentido para exercícios com carga
+      const lista = pontosPorExercicio.get(exReg.exercicioId) ?? [];
+      lista.push({ data: registro.iniciadoEm, maiorCarga });
+      pontosPorExercicio.set(exReg.exercicioId, lista);
+    }
+  }
+
+  let melhor: EvolucaoCarga | null = null;
+  for (const [exercicioId, todos] of pontosPorExercicio) {
+    const pontos = todos.slice(-janela);
+    if (pontos.length < 2) continue;
+
+    const cargaInicial = pontos[0].maiorCarga;
+    const cargaAtual = pontos[pontos.length - 1].maiorCarga;
+    const delta = cargaAtual - cargaInicial;
+    if (delta <= 0) continue;
+
+    const exercicio = catalogo.get(exercicioId)!;
+    const candidato: EvolucaoCarga = {
+      exercicioId,
+      nome: exercicio.nome,
+      grupoMuscular: exercicio.grupoMuscular,
+      pontos,
+      cargaInicial,
+      cargaAtual,
+      delta,
+    };
+
+    if (
+      !melhor ||
+      candidato.delta > melhor.delta ||
+      (candidato.delta === melhor.delta && candidato.cargaAtual > melhor.cargaAtual)
+    ) {
+      melhor = candidato;
+    }
+  }
+
+  return melhor;
 }

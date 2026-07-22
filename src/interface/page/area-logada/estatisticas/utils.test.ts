@@ -6,10 +6,13 @@ import {
 } from "./cardioUtils";
 import {
   agregarProgressaoPorExercicio,
+  calcularMaiorEvolucaoCarga,
   calcularRecordeStreak,
   calcularStreakAtual,
   calcularTreinosNoMes,
+  calcularVolumeSemanal,
   construirDadosFrequencia,
+  filtrarProgressaoExercicios,
 } from "./utils";
 
 function treino(parcial: Partial<RegistroTreino>): RegistroTreino {
@@ -143,6 +146,75 @@ describe("estatisticas utils", () => {
     ]);
   });
 
+  it("filtra a progressao por nome sem diferenciar acentos ou maiusculas", () => {
+    const progressao = [
+      {
+        exercicioId: "rosca",
+        nome: "Rosca Concentrada",
+        grupoMuscular: "Bíceps",
+        totalSessoes: 2,
+        ultimaData: "2026-05-20T10:00:00",
+        cargaMaxima: 12,
+        ultimaCarga: 12,
+        usaCarga: true,
+      },
+      {
+        exercicioId: "remada",
+        nome: "Remada Baixa",
+        grupoMuscular: "Costas",
+        totalSessoes: 1,
+        ultimaData: "2026-05-19T10:00:00",
+        cargaMaxima: 30,
+        ultimaCarga: 30,
+        usaCarga: true,
+      },
+    ];
+
+    expect(filtrarProgressaoExercicios(progressao, "CONCENTRÁDA", null)).toEqual([
+      progressao[0],
+    ]);
+  });
+
+  it("combina a busca por exercício com o filtro de grupo muscular", () => {
+    const progressao = [
+      {
+        exercicioId: "abdominal",
+        nome: "Abdominal Crunch",
+        grupoMuscular: "Abdômen",
+        totalSessoes: 2,
+        ultimaData: "2026-05-20T10:00:00",
+        cargaMaxima: 0,
+        ultimaCarga: 0,
+        usaCarga: false,
+      },
+      {
+        exercicioId: "prancha",
+        nome: "Prancha Lateral",
+        grupoMuscular: "Abdômen",
+        totalSessoes: 1,
+        ultimaData: "2026-05-19T10:00:00",
+        cargaMaxima: 0,
+        ultimaCarga: 0,
+        usaCarga: false,
+      },
+      {
+        exercicioId: "rosca",
+        nome: "Rosca de Punho",
+        grupoMuscular: "Antebraço",
+        totalSessoes: 1,
+        ultimaData: "2026-05-18T10:00:00",
+        cargaMaxima: 10,
+        ultimaCarga: 10,
+        usaCarga: true,
+      },
+    ];
+
+    expect(filtrarProgressaoExercicios(progressao, "lateral", "Abdômen")).toEqual([
+      progressao[1],
+    ]);
+    expect(filtrarProgressaoExercicios(progressao, "rosca", "Abdômen")).toEqual([]);
+  });
+
   it("calcula resumo de cardio somando sessões, duração e distância", () => {
     const historico = [
       treino({
@@ -174,6 +246,121 @@ describe("estatisticas utils", () => {
       totalMinutos: 75,
       totalKm: 19.2,
     });
+  });
+
+  it("agrega volume semanal em janela contígua com semanas sem treino zeradas", () => {
+    // Segunda de referência: 2026-05-18. Semana atual (18–24) e a anterior (11–17).
+    const historico = [
+      treino({
+        iniciadoEm: "2026-05-20T10:00:00", // semana atual
+        exercicios: [
+          {
+            exercicioId: "supino",
+            nota: "",
+            series: [
+              { serie: 1, repeticoes: 10, carga: 40 }, // 400
+              { serie: 2, repeticoes: 8, carga: 50 }, // 400
+            ],
+          },
+        ],
+      }),
+      treino({
+        iniciadoEm: "2026-05-12T10:00:00", // semana anterior
+        exercicios: [
+          {
+            exercicioId: "supino",
+            nota: "",
+            series: [{ serie: 1, repeticoes: 10, carga: 40 }], // 400
+          },
+        ],
+      }),
+    ];
+
+    const resultado = calcularVolumeSemanal(historico, 3, new Date("2026-05-21T09:00:00"));
+
+    expect(resultado.semanas).toEqual([
+      { inicioISO: "2026-05-04", volume: 0 },
+      { inicioISO: "2026-05-11", volume: 400 },
+      { inicioISO: "2026-05-18", volume: 800 },
+    ]);
+    expect(resultado.volumeAtual).toBe(800);
+    expect(resultado.volumeAnterior).toBe(400);
+    expect(resultado.deltaPct).toBe(100);
+  });
+
+  it("volume semanal sem base de comparação retorna deltaPct null", () => {
+    const historico = [
+      treino({
+        iniciadoEm: "2026-05-20T10:00:00",
+        exercicios: [
+          { exercicioId: "supino", nota: "", series: [{ serie: 1, repeticoes: 10, carga: 40 }] },
+        ],
+      }),
+    ];
+
+    const resultado = calcularVolumeSemanal(historico, 3, new Date("2026-05-21T09:00:00"));
+
+    expect(resultado.volumeAnterior).toBe(0);
+    expect(resultado.deltaPct).toBeNull();
+  });
+
+  it("escolhe o exercício com maior ganho de carga na janela", () => {
+    const exercicios: Exercicio[] = [
+      { id: "supino", nome: "Supino", grupoMuscular: "Peito" },
+      { id: "agacho", nome: "Agachamento", grupoMuscular: "Pernas" },
+    ];
+    const historico = [
+      treino({
+        iniciadoEm: "2026-05-01T10:00:00",
+        exercicios: [
+          { exercicioId: "supino", nota: "", series: [{ serie: 1, repeticoes: 8, carga: 40 }] },
+          { exercicioId: "agacho", nota: "", series: [{ serie: 1, repeticoes: 8, carga: 60 }] },
+        ],
+      }),
+      treino({
+        iniciadoEm: "2026-05-10T10:00:00",
+        exercicios: [
+          { exercicioId: "supino", nota: "", series: [{ serie: 1, repeticoes: 8, carga: 45 }] }, // +5
+          { exercicioId: "agacho", nota: "", series: [{ serie: 1, repeticoes: 8, carga: 80 }] }, // +20
+        ],
+      }),
+    ];
+
+    const resultado = calcularMaiorEvolucaoCarga(historico, exercicios);
+
+    expect(resultado).toMatchObject({
+      exercicioId: "agacho",
+      nome: "Agachamento",
+      cargaInicial: 60,
+      cargaAtual: 80,
+      delta: 20,
+    });
+    expect(resultado?.pontos).toHaveLength(2);
+  });
+
+  it("maior evolução ignora exercícios sem carga ou sem progresso", () => {
+    const exercicios: Exercicio[] = [
+      { id: "barra", nome: "Barra fixa", grupoMuscular: "Costas" },
+      { id: "supino", nome: "Supino", grupoMuscular: "Peito" },
+    ];
+    const historico = [
+      treino({
+        iniciadoEm: "2026-05-01T10:00:00",
+        exercicios: [
+          { exercicioId: "barra", nota: "", series: [{ serie: 1, repeticoes: 8, carga: 0 }] },
+          { exercicioId: "supino", nota: "", series: [{ serie: 1, repeticoes: 8, carga: 50 }] },
+        ],
+      }),
+      treino({
+        iniciadoEm: "2026-05-10T10:00:00",
+        exercicios: [
+          { exercicioId: "barra", nota: "", series: [{ serie: 1, repeticoes: 10, carga: 0 }] },
+          { exercicioId: "supino", nota: "", series: [{ serie: 1, repeticoes: 8, carga: 45 }] }, // regrediu
+        ],
+      }),
+    ];
+
+    expect(calcularMaiorEvolucaoCarga(historico, exercicios)).toBeNull();
   });
 
   it("agrega progressão de cardio pela métrica principal mais recente", () => {

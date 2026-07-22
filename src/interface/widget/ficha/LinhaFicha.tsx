@@ -3,6 +3,7 @@ import { exerciciosDaFicha } from "@/domain/ficha";
 import { formatarDataRelativa } from "@/interface/page/area-logada/programa/utils";
 import { Botao } from "@/interface/widget/botao/Botao";
 import { Icone, IconeFicha } from "@/interface/widget/svg/Icone";
+import { TextoLetreiro } from "@/interface/widget/texto/TextoLetreiro";
 
 interface PropriedadesLinhaFicha {
   ficha: Ficha;
@@ -34,10 +35,7 @@ export function LinhaFicha({
   const exerciciosFicha = exerciciosDaFicha(ficha);
   const gruposMusculares = extrairGruposMusculares(exerciciosFicha, exerciciosCatalogo);
 
-  // Metadados numa única linha, agrupados à esquerda: grupos + contagem.
-  // A recência ("Hoje") sai daqui e vira um chip ao lado do nome — antes ela
-  // era empurrada para a direita pelo flex-1 e ficava flutuando junto ao botão.
-  const meta = [...gruposMusculares, `${exerciciosFicha.length} exerc.`].join(" · ");
+  const textoGruposMusculares = gruposMusculares.join(" · ");
 
   return (
     <div className={`flex items-center gap-4 py-3 px-4 transition-all duration-200 group ${proximoTreino ? "bg-acento-suave/50 animate-highlight-pulse" : "hover:bg-superficie-suave"}`}>
@@ -62,9 +60,17 @@ export function LinhaFicha({
             </span>
           )}
         </div>
-        <p className="mt-1 truncate text-xs text-texto-sutil">
-          {meta}
-        </p>
+        <div className="mt-1 flex min-w-0 items-center text-xs text-texto-sutil">
+          <span className="flex-shrink-0">
+            {exerciciosFicha.length} exerc.
+          </span>
+          {textoGruposMusculares && (
+            <>
+              <span className="mx-1 flex-shrink-0"> · </span>
+              <TextoLetreiro texto={textoGruposMusculares} className="flex-1" />
+            </>
+          )}
+        </div>
       </div>
 
       {proximoTreino ? (

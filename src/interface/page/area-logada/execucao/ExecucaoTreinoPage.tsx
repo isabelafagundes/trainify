@@ -15,7 +15,7 @@ import { AccordionProgressao } from "./AccordionProgressao";
 import { TimerDescansoInline } from "./TimerDescansoInline";
 import { ToastDesfazer } from "./ToastDesfazer";
 import { OverlayConfirmarFinalizar } from "./OverlayConfirmarFinalizar";
-import { OverlayFinalizado } from "./OverlayFinalizado";
+import { OverlayFinalizado, type EtapaResultado } from "./OverlayFinalizado";
 import { OverlayConfirmarCancelar } from "./OverlayConfirmarCancelar";
 import { OverlayHistoricoSerie } from "./OverlayHistoricoSerie";
 import { OverlayGraficoProgressao } from "./OverlayGraficoProgressao";
@@ -48,13 +48,20 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
   const [mapaMuscularAberto, setMapaMuscularAberto] = useState(false);
   const [desfazerAlvo, setDesfazerAlvo] = useState<{ indiceSerie: number; texto: string } | null>(null);
   const [finalizadoAberto, setFinalizadoAberto] = useState(false);
+  const [registroFinalizado, setRegistroFinalizado] = useState<RegistroTreino | null>(null);
+  const [etapaResultado, setEtapaResultado] = useState<EtapaResultado>("celebracao");
   const rodandoAnterior = useRef(false);
 
   // "Voltar" (back do navegador ou físico do Android) não pode sair direto pra
   // home: primeiro fecha algum overlay aberto; senão, pede confirmação de
   // abandono — a mesma do kebab. Inativo quando o treino já foi finalizado
   // (aí o "Concluir" do overlay de fim é quem leva embora).
-  useInterceptarVoltar(!finalizadoAberto, () => {
+  useInterceptarVoltar(true, () => {
+    if (finalizadoAberto) {
+      if (etapaResultado === "editor") return setEtapaResultado("resumo");
+      if (etapaResultado === "celebracao") return;
+      return aoVoltar();
+    }
     if (confirmarFinalizarAberto) return setConfirmarFinalizarAberto(false);
     if (serieHistoricoAlvo !== null) return setSerieHistoricoAlvo(null);
     if (graficoAberto) return setGraficoAberto(false);
@@ -125,7 +132,7 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
 
   const persistirFinalizacao = () => {
     const registro = sessao.finalizar();
-    stateManagerRepository.adicionarTreino({
+    const registroSalvo = stateManagerRepository.adicionarTreino({
       fichaId: registro.fichaId,
       data: registro.data,
       iniciadoEm: registro.iniciadoEm,
@@ -134,6 +141,8 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
       cardio: registro.cardio,
     });
     void sessao.encerrar();
+    setRegistroFinalizado(registroSalvo);
+    setEtapaResultado("celebracao");
     setConfirmarFinalizarAberto(false);
     setFinalizadoAberto(true);
     void appModule.feedbackTatil.sucesso();
@@ -181,10 +190,12 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
     <Botao
       variante="secundario"
       ocuparLarguraTotal
+      className="min-w-0 overflow-hidden"
       onClick={sessao.ultimoItem ? solicitarFinalizacao : sessao.proximo}
+      aria-label={sessao.ultimoItem ? "Finalizar treino" : `Próximo exercício: ${nomeProximo}`}
     >
-      <span className="min-w-0 truncate">
-        {sessao.ultimoItem ? "Finalizar treino" : `Próximo: ${nomeProximo}`}
+      <span className="min-w-0 flex-1 truncate">
+        {sessao.ultimoItem ? "Finalizar treino" : nomeProximo}
       </span>
       <Icone nome="setaDireita" tamanho={15} className="shrink-0" />
     </Botao>
@@ -356,15 +367,16 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
       {/* Footer mobile: navegação entre itens. Abandonar saiu daqui (zona do
           dedão) e virou item do kebab no header. */}
       <footer className="border-t border-borda-suave bg-fundo/95 px-4 pb-[calc(var(--safe-bottom)+18px)] pt-2.5 backdrop-blur-sm md:hidden">
-        <div className="grid grid-cols-[1fr_2fr] gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Botao
             variante="secundario"
             ocuparLarguraTotal
+            className="min-w-0 overflow-hidden"
             disabled={sessao.indiceAtual === 0}
             onClick={sessao.anterior}
             icone={<Icone nome="setaEsquerda" tamanho={15} className="shrink-0" />}
           >
-            <span className="min-w-0 truncate">{nomeAnterior ?? "Anterior"}</span>
+            <span className="min-w-0 flex-1 truncate">{nomeAnterior ?? "Anterior"}</span>
           </Botao>
           {botaoProximo}
         </div>
@@ -436,7 +448,7 @@ export function ExecucaoTreinoPage({ ficha, historico, aoVoltar }: ExecucaoTrein
           historico={historicoDaFicha}
         />
       )}
-      <OverlayFinalizado aberto={finalizadoAberto} aoConcluir={aoVoltar} />
+      <OverlayFinalizado aberto={finalizadoAberto} registro={registroFinalizado} ficha={ficha} catalogo={catalogo} etapa={etapaResultado} aoMudarEtapa={setEtapaResultado} aoConcluir={aoVoltar} />
       <ToastDesfazer
         mensagem={desfazerAlvo?.texto ?? null}
         aoDesfazer={() => {

@@ -121,6 +121,16 @@ export function ehRotaSemNav(pathname: string): boolean {
   return ROTAS_SEM_NAV.some((padrao) => matchPath(padrao, pathname) !== null);
 }
 
+/**
+ * Rotas que, no desktop (lg+), usam uma coluna de conteúdo mais larga que a de
+ * leitura padrão (768px) — hoje só o resumo do programa, que ganha 2 colunas.
+ */
+const ROTAS_LARGAS = [ROTAS.treinos, ROTAS.resumoPrograma];
+
+export function ehRotaLarga(pathname: string): boolean {
+  return ROTAS_LARGAS.some((padrao) => matchPath(padrao, pathname) !== null);
+}
+
 /** Tabs raiz não mostram botão de voltar no cabeçalho. */
 export function ehTabRaiz(pathname: string): boolean {
   return (
