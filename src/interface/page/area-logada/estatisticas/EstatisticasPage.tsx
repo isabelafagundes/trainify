@@ -7,7 +7,8 @@ import { GraficoMaiorEvolucao } from "@/interface/widget/grafico/GraficoMaiorEvo
 import { GraficoVolumeSemanal } from "@/interface/widget/grafico/GraficoVolumeSemanal";
 import { Input } from "@/interface/widget/formulario/Input";
 import { Chip } from "@/interface/widget/chip/Chip";
-import { CardMetricaResumo } from "./CardMetricaResumo";
+import { BigSwitcher } from "@/interface/widget/formulario/BigSwitcher";
+import { ListaMetricas, type ItemMetrica } from "./ListaMetricas";
 import { ItemProgressaoExercicio } from "./ItemProgressaoExercicio";
 import {
   agregarProgressaoPorCardio,
@@ -16,6 +17,7 @@ import {
 } from "./cardioUtils";
 import {
   agregarProgressaoPorExercicio,
+  calcularMaiorEvolucaoCarga,
   calcularRecordeStreak,
   calcularStreakAtual,
   calcularTreinosNoMes,
@@ -27,6 +29,8 @@ interface PropriedadesEstatisticasPage {
   exercicios: Exercicio[];
   aoNavegar: (destino: string, params?: Record<string, string>) => void;
 }
+
+type AbaEstatisticas = "resumo" | "exercicios" | "cardio";
 
 const nomesMeses = [
   "Janeiro",
@@ -43,14 +47,25 @@ const nomesMeses = [
   "Dezembro",
 ];
 
+/** Normaliza texto para busca acento-insensível. */
+function normalizarBusca(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim();
+}
+
 export function EstatisticasPage({
   historico,
   exercicios,
   aoNavegar,
 }: PropriedadesEstatisticasPage) {
   const hoje = useMemo(() => new Date(), []);
+  const [abaAtiva, setAbaAtiva] = useState<AbaEstatisticas>("resumo");
   const [buscaExercicio, setBuscaExercicio] = useState("");
   const [grupoMuscular, setGrupoMuscular] = useState<string | null>(null);
+  const [buscaCardio, setBuscaCardio] = useState("");
 
   const treinosNoMes = useMemo(
     () => calcularTreinosNoMes(historico, hoje),
@@ -63,6 +78,10 @@ export function EstatisticasPage({
   const recordeStreak = useMemo(
     () => calcularRecordeStreak(historico),
     [historico],
+  );
+  const maiorEvolucao = useMemo(
+    () => calcularMaiorEvolucaoCarga(historico, exercicios),
+    [historico, exercicios],
   );
   const progressao = useMemo(
     () => agregarProgressaoPorExercicio(historico, exercicios),
@@ -88,6 +107,13 @@ export function EstatisticasPage({
     () => agregarProgressaoPorCardio(historico),
     [historico],
   );
+  const progressaoCardioFiltrada = useMemo(() => {
+    const termo = normalizarBusca(buscaCardio);
+    if (!termo) return progressaoCardio;
+    return progressaoCardio.filter((item) =>
+      normalizarBusca(item.nome).includes(termo),
+    );
+  }, [progressaoCardio, buscaCardio]);
 
   const totalTreinos = historico.length;
 
@@ -113,83 +139,143 @@ export function EstatisticasPage({
   }
 
   const nomeMesAtual = nomesMeses[hoje.getMonth()];
+  const temCardio = resumoCardio.totalSessoes > 0 || progressaoCardio.length > 0;
+  const abaAtivaEfetiva: AbaEstatisticas =
+    abaAtiva === "cardio" && !temCardio ? "resumo" : abaAtiva;
+
+  const opcoesAbas = [
+    { id: "resumo", label: "Resumo", icone: "grafico" },
+    { id: "exercicios", label: "Exercícios", icone: "halter" },
+    ...(temCardio ? [{ id: "cardio", label: "Cardio", icone: "coracao" }] : []),
+  ];
+
+  // Totalizadores do Resumo como lista de propriedades (Notion-like).
+  const itensResumo: ItemMetrica[] = [
+    { icone: "halter", rotulo: `Treinos em ${nomeMesAtual}`, valor: treinosNoMes },
+    {
+      icone: "fogo",
+      rotulo: "Streak atual",
+      valor: `${streakAtual} ${streakAtual === 1 ? "dia" : "dias"}`,
+      extra: recordeStreak > 0 ? `recorde: ${recordeStreak}` : undefined,
+    },
+  ];
+  if (resumoCardio.totalSessoes > 0) {
+    itensResumo.push({
+      icone: "coracao",
+      rotulo: "Cardio total",
+      valor: `${Math.round(resumoCardio.totalMinutos)} min`,
+      extra: `${resumoCardio.totalSessoes} ${
+        resumoCardio.totalSessoes === 1 ? "registro" : "registros"
+      }`,
+    });
+    itensResumo.push({
+      icone: "corrida",
+      rotulo: "Distância",
+      valor: `${formatarNumeroBR(resumoCardio.totalKm, 1)} km`,
+    });
+  }
+
+  const filtrosExercicioChips = (
+    <div
+      className="flex flex-nowrap gap-2 overflow-x-auto pb-0.5 md:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      aria-label="Filtrar por grupo muscular"
+    >
+      <button
+        type="button"
+        aria-pressed={grupoMuscular === null}
+        onClick={() => setGrupoMuscular(null)}
+        className="shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+      >
+        <Chip
+          rotulo="Todos"
+          tamanho="pequeno"
+          ativo={grupoMuscular === null}
+          className="min-h-[36px] px-3.5 text-[13px]"
+        />
+      </button>
+      {gruposMusculares.map((grupo) => (
+        <button
+          key={grupo}
+          type="button"
+          aria-pressed={grupoMuscular === grupo}
+          onClick={() => setGrupoMuscular(grupo)}
+          className="shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+        >
+          <Chip
+            rotulo={grupo}
+            tamanho="pequeno"
+            ativo={grupoMuscular === grupo}
+            className="min-h-[36px] px-3.5 text-[13px]"
+          />
+        </button>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="px-4 py-4 space-y-5">
-      {/* Cards de resumo */}
-      <section className="grid grid-cols-2 gap-3 reveal-up md:grid-cols-4">
-        <CardMetricaResumo
-          rotulo={`Treinos em ${nomeMesAtual}`}
-          valor={treinosNoMes}
-          sufixo={treinosNoMes === 1 ? "treino" : "treinos"}
-          icone={<Icone nome="halter" tamanho={14} />}
+    <div className="px-4 py-4 space-y-4">
+      <div className="reveal-up">
+        <BigSwitcher
+          opcoes={opcoesAbas}
+          valorSelecionado={abaAtivaEfetiva}
+          aoAlterar={(valor) => setAbaAtiva(valor as AbaEstatisticas)}
+          ariaLabel="Seções de estatísticas"
         />
-        <CardMetricaResumo
-          rotulo="Streak atual"
-          valor={streakAtual}
-          sufixo={streakAtual === 1 ? "dia" : "dias"}
-          icone={<Icone nome="fogo" tamanho={14} />}
-          destaque={
-            recordeStreak > 0
-              ? `recorde: ${recordeStreak} ${recordeStreak === 1 ? "dia" : "dias"}`
-              : undefined
-            }
-        />
-        {resumoCardio.totalSessoes > 0 ? (
-          <>
-            <CardMetricaResumo
-              rotulo="Cardio total"
-              valor={Math.round(resumoCardio.totalMinutos)}
-              sufixo="min"
-              icone={<Icone nome="coracao" tamanho={14} />}
-              destaque={`${resumoCardio.totalSessoes} ${
-                resumoCardio.totalSessoes === 1 ? "registro" : "registros"
-              }`}
-            />
-            <CardMetricaResumo
-              rotulo="Distância"
-              valor={formatarNumeroBR(resumoCardio.totalKm, 1)}
-              sufixo="km"
-              icone={<Icone nome="corrida" tamanho={14} />}
-            />
-          </>
-        ) : null}
-      </section>
+      </div>
 
-      {/* Gráficos fixos de insight — volume semanal + maior evolução de carga */}
-      <section
-        className="grid grid-cols-1 gap-3 reveal-up md:grid-cols-2"
-        style={{ animationDelay: "60ms" }}
-      >
-        <GraficoVolumeSemanal historico={historico} />
-        <GraficoMaiorEvolucao
-          historico={historico}
-          exercicios={exercicios}
-          aoVerExercicio={(exercicioId) => aoNavegar("graficoProgressao", { exercicioId })}
-        />
-      </section>
-
-      {/* Progressão por exercício */}
-      <section>
-        <div
-          className="flex items-baseline justify-between mb-2.5 px-1 reveal-up"
-          style={{ animationDelay: "80ms" }}
+      {/* ── Resumo: totalizadores + volume + evolução ──
+          Largo (md+): coluna estreita empilha totalizador + evolução ao lado do
+          gráfico de volume, que ocupa as duas linhas — sem sobra de espaço. */}
+      {abaAtivaEfetiva === "resumo" && (
+        <section
+          className="grid gap-3 reveal-up md:grid-cols-[minmax(0,340px)_1fr] md:items-start"
+          key="resumo"
         >
-          <h2 className="text-sm font-semibold text-texto-primario font-display">
-            Progressão por exercício
-          </h2>
-          <span className="text-xs text-texto-sutil tabular-nums">
-            {filtrosAtivos ? `${progressaoFiltrada.length} de ` : ""}
-            {progressao.length} {progressao.length === 1 ? "exercício" : "exercícios"}
-          </span>
-        </div>
+          <div className="md:col-start-1 md:row-start-1">
+            <ListaMetricas itens={itensResumo} />
+          </div>
+          <div className="md:col-start-2 md:row-start-1 md:row-span-2">
+            <GraficoVolumeSemanal historico={historico} />
+          </div>
+          <div className="md:col-start-1 md:row-start-2">
+            {maiorEvolucao ? (
+              <GraficoMaiorEvolucao
+                historico={historico}
+                exercicios={exercicios}
+                aoVerExercicio={(exercicioId) =>
+                  aoNavegar("graficoProgressao", { exercicioId })
+                }
+              />
+            ) : (
+              <div className="flex items-center gap-3 rounded-2xl border border-dashed border-borda px-4 py-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-acento-suave text-texto-secundario">
+                  <Icone nome="tendencia" tamanho={16} />
+                </span>
+                <p className="text-[13px] leading-snug text-texto-sutil">
+                  <b className="font-semibold text-texto-secundario">
+                    Maior evolução de carga
+                  </b>{" "}
+                  aparece aqui após 2 sessões com carga num mesmo exercício.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
-        {progressao.length > 0 ? (
-          <div className="space-y-3">
-            <div
-              className="space-y-2.5 reveal-up"
-              style={{ animationDelay: "110ms" }}
-            >
+      {/* ── Exercícios: busca + filtros + progressão ── */}
+      {abaAtivaEfetiva === "exercicios" && (
+        <section className="space-y-3 reveal-up" key="exercicios">
+          {progressao.length > 0 ? (
+            <>
+              <div className="flex items-baseline justify-between px-1">
+                <span className="text-xs text-texto-sutil tabular-nums">
+                  {filtrosAtivos ? `${progressaoFiltrada.length} de ` : ""}
+                  {progressao.length}{" "}
+                  {progressao.length === 1 ? "exercício" : "exercícios"}
+                </span>
+              </div>
+
               <Input
                 tipo="busca"
                 value={buscaExercicio}
@@ -199,40 +285,7 @@ export function EstatisticasPage({
                 aoLimpar={() => setBuscaExercicio("")}
               />
 
-              <div
-                className="flex flex-nowrap gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                aria-label="Filtrar por grupo muscular"
-              >
-                <button
-                  type="button"
-                  aria-pressed={grupoMuscular === null}
-                  onClick={() => setGrupoMuscular(null)}
-                  className="shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
-                >
-                  <Chip
-                    rotulo="Todos"
-                    tamanho="pequeno"
-                    ativo={grupoMuscular === null}
-                    className="min-h-[36px] px-3.5 text-[13px]"
-                  />
-                </button>
-                {gruposMusculares.map((grupo) => (
-                  <button
-                    key={grupo}
-                    type="button"
-                    aria-pressed={grupoMuscular === grupo}
-                    onClick={() => setGrupoMuscular(grupo)}
-                    className="shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
-                  >
-                    <Chip
-                      rotulo={grupo}
-                      tamanho="pequeno"
-                      ativo={grupoMuscular === grupo}
-                      className="min-h-[36px] px-3.5 text-[13px]"
-                    />
-                  </button>
-                ))}
-              </div>
+              {filtrosExercicioChips}
 
               <span className="sr-only" aria-live="polite">
                 {progressaoFiltrada.length}{" "}
@@ -240,96 +293,119 @@ export function EstatisticasPage({
                   ? "exercício encontrado"
                   : "exercícios encontrados"}
               </span>
-            </div>
 
-            {progressaoFiltrada.length > 0 ? (
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                {progressaoFiltrada.map((item, i) => (
-                  <div
-                    key={item.exercicioId}
-                    className="reveal-up"
-                    style={{ animationDelay: `${150 + i * 55}ms` }}
-                  >
+              {progressaoFiltrada.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {progressaoFiltrada.map((item) => (
                     <ItemProgressaoExercicio
+                      key={item.exercicioId}
                       progressao={item}
                       aoClicar={(exercicioId) =>
                         aoNavegar("graficoProgressao", { exercicioId })
                       }
                     />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-[12px] border border-dashed border-borda px-4 py-7 text-center">
-                <p className="text-sm text-texto-secundario">
-                  Nenhum exercício encontrado.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBuscaExercicio("");
-                    setGrupoMuscular(null);
-                  }}
-                  className="mt-2 min-h-[36px] text-sm font-medium text-acento hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
-                >
-                  Limpar filtros
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-texto-sutil text-center py-6">
-            Nenhum exercício registrado ainda.
-          </p>
-        )}
-      </section>
-
-      {progressaoCardio.length > 0 ? (
-        <section>
-          <div
-            className="mb-2.5 flex items-baseline justify-between px-1 reveal-up"
-            style={{ animationDelay: "120ms" }}
-          >
-            <h2 className="font-display text-sm font-semibold text-texto-primario">
-              Progressão de cardio
-            </h2>
-            <span className="text-xs text-texto-sutil tabular-nums">
-              {progressaoCardio.length} {progressaoCardio.length === 1 ? "métrica" : "métricas"}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            {progressaoCardio.map((item, i) => (
-              <button
-                key={item.idGrafico}
-                type="button"
-                onClick={() => aoNavegar("graficoProgressao", { exercicioId: item.idGrafico })}
-                className="flex min-h-[72px] items-center gap-3 rounded-[12px] border border-borda bg-superficie px-4 py-3 text-left transition-colors hover:bg-superficie-hover reveal-up"
-                style={{ animationDelay: `${170 + i * 55}ms` }}
-              >
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-acento-suave text-lg">
-                  {item.emoji || <Icone nome="coracao" tamanho={16} />}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-texto-primario">
-                    {item.nome}
-                  </span>
-                  <span className="mt-1 block truncate text-xs text-texto-sutil">
-                    {item.rotuloMetrica} · {item.totalSessoes}{" "}
-                    {item.totalSessoes === 1 ? "sessão" : "sessões"}
-                  </span>
-                </span>
-                <span className="text-right text-xs text-texto-sutil">
-                  <span className="block font-semibold text-texto-secundario">
-                    {formatarValorCardio(item)}
-                  </span>
-                  <span className="block">último</span>
-                </span>
-              </button>
-            ))}
-          </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-[12px] border border-dashed border-borda px-4 py-7 text-center">
+                  <p className="text-sm text-texto-secundario">
+                    Nenhum exercício encontrado.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBuscaExercicio("");
+                      setGrupoMuscular(null);
+                    }}
+                    className="mt-2 min-h-[36px] text-sm font-medium text-acento hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+                  >
+                    Limpar filtros
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="py-6 text-center text-sm text-texto-sutil">
+              Nenhum exercício registrado ainda.
+            </p>
+          )}
         </section>
-      ) : null}
+      )}
+
+      {/* ── Cardio: totalizadores + busca + progressão ── */}
+      {abaAtivaEfetiva === "cardio" && temCardio && (
+        <section className="space-y-3 reveal-up" key="cardio">
+          {progressaoCardio.length > 0 && (
+            <>
+              <div className="flex items-baseline justify-between px-1">
+                <span className="text-xs text-texto-sutil tabular-nums">
+                  {buscaCardio.trim().length > 0
+                    ? `${progressaoCardioFiltrada.length} de `
+                    : ""}
+                  {progressaoCardio.length}{" "}
+                  {progressaoCardio.length === 1 ? "modalidade" : "modalidades"}
+                </span>
+              </div>
+
+              <Input
+                tipo="busca"
+                value={buscaCardio}
+                onChange={(evento) => setBuscaCardio(evento.target.value)}
+                placeholder="Buscar modalidade..."
+                ariaLabel="Buscar modalidade de cardio"
+                aoLimpar={() => setBuscaCardio("")}
+              />
+
+              {progressaoCardioFiltrada.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {progressaoCardioFiltrada.map((item) => (
+                    <button
+                      key={item.idGrafico}
+                      type="button"
+                      onClick={() =>
+                        aoNavegar("graficoProgressao", { exercicioId: item.idGrafico })
+                      }
+                      className="flex min-h-[72px] items-center gap-3 rounded-[12px] border border-borda bg-superficie px-4 py-3 text-left transition-colors hover:bg-superficie-hover"
+                    >
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-acento-suave text-lg">
+                        {item.emoji || <Icone nome="coracao" tamanho={16} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-texto-primario">
+                          {item.nome}
+                        </span>
+                        <span className="mt-1 block truncate text-xs text-texto-sutil">
+                          {item.rotuloMetrica} · {item.totalSessoes}{" "}
+                          {item.totalSessoes === 1 ? "sessão" : "sessões"}
+                        </span>
+                      </span>
+                      <span className="text-right text-xs text-texto-sutil">
+                        <span className="block font-semibold text-texto-secundario">
+                          {formatarValorCardio(item)}
+                        </span>
+                        <span className="block">último</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-[12px] border border-dashed border-borda px-4 py-7 text-center">
+                  <p className="text-sm text-texto-secundario">
+                    Nenhuma modalidade encontrada.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setBuscaCardio("")}
+                    className="mt-2 min-h-[36px] text-sm font-medium text-acento hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+                  >
+                    Limpar busca
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
     </div>
   );
 }

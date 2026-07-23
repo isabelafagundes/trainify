@@ -16,12 +16,15 @@ interface BigSwitcherProps {
   opcoes: OpcaoSwitcher[];
   valorSelecionado: string;
   aoAlterar: (valor: string) => void;
+  /** Rótulo do tablist para leitores de tela. */
+  ariaLabel?: string;
 }
 
 export function BigSwitcher({
   opcoes,
   valorSelecionado,
   aoAlterar,
+  ariaLabel = "Visualização",
 }: BigSwitcherProps) {
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, indiceAtual: number) {
     const ultimaOpcao = opcoes.length - 1;
@@ -51,7 +54,7 @@ export function BigSwitcher({
 
   return (
     <div className="bg-superficie-hover border border-borda rounded-2xl p-1.5">
-      <div className="flex gap-1.5" role="tablist" aria-label="Visualização de gerenciamento">
+      <div className="flex gap-1.5" role="tablist" aria-label={ariaLabel}>
         {opcoes.map((opcao, indice) => {
           const selecionado = valorSelecionado === opcao.id;
 

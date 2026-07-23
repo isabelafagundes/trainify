@@ -4,6 +4,11 @@ import { EstadoVazio } from "@/interface/widget/EstadoVazio";
 import { Icone } from "@/interface/widget/svg/Icone";
 import { useToast } from "@/interface/widget/toast";
 import { calcularStreakAtual } from "./estatisticas/utils";
+import {
+  ListaMetricas,
+  FaixaPropriedades,
+  type ItemMetrica,
+} from "./estatisticas/ListaMetricas";
 
 interface PropriedadesHistoricoPage {
   fichas: Ficha[];
@@ -40,12 +45,32 @@ export function HistoricoPage({
   const totalMesAtual = contarTreinosNoMesAtual(historico);
   const streak = calcularStreakAtual(historico);
 
+  // Mobile: lista vertical de propriedades (mesmo componente das Estatísticas).
+  const itensResumo: ItemMetrica[] = [
+    { icone: "halter", rotulo: "Total de treinos", valor: historico.length },
+    { icone: "calendario", rotulo: "Este mês", valor: totalMesAtual },
+    {
+      icone: "fogo",
+      rotulo: "Sequência",
+      valor: `${streak} ${streak === 1 ? "dia" : "dias"}`,
+    },
+  ];
+  // Largo (md+): faixa horizontal com rótulos curtos.
+  const itensResumoFaixa: ItemMetrica[] = [
+    { icone: "halter", rotulo: "Total", valor: historico.length },
+    { icone: "calendario", rotulo: "Este mês", valor: totalMesAtual },
+    { icone: "fogo", rotulo: "Sequência", valor: `${streak}d` },
+  ];
+
   return (
     <div className="px-5 py-4">
-      <div className="mb-5 grid grid-cols-3 gap-2">
-        <ResumoHistorico rotulo="Total" valor={String(historico.length)} indice={0} />
-        <ResumoHistorico rotulo="Este mês" valor={String(totalMesAtual)} indice={1} />
-        <ResumoHistorico rotulo="Sequência" valor={`${streak}d`} indice={2} />
+      <div className="mb-5 reveal-up">
+        <div className="md:hidden">
+          <ListaMetricas itens={itensResumo} />
+        </div>
+        <div className="hidden md:block">
+          <FaixaPropriedades itens={itensResumoFaixa} />
+        </div>
       </div>
 
       {historicoOrdenado.length > 0 ? (
@@ -54,7 +79,7 @@ export function HistoricoPage({
             let indiceGlobal = 0;
             return grupos.map((grupo) => (
               <section key={grupo.mes}>
-                <h2 className="sticky top-[72px] z-10 -mx-1 mb-2 px-1 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil backdrop-blur reveal-up">
+                <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.08em] text-texto-sutil reveal-up">
                   {grupo.mes}
                 </h2>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -99,18 +124,6 @@ export function HistoricoPage({
         />
         </div>
       )}
-    </div>
-  );
-}
-
-function ResumoHistorico({ rotulo, valor, indice = 0 }: { rotulo: string; valor: string; indice?: number }) {
-  return (
-    <div
-      className="rounded-[10px] border border-borda bg-superficie px-3 py-2 reveal-up"
-      style={{ animationDelay: `${indice * 60}ms` }}
-    >
-      <p className="text-[11px] text-texto-sutil">{rotulo}</p>
-      <p className="mt-1 text-lg font-semibold text-texto-primario tabular-nums">{valor}</p>
     </div>
   );
 }
